@@ -15,24 +15,14 @@ namespace WordFlow.Adventure.Net
         [SerializeField] private string gradeUrl = "http://127.0.0.1:8000/api/v1/grade";
         [SerializeField] private string authorization = "Bearer demo-token";
         [SerializeField] private int sampleRate = 16000;
-        // Recording buffer length. MUST be longer than the controller's mic window (micSeconds),
-        // because Microphone.Start(loop:false) auto-stops at maxSeconds and GetPosition() then
-        // returns 0 -> "Empty recording". Keep headroom so the mic is still recording on StopAndGrade.
-        [SerializeField] private int maxSeconds = 10;
+        [SerializeField] private int maxSeconds = 5; // matches the controller's 5s mic auto-stop
+        [SerializeField] private float deviceStallGrace = 1f; // matches MagicStonePuzzleController's proven mic stall-detection window
 
         private string _device;
         private AudioClip _recording;
         private bool _isRecording;
 
         public bool IsRecording => _isRecording;
-
-        /// <summary>Override the endpoint/auth at runtime (e.g. from a scene that keeps its own
-        /// URL field). Empty/whitespace values are ignored so defaults survive.</summary>
-        public void Configure(string url, string auth)
-        {
-            if (!string.IsNullOrWhiteSpace(url)) gradeUrl = url.Trim();
-            if (!string.IsNullOrWhiteSpace(auth)) authorization = auth.Trim();
-        }
 
         public struct GradeContext
         {
@@ -50,16 +40,53 @@ namespace WordFlow.Adventure.Net
 
         private IEnumerator StartRecordingRoutine()
         {
+#if UNITY_IOS || UNITY_ANDROID || UNITY_WEBGL
+            // Runtime permission prompts only exist on these platforms; matches the
+            // MagicStonePuzzleController guard so Standalone doesn't depend on this API.
             yield return Application.RequestUserAuthorization(UserAuthorization.Microphone);
-            if (!Application.HasUserAuthorization(UserAuthorization.Microphone) ||
-                Microphone.devices == null || Microphone.devices.Length == 0)
+            if (!Application.HasUserAuthorization(UserAuthorization.Microphone))
             {
-                Debug.Log("[GradeApiClient] No mic / permission; recording skipped (invisible — play continues).");
+                Debug.Log("[GradeApiClient] Mic permission not granted; recording skipped (invisible — play continues).");
                 _isRecording = false;
                 yield break;
             }
+#endif
+            if (Microphone.devices == null || Microphone.devices.Length == 0)
+            {
+                Debug.Log("[GradeApiClient] No mic device found; recording skipped (invisible — play continues).");
+                _isRecording = false;
+                yield break;
+            }
+
             _device = Microphone.devices[0];
             _recording = Microphone.Start(_device, false, maxSeconds, sampleRate);
+            if (_recording == null)
+            {
+                Debug.Log("[GradeApiClient] Microphone.Start returned null; recording skipped (invisible — play continues).");
+                _device = null;
+                _isRecording = false;
+                yield break;
+            }
+
+            // Stall guard (ported from MagicStonePuzzleController.RecordingRoutine): some
+            // drivers/devices hand back a valid clip but never advance playback position
+            // (exclusive-mode conflict, disabled device, unsupported sample rate). Confirm
+            // real capture is happening before committing the encounter's mic window to it —
+            // otherwise StopAndGrade silently gets a 0-sample clip after wasting maxSeconds.
+            float waitUntil = Time.realtimeSinceStartup + deviceStallGrace;
+            while (Microphone.GetPosition(_device) <= 0 && Time.realtimeSinceStartup < waitUntil)
+                yield return null;
+
+            if (Microphone.GetPosition(_device) <= 0)
+            {
+                Microphone.End(_device);
+                Debug.Log($"[GradeApiClient] Mic device '{_device}' did not advance within {deviceStallGrace}s (stalled); recording skipped (invisible — play continues).");
+                _recording = null;
+                _device = null;
+                _isRecording = false;
+                yield break;
+            }
+
             _isRecording = true;
         }
 
