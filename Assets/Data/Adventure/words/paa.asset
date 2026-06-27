@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39359d0b0d70fe44f99aa7d06fe39c91, type: 3}
+  m_Name: paa
+  m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Data.WordEncounterData
+  id: paa
+  thai: "\u0E1B\u0E32"
+  tiles:
+  - {fileID: 11400000, guid: f6b7c0237958edd43aa98ed1aad95eeb, type: 2}
+  - {fileID: 11400000, guid: 2ddf7c4e3ddc99e4d8043f09bf88ea81, type: 2}
+  ipa: "pa\u02D0"
+  meaning: to throw
+  wordAudio: {fileID: 8300000, guid: 23ced9ca08445cf49b93a0b3497666df, type: 3}
+  soundOutAudio: {fileID: 8300000, guid: fa7a152750660944ea6b99e77fb90a8f, type: 3}
+  magicStone: {fileID: 4098333124587106711, guid: 1168e6515f6b9994a9c3771cd6b3af87, type: 3}
+  effect: 1
+  effectSprite: {fileID: 21300000, guid: 75b491a21e189374e8e151134a3ec9e1, type: 3}

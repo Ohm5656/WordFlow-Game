@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39359d0b0d70fe44f99aa7d06fe39c91, type: 3}
+  m_Name: yaa
+  m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Data.WordEncounterData
+  id: yaa
+  thai: "\u0E22\u0E32"
+  tiles:
+  - {fileID: 11400000, guid: 481b3ad7cf3a46c4f91c774673b1163f, type: 2}
+  - {fileID: 11400000, guid: 2ddf7c4e3ddc99e4d8043f09bf88ea81, type: 2}
+  ipa: "ja\u02D0"
+  meaning: medicine
+  wordAudio: {fileID: 0}

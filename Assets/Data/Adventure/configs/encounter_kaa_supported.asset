@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fefd9f89262382c4199653a970078cee, type: 3}
+  m_Name: encounter_kaa_supported
+  m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Data.EncounterConfig
+  mode: 0
+  echo: 0
+  target: {fileID: 11400000, guid: bedc22c0423844f4dab3b2f4008389c8, type: 2}
+  questId: 
+  sceneId: word_build_prototype
+  childId: kid_demo_01
+  introCutscene: {fileID: 11400000, guid: 13f1cce2a15c8e9419f9a934d0f05bad, type: 2}
+  outroCutscene: {fileID: 11400000, guid: 767e633ac6e0a73438377b9ac053bfa0, type: 2}

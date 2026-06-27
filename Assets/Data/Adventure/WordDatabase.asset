@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11b70c0912b7d954b901a9be4fba838e, type: 3}
+  m_Name: WordDatabase
+  m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Data.WordDatabase
+  words:
+  - {fileID: 11400000, guid: bedc22c0423844f4dab3b2f4008389c8, type: 2}
+  - {fileID: 11400000, guid: 94b0f2eec06fd704e92674a56e47f219, type: 2}
+  - {fileID: 11400000, guid: 0f59249be4ab09a41af666a7e11c4ab0, type: 2}
+  - {fileID: 11400000, guid: 50aef50c16dfc2c4eb17aeebc8774e69, type: 2}
+  - {fileID: 11400000, guid: 659878d8da60a7e48ae423cc63b71935, type: 2}
+  - {fileID: 11400000, guid: bd226dc0e87fbdd4c962a89c56f993c5, type: 2}
+  - {fileID: 11400000, guid: 6f496244dba26a84790a664c1d6ad504, type: 2}

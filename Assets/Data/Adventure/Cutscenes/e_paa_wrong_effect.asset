@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5144ee1b6ddc4d04d986d626bf2d951b, type: 3}
+  m_Name: e_paa_wrong_effect
+  m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Data.CutsceneData
+  frames:
+  - background: {fileID: 21300000, guid: 8d79d89075163fd4e912be914ef9b086, type: 3}
+    npc: {fileID: 21300000, guid: eadbec69db76c304d8e8f5a6f8951191, type: 3}
+    side: 1
+    npcAnim: {fileID: 0}
+    npcSize: {x: 0, y: 0}
+    npcEntrance: 0
+    npcEntranceSeconds: 0.8
+    extraCharacters:
+    - sprite: {fileID: 21300000, guid: 6645524b86434c6419d6a1069a99c834, type: 3}
+      offset: {x: 360, y: 40}
+      size: {x: 0, y: 0}
+      anim: {fileID: 0}
+      entrance: 2
+      entranceSeconds: 1
+    focusIndex: 1
+    voiceLineId: e_paa_wrong_effect
+    voiceClip: {fileID: 8300000, guid: bbb84ea89aa76b84f879e9dcf401583d, type: 3}
+    holdSeconds: 2
+  backdropDim: 0.35
+  focusDimAlpha: 0.5
+  focusScale: 1.15
+  unfocusScale: 0.92
