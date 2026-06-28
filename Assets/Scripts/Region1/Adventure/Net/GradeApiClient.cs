@@ -13,7 +13,8 @@ namespace WordFlow.Adventure.Net
     public sealed class GradeApiClient : MonoBehaviour
     {
         [SerializeField] private string gradeUrl = "http://127.0.0.1:8000/api/v1/grade";
-        [SerializeField] private string authorization = "Bearer demo-token";
+        [Tooltip("Optional offline override; normally the bearer token comes from AuthSession.")]
+        [SerializeField] private string authorization = "";
         [SerializeField] private int sampleRate = 16000;
         // Recording buffer length. MUST be longer than the controller's mic window (micSeconds),
         // because Microphone.Start(loop:false) auto-stops at maxSeconds and GetPosition() then
@@ -103,8 +104,9 @@ namespace WordFlow.Adventure.Net
 
             using (UnityWebRequest req = UnityWebRequest.Post(gradeUrl.Trim(), form))
             {
-                if (!string.IsNullOrWhiteSpace(authorization))
-                    req.SetRequestHeader("Authorization", authorization.Trim());
+                string bearer = ResolveBearer();
+                if (!string.IsNullOrWhiteSpace(bearer))
+                    req.SetRequestHeader("Authorization", bearer);
                 yield return req.SendWebRequest();
 
                 if (req.result != UnityWebRequest.Result.Success)
@@ -121,6 +123,14 @@ namespace WordFlow.Adventure.Net
                 catch (Exception e) { Debug.LogWarning($"[GradeApiClient] parse failed: {e.Message}"); }
                 onResult?.Invoke(parsed);
             }
+        }
+
+        // Prefer the live session token; fall back to the optional serialized override.
+        private string ResolveBearer()
+        {
+            if (AuthSession.Instance != null && !string.IsNullOrEmpty(AuthSession.Instance.IdToken))
+                return AuthSession.Instance.BearerHeader;
+            return string.IsNullOrWhiteSpace(authorization) ? null : authorization.Trim();
         }
 
         /// <summary>AudioClip overload of WavEncoder.Encode (kept out of the tested core).</summary>

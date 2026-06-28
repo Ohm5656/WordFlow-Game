@@ -85,9 +85,9 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [SerializeField] private AudioClip soundPlaybackClip;
     [SerializeField] private string recordingUploadUrl = "http://127.0.0.1:8000/api/v1/grade";
     [SerializeField] private string recordingFileFieldName = "audio";
-    [SerializeField] private string backendAuthToken = "demo-token";
+    [SerializeField] private string backendAuthToken = "";
     [SerializeField] private string targetWordId = "paa";
-    [SerializeField] private string childId = "kid_demo_01";
+    [SerializeField] private string childId = "";
     [SerializeField] private string questId = "q_region1_throw";
     [SerializeField] private string sessionId = "";
     [SerializeField] private string recordingSceneId = "cut_scene1";
@@ -1241,7 +1241,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         // groups under the same session the webapp shows; fall back to the inspector fields.
         SessionContext session = SessionContext.Instance;
         string sid = session != null && !string.IsNullOrEmpty(session.SessionId) ? session.SessionId : sessionId;
-        string kid = session != null && !string.IsNullOrEmpty(session.KidId) ? session.KidId : childId;
+        string kid = ResolveChildId();
 
         return new GradeApiClient.GradeContext
         {
@@ -1430,9 +1430,10 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             yield break;
         }
 
-        if (string.IsNullOrWhiteSpace(targetWordId) || string.IsNullOrWhiteSpace(childId))
+        string kid = ResolveChildId();
+        if (string.IsNullOrWhiteSpace(targetWordId) || string.IsNullOrWhiteSpace(kid))
         {
-            Debug.LogWarning("Recording backend fields are incomplete. Set targetWordId and childId on MagicStonePuzzleController.");
+            Debug.LogWarning("Recording backend fields are incomplete. Set targetWordId, and log in so a child id is available.");
             SetActionButtonInteractable(micButton, CanUseActionButtons());
             uploadRecordingRoutine = null;
             yield break;
@@ -1446,7 +1447,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         WWWForm form = new WWWForm();
         form.AddBinaryData(GetSafeUploadFieldName(), wavBytes, GetSafeRecordingFileName(), "audio/wav");
         form.AddField("targetWordId", targetWordId.Trim());
-        form.AddField("childId", childId.Trim());
+        form.AddField("childId", kid.Trim());
         form.AddField("sampleRate", sampleRate);
         form.AddField("channels", channels);
         form.AddField("sampleCount", sampleCount);
@@ -1504,16 +1505,17 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             yield break;
         }
 
-        if (string.IsNullOrWhiteSpace(targetWordId) || string.IsNullOrWhiteSpace(childId))
+        string kid = ResolveChildId();
+        if (string.IsNullOrWhiteSpace(targetWordId) || string.IsNullOrWhiteSpace(kid))
         {
-            Debug.LogWarning("Recording backend fields are incomplete. Set targetWordId and childId on MagicStonePuzzleController.");
+            Debug.LogWarning("Recording backend fields are incomplete. Set targetWordId, and log in so a child id is available.");
             yield break;
         }
 
         WWWForm form = new WWWForm();
         form.AddBinaryData(GetSafeUploadFieldName(), wavBytes, GetSafeRecordingFileName(), "audio/wav");
         form.AddField("targetWordId", targetWordId.Trim());
-        form.AddField("childId", childId.Trim());
+        form.AddField("childId", kid.Trim());
         form.AddField("sampleRate", sampleRate);
         form.AddField("channels", channels);
         form.AddField("sampleCount", sampleCount);
@@ -1578,6 +1580,12 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
     private string GetAuthorizationHeaderValue()
     {
+        // Prefer the live login token; the serialized field is only an offline override.
+        if (AuthSession.Instance != null && !string.IsNullOrEmpty(AuthSession.Instance.IdToken))
+        {
+            return AuthSession.Instance.BearerHeader;
+        }
+
         if (string.IsNullOrWhiteSpace(backendAuthToken))
         {
             return "";
@@ -1585,6 +1593,16 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         string token = backendAuthToken.Trim();
         return token.StartsWith("Bearer ", System.StringComparison.OrdinalIgnoreCase) ? token : "Bearer " + token;
+    }
+
+    // The child id comes from the live session/login; the serialized field is only an offline override.
+    private string ResolveChildId()
+    {
+        SessionContext session = SessionContext.Instance;
+        if (session != null && !string.IsNullOrEmpty(session.KidId)) return session.KidId;
+        if (AuthSession.Instance != null && !string.IsNullOrEmpty(AuthSession.Instance.ChildId))
+            return AuthSession.Instance.ChildId;
+        return childId;
     }
 
     private void CaptureActionIconBaseScale(RectTransform iconRoot)

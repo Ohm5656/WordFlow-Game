@@ -13,7 +13,7 @@ namespace WordFlow.Adventure.Data
         public WordEncounterData target;
         public string questId = "";
         public string sceneId = "word_build_prototype";
-        public string childId = "kid_demo_01";
+        public string childId = "";   // offline fallback only; the real id comes from SessionContext/AuthSession
 
         // Encounter cutscenes (NPC-only VN, voice + visuals, no text). All nullable —
         // a null slot keeps the original no-cutscene flow byte-for-byte.

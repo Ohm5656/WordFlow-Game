@@ -15,7 +15,8 @@ namespace WordFlow.Adventure.Net
     public sealed class TtsApiClient : MonoBehaviour
     {
         [SerializeField] private string ttsUrl = "http://127.0.0.1:8000/api/v1/tts";
-        [SerializeField] private string authorization = "Bearer demo-token";
+        [Tooltip("Optional offline override; normally the bearer token comes from AuthSession.")]
+        [SerializeField] private string authorization = "";
 
         private readonly Dictionary<string, AudioClip> _cache = new Dictionary<string, AudioClip>();
 
@@ -32,8 +33,9 @@ namespace WordFlow.Adventure.Net
             string url = $"{ttsUrl.Trim()}?line_id={UnityWebRequest.EscapeURL(lineId)}";
             using (UnityWebRequest req = UnityWebRequestMultimedia.GetAudioClip(url, AudioType.WAV))
             {
-                if (!string.IsNullOrWhiteSpace(authorization))
-                    req.SetRequestHeader("Authorization", authorization.Trim());
+                string bearer = ResolveBearer();
+                if (!string.IsNullOrWhiteSpace(bearer))
+                    req.SetRequestHeader("Authorization", bearer);
                 yield return req.SendWebRequest();
 
                 if (req.result != UnityWebRequest.Result.Success)
@@ -49,6 +51,14 @@ namespace WordFlow.Adventure.Net
                 if (clip != null) { clip.name = lineId; _cache[lineId] = clip; }
                 onResult?.Invoke(clip);
             }
+        }
+
+        // Prefer the live session token; fall back to the optional serialized override.
+        private string ResolveBearer()
+        {
+            if (AuthSession.Instance != null && !string.IsNullOrEmpty(AuthSession.Instance.IdToken))
+                return AuthSession.Instance.BearerHeader;
+            return string.IsNullOrWhiteSpace(authorization) ? null : authorization.Trim();
         }
     }
 }

@@ -19,7 +19,8 @@ namespace WordFlow.Adventure.Net
         public const string JournalFile = "telemetry_queue.jsonl";
 
         [SerializeField] private string baseUrl = "http://127.0.0.1:8000/api/v1";
-        [SerializeField] private string authorization = "Bearer demo-token";
+        [Tooltip("Optional offline override; normally the bearer token comes from AuthSession.")]
+        [SerializeField] private string authorization = "";
         [Tooltip("Seconds between pump ticks (also the floor on retry latency).")]
         [SerializeField] private float pumpIntervalSeconds = 1f;
 
@@ -128,8 +129,9 @@ namespace WordFlow.Adventure.Net
                 req.uploadHandler = new UploadHandlerRaw(payload);
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
-                if (!string.IsNullOrWhiteSpace(authorization))
-                    req.SetRequestHeader("Authorization", authorization.Trim());
+                string bearer = ResolveBearer();
+                if (!string.IsNullOrWhiteSpace(bearer))
+                    req.SetRequestHeader("Authorization", bearer);
                 yield return req.SendWebRequest();
 
                 long code = req.responseCode;
@@ -152,6 +154,14 @@ namespace WordFlow.Adventure.Net
                     _queue.OnFailed(Time.realtimeSinceStartup);
                 }
             }
+        }
+
+        // Prefer the live session token; fall back to the optional serialized override.
+        private string ResolveBearer()
+        {
+            if (AuthSession.Instance != null && !string.IsNullOrEmpty(AuthSession.Instance.IdToken))
+                return AuthSession.Instance.BearerHeader;
+            return string.IsNullOrWhiteSpace(authorization) ? null : authorization.Trim();
         }
 
         // ---- disk journal ----
