@@ -2,11 +2,12 @@ using UnityEngine;
 
 public class PathGizmoDrawer : MonoBehaviour
 {
-    public Vector2 pointSize = new Vector2(1f, 1f);
+    // UI canvas units are ~pixels, so a size of 1 is invisible; default big.
+    public Vector2 pointSize = new Vector2(60f, 60f);
     public Color pointColor = Color.yellow;
     public Color lineColor = Color.green;
 
-    private void OnDrawGizmosSelected()
+    private void OnDrawGizmos()
     {
         if (Application.isPlaying) return;
 

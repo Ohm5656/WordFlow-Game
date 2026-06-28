@@ -133,8 +133,9 @@ namespace WordFlow.Adventure.Net
 
             using (UnityWebRequest req = UnityWebRequest.Post(gradeUrl.Trim(), form))
             {
-                if (!string.IsNullOrWhiteSpace(authorization))
-                    req.SetRequestHeader("Authorization", authorization.Trim());
+                string bearer = ResolveBearer();
+                if (!string.IsNullOrWhiteSpace(bearer))
+                    req.SetRequestHeader("Authorization", bearer);
                 yield return req.SendWebRequest();
 
                 if (req.result != UnityWebRequest.Result.Success)
@@ -151,6 +152,14 @@ namespace WordFlow.Adventure.Net
                 catch (Exception e) { Debug.LogWarning($"[GradeApiClient] parse failed: {e.Message}"); }
                 onResult?.Invoke(parsed);
             }
+        }
+
+        private string ResolveBearer()
+        {
+            if (AuthSession.Instance != null && !string.IsNullOrEmpty(AuthSession.Instance.IdToken))
+                return AuthSession.Instance.BearerHeader;
+
+            return string.IsNullOrWhiteSpace(authorization) ? null : authorization.Trim();
         }
 
         /// <summary>AudioClip overload of WavEncoder.Encode (kept out of the tested core).</summary>

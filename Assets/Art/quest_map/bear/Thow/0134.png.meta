@@ -5,9 +5,6 @@ TextureImporter:
   - first:
       213: 5559108957076322698
     second: 0134_0
-  - first:
-      213: 4347375638697537380
-    second: 0134_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -132,9 +129,9 @@ TextureImporter:
       name: 0134_0
       rect:
         serializedVersion: 2
-        x: 149
+        x: 0
         y: 0
-        width: 337
+        width: 1920
         height: 1080
       alignment: 0
       pivot: {x: 0, y: 0}
@@ -146,28 +143,6 @@ TextureImporter:
       bones: []
       spriteID: a89f93e942ce52d40800000000000000
       internalID: 5559108957076322698
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: 0134_1
-      rect:
-        serializedVersion: 2
-        x: 171
-        y: 0
-        width: 1600
-        height: 1080
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 46fe0c92c1bf45c30800000000000000
-      internalID: 4347375638697537380
       vertices: []
       indices: 
       edges: []
@@ -187,7 +162,6 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       0134_0: 5559108957076322698
-      0134_1: 4347375638697537380
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

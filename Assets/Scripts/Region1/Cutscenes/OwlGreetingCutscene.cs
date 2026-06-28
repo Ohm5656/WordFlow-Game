@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using WordFlow.Adventure.Net;
 
 public sealed class OwlGreetingCutscene : MonoBehaviour
 {
@@ -61,9 +62,39 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [SerializeField] private AudioClip greetingVoiceClip;
     [SerializeField] private AudioClip bearFocusLookVoiceClip;
     [SerializeField] private AudioClip bearFocusMissionVoiceClip;
+
+    [Header("Voice (TTS) — id wins over the baked clip; falls back to the clip on any failure")]
+    [SerializeField] private TtsApiClient ttsClient;
+    [Tooltip("/tts line for the first intro greeting (e.g. paa_intro_owl_1).")]
+    [SerializeField] private string greetingLineId;
+    [Tooltip("/tts line for the second intro line (bear-focus 'look/mission' clip; e.g. paa_intro_owl_2).")]
+    [SerializeField] private string bearFocusLookLineId;
     [SerializeField] private float voiceStartDelay = 0f;
     [SerializeField] private float bearFocusVoiceGap = 0.05f;
     [SerializeField] private bool useVoiceClipLengthForTalkDuration = true;
+
+    [Header("Talking Prefab Animation")]
+    [Tooltip("Animator on the owl prefab under OwlRoot. Empty = find the first child Animator (the Animator on OwlRoot itself is ignored).")]
+    [SerializeField] private Animator talkingAnimator;
+    [SerializeField] private string talkingStateName = "Owl";
+    // Per-phrase (วรรค) owl mouth speed: Seconds Per Loop = how long one mouth loop takes for that
+    // line (smaller = faster); >0 uses it, 0 falls back to that line's Animation Speed multiplier.
+    [Tooltip("Phrase 1 — greeting. Animation Speed multiplier (used when its Seconds Per Loop is 0).")]
+    [SerializeField, Min(0.01f)] private float talkingAnimationSpeed = 1f;
+    [Tooltip("Phrase 1 — greeting. Seconds per mouth loop (lip-sync knob; 0 = use Animation Speed).")]
+    [SerializeField, Min(0f)] private float talkingSecondsPerLoop = 0f;
+    [Tooltip("Phrase 2 — bear-focus 'look' line. Animation Speed multiplier.")]
+    [SerializeField, Min(0.01f)] private float bearFocusLookAnimationSpeed = 1f;
+    [Tooltip("Phrase 2 — bear-focus 'look' line. Seconds per mouth loop (0 = use Animation Speed).")]
+    [SerializeField, Min(0f)] private float bearFocusLookSecondsPerLoop = 0f;
+    [Tooltip("Phrase 3 — bear-focus 'mission' line. Animation Speed multiplier.")]
+    [SerializeField, Min(0.01f)] private float bearFocusMissionAnimationSpeed = 1f;
+    [Tooltip("Phrase 3 — bear-focus 'mission' line. Seconds per mouth loop (0 = use Animation Speed).")]
+    [SerializeField, Min(0f)] private float bearFocusMissionSecondsPerLoop = 0f;
+    [Tooltip("Hide the owl prefab whenever no voice line is playing.")]
+    [SerializeField] private bool hideTalkingPrefabWhenSilent = true;
+    [Tooltip("Seconds to fade the talking owl in when it enters and out when it leaves. 0 = pop instantly.")]
+    [SerializeField, Min(0f)] private float talkingFadeDuration = 0.35f;
 
     [Header("Book Reveal")]
     [SerializeField] private bool playBookRevealAfterBearFocus = true;
@@ -98,6 +129,15 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     private Vector3 bookRevealTargetScale;
     private Color bookRevealTargetColor = Color.white;
     private Vector2 cachedOwlBookRevealTargetPosition;
+    private RectTransform talkingRectTransform;
+    private Vector2 talkingPlacedPosition;
+    private Vector3 talkingPlacedScale;
+    private Quaternion talkingPlacedRotation;
+    private bool hasTalkingPlacedTransform;
+    // The talking-speed knobs for the round currently playing (set per PlayTalkingSequence call so
+    // each round — greeting vs bear-focus — uses its own inspector values).
+    private float activeTalkingSpeed = 1f;
+    private float activeTalkingSecondsPerLoop = 0f;
 
     private struct OwlFrame
     {
@@ -123,6 +163,7 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     }
 
     private bool ShouldUseSingleVisibleFrame => useSingleVisibleFrame && !preservePlacedFrameTransforms;
+    private bool UsesTalkingPrefabAnimator => talkingAnimator != null;
 
     private void OnValidate()
     {
@@ -132,6 +173,8 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     private void Awake()
     {
         owlRootRect = transform as RectTransform;
+        ResolveTalkingAnimator();
+        CacheTalkingPlacedTransform();
         CacheOwlBookRevealTarget();
         PrepareOwlForBookRevealTarget();
         ApplyPreservePlacedFrameSettings();
@@ -140,7 +183,28 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         PrepareBookForReveal();
         PrepareMagicStonePuzzle();
         PreloadVoiceClips();
+        ResolveTtsLines();
         ShowFrame(0);
+        if (UsesTalkingPrefabAnimator)
+        {
+            StopTalkingAnimation();
+        }
+        else
+        {
+            SetOwlFramesAlpha(0f); // legacy frame setup fades in before the greeting
+        }
+    }
+
+    // TTS wins over the baked clip when a line id is set: fetched async + cached on the client, so it
+    // is ready by the time the greeting plays (after the intro zoom). Any failure -> keep the clip.
+    private void ResolveTtsLines()
+    {
+        if (ttsClient == null) ttsClient = FindObjectOfType<TtsApiClient>();
+        if (ttsClient == null) return;
+        if (!string.IsNullOrWhiteSpace(greetingLineId))
+            ttsClient.GetLine(greetingLineId, c => { if (c != null) greetingVoiceClip = c; });
+        if (!string.IsNullOrWhiteSpace(bearFocusLookLineId))
+            ttsClient.GetLine(bearFocusLookLineId, c => { if (c != null) bearFocusLookVoiceClip = c; });
     }
 
     private void OnDisable()
@@ -180,7 +244,10 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     {
         ApplyPreservePlacedFrameSettings();
         CacheFrames();
-        CacheBookRevealTarget();
+        // NOTE: do NOT re-cache the book reveal target here. Awake already cached the book's full
+        // (authored) position/scale/color; by now PrepareBookForReveal has shrunk it and set alpha 0,
+        // so re-caching would capture that hidden state as the "target" and the book would restore
+        // invisible (alpha 0) on retry.
 
         SetOwlFramesAlpha(0f);
         for (int i = 0; i < frames.Count; i++)
@@ -233,6 +300,14 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         }
 
         ShowFrame(0);
+        if (UsesTalkingPrefabAnimator)
+        {
+            StopTalkingAnimation();
+        }
+        else
+        {
+            SetOwlFramesAlpha(0f); // legacy frame setup fades in before the greeting
+        }
 
         if (startDelay > 0f)
         {
@@ -242,6 +317,11 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         if (dimBackgroundBeforeZoom)
         {
             yield return FadeDimOverlay(true, GetOwlOnlyDimSiblingIndex());
+        }
+
+        if (!UsesTalkingPrefabAnimator)
+        {
+            yield return FadeOwlInRoutine();
         }
 
         if (zoomBeforeGreeting && zoomDuration > 0f)
@@ -254,10 +334,13 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             yield return new WaitForSeconds(holdAfterZoom);
         }
 
-        PlayVoiceSequence(voiceStartDelay, greetingVoiceClip);
-        yield return PlayGreetingFrames(GetTalkDuration(greetingDuration, greetingVoiceClip));
+        yield return PlayTalkingSequence(greetingDuration, null,
+            new TalkLine(greetingVoiceClip, talkingAnimationSpeed, talkingSecondsPerLoop));
 
-        ShowFrame(holdLastFrame ? frames.Count - 1 : 0);
+        if (!UsesTalkingPrefabAnimator)
+        {
+            ShowFrame(holdLastFrame ? frames.Count - 1 : 0);
+        }
 
         if (restoreZoomAfterGreeting && hasZoomState)
         {
@@ -320,9 +403,16 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             bearFocusSequence = GetDefaultBearFocusFrameSequence();
         }
 
-        PlayVoiceSequence(voiceStartDelay, bearFocusLookVoiceClip, bearFocusMissionVoiceClip);
-        yield return PlayGreetingFrames(GetTalkDuration(bearFocusGreetingDuration, bearFocusLookVoiceClip, bearFocusMissionVoiceClip), bearFocusSequence);
-        ShowFrame(holdLastFrame ? GetLastSequenceFrameIndex(bearFocusSequence) : 0);
+        yield return PlayTalkingSequence(
+            bearFocusGreetingDuration,
+            bearFocusSequence,
+            new TalkLine(bearFocusLookVoiceClip, bearFocusLookAnimationSpeed, bearFocusLookSecondsPerLoop),
+            new TalkLine(bearFocusMissionVoiceClip, bearFocusMissionAnimationSpeed, bearFocusMissionSecondsPerLoop));
+
+        if (!UsesTalkingPrefabAnimator)
+        {
+            ShowFrame(holdLastFrame ? GetLastSequenceFrameIndex(bearFocusSequence) : 0);
+        }
 
         if (restoreBearScaleAfterFocus)
         {
@@ -448,6 +538,24 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
     }
 
+    private IEnumerator FadeOwlInRoutine()
+    {
+        if (frames.Count == 0)
+        {
+            yield break;
+        }
+
+        float duration = Mathf.Max(0.01f, owlFadeOutBeforeBookDuration);
+
+        for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
+        {
+            SetOwlFramesAlpha(SmoothStep(Mathf.Clamp01(elapsed / duration)));
+            yield return null;
+        }
+
+        SetOwlFramesAlpha(1f);
+    }
+
     private IEnumerator FadeOwlOutBeforeBookRevealRoutine()
     {
         if (!fadeOwlBeforeBookReveal || frames.Count == 0)
@@ -523,6 +631,13 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     private void PrepareOwlForBookRevealTarget()
     {
         if (!playBookRevealAfterBearFocus || owlRootRect == null)
+        {
+            return;
+        }
+
+        // Only pre-position the owl if we will actually animate it to the book reveal spot.
+        // Otherwise keep it at the position the designer placed in the scene.
+        if (!moveOwlToBookRevealPosition)
         {
             return;
         }
@@ -627,41 +742,59 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         return magicStonePuzzle;
     }
 
-    private void PlayVoiceSequence(float startDelaySeconds, params AudioClip[] clips)
+    // One spoken phrase (วรรค) = its voice clip + that line's own owl mouth speed.
+    private struct TalkLine
     {
-        StopVoice();
-
-        if (clips == null || clips.Length == 0)
+        public AudioClip clip;
+        public float speed;
+        public float secondsPerLoop;
+        public TalkLine(AudioClip clip, float speed, float secondsPerLoop)
         {
-            return;
+            this.clip = clip;
+            this.speed = speed;
+            this.secondsPerLoop = secondsPerLoop;
         }
-
-        AudioSource source = GetOrCreateVoiceAudioSource();
-        if (source == null)
-        {
-            return;
-        }
-
-        voiceRoutine = StartCoroutine(PlayVoiceSequenceRoutine(source, startDelaySeconds, clips));
     }
 
-    private IEnumerator PlayVoiceSequenceRoutine(AudioSource source, float startDelaySeconds, AudioClip[] clips)
+    // Plays the round's phrases in order, each at its OWN mouth speed (the animator speed is re-set
+    // per line). The owl fades in on the first phrase and out after the last; phrases in between
+    // just swap speed while the owl keeps talking.
+    private IEnumerator PlayTalkingSequence(
+        float fallbackDuration,
+        List<int> frameSequence,
+        params TalkLine[] lines)
     {
-        if (startDelaySeconds > 0f)
+        if (voiceStartDelay > 0f)
         {
-            yield return new WaitForSeconds(startDelaySeconds);
+            yield return new WaitForSeconds(voiceStartDelay);
         }
 
-        bool playedAnyClip = false;
-        for (int i = 0; i < clips.Length; i++)
+        StopVoice();
+        AudioSource source = GetOrCreateVoiceAudioSource();
+        StartTalkingAnimation();
+
+        bool fade = UsesTalkingPrefabAnimator && talkingFadeDuration > 0f;
+        int lastIndex = LastNonNullLineIndex(lines);
+        bool fadedIn = false;
+        bool playedAny = false;
+
+        for (int i = 0; i < lines.Length; i++)
         {
-            AudioClip clip = clips[i];
+            AudioClip clip = lines[i].clip;
             if (clip == null)
             {
                 continue;
             }
 
-            if (playedAnyClip && bearFocusVoiceGap > 0f)
+            // This phrase's own mouth speed.
+            activeTalkingSpeed = lines[i].speed;
+            activeTalkingSecondsPerLoop = lines[i].secondsPerLoop;
+            if (UsesTalkingPrefabAnimator)
+            {
+                talkingAnimator.speed = GetTalkingAnimatorSpeed();
+            }
+
+            if (playedAny && bearFocusVoiceGap > 0f)
             {
                 yield return new WaitForSeconds(bearFocusVoiceGap);
             }
@@ -669,52 +802,55 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             LoadVoiceClip(clip);
             source.clip = clip;
             source.Play();
-            playedAnyClip = true;
+            playedAny = true;
 
-            if (clip.length > 0f)
+            float hold = clip.length > 0f ? clip.length : Mathf.Max(0f, fallbackDuration);
+
+            if (fade && !fadedIn)
             {
-                yield return new WaitForSeconds(clip.length);
+                SetOwlFramesAlpha(0f);
+                yield return FadeTalkingAlpha(0f, 1f, talkingFadeDuration);
+                hold = Mathf.Max(0f, hold - talkingFadeDuration);
+                fadedIn = true;
+            }
+
+            if (fade && i == lastIndex)
+            {
+                yield return PlayGreetingFrames(Mathf.Max(0f, hold - talkingFadeDuration), frameSequence);
+                yield return FadeTalkingAlpha(1f, 0f, talkingFadeDuration);
             }
             else
             {
-                while (source.isPlaying)
-                {
-                    yield return null;
-                }
+                yield return PlayGreetingFrames(hold, frameSequence);
             }
         }
 
-        voiceRoutine = null;
+        StopTalkingAnimation();
     }
 
-    private float GetTalkDuration(float fallbackDuration, params AudioClip[] clips)
+    private static int LastNonNullLineIndex(TalkLine[] lines)
     {
-        if (!useVoiceClipLengthForTalkDuration || clips == null || clips.Length == 0)
+        for (int i = lines.Length - 1; i >= 0; i--)
         {
-            return Mathf.Max(0f, fallbackDuration);
+            if (lines[i].clip != null)
+            {
+                return i;
+            }
         }
 
-        float duration = 0f;
-        int validClipCount = 0;
+        return -1;
+    }
 
-        for (int i = 0; i < clips.Length; i++)
+    private IEnumerator FadeTalkingAlpha(float from, float to, float duration)
+    {
+        float safeDuration = Mathf.Max(0.01f, duration);
+        for (float elapsed = 0f; elapsed < safeDuration; elapsed += Time.deltaTime)
         {
-            AudioClip clip = clips[i];
-            if (clip == null)
-            {
-                continue;
-            }
-
-            if (validClipCount > 0)
-            {
-                duration += Mathf.Max(0f, bearFocusVoiceGap);
-            }
-
-            duration += Mathf.Max(0f, clip.length);
-            validClipCount++;
+            SetOwlFramesAlpha(Mathf.Lerp(from, to, SmoothStep(elapsed / safeDuration)));
+            yield return null;
         }
 
-        return validClipCount > 0 ? duration : Mathf.Max(0f, fallbackDuration);
+        SetOwlFramesAlpha(to);
     }
 
     private AudioSource GetOrCreateVoiceAudioSource()
@@ -763,6 +899,8 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         {
             voiceAudioSource.Stop();
         }
+
+        StopTalkingAnimation();
     }
 
     private IEnumerator PlayGreetingFrames(float totalDuration, List<int> frameSequence = null)
@@ -973,6 +1111,19 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
     private void CacheFrames()
     {
+        // CacheFrames is called again immediately before playback. At that point the owl may
+        // already be hidden (alpha 0). Preserve the original authored colors so a later fade-in
+        // does not multiply against a newly cached zero alpha forever.
+        Dictionary<Transform, Color> authoredColors = new Dictionary<Transform, Color>();
+        for (int index = 0; index < frames.Count; index++)
+        {
+            OwlFrame cachedFrame = frames[index];
+            if (cachedFrame.Target != null && cachedFrame.Image != null)
+            {
+                authoredColors[cachedFrame.Target] = cachedFrame.Color;
+            }
+        }
+
         frames.Clear();
 
         for (int index = 0; index < transform.childCount; index++)
@@ -993,6 +1144,12 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
                 continue;
             }
 
+            Color authoredColor = image != null ? image.color : Color.white;
+            if (authoredColors.TryGetValue(child, out Color cachedColor))
+            {
+                authoredColor = cachedColor;
+            }
+
             frames.Add(new OwlFrame
             {
                 Name = child.name,
@@ -1000,13 +1157,147 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
                 RectTransform = rect,
                 Image = image,
                 Sprite = image != null ? image.sprite : null,
-                Color = image != null ? image.color : Color.white,
+                Color = authoredColor,
                 PreserveAspect = image == null || image.preserveAspect,
                 Position = rect != null ? rect.anchoredPosition : new Vector2(child.localPosition.x, child.localPosition.y),
                 SizeDelta = rect != null ? rect.sizeDelta : Vector2.zero,
                 Scale = child.localScale
             });
         }
+    }
+
+    private void ResolveTalkingAnimator()
+    {
+        if (talkingAnimator != null && talkingAnimator.transform != transform)
+        {
+            return;
+        }
+
+        talkingAnimator = null;
+        Animator[] childAnimators = GetComponentsInChildren<Animator>(true);
+        for (int index = 0; index < childAnimators.Length; index++)
+        {
+            Animator candidate = childAnimators[index];
+            if (candidate != null && candidate.transform != transform)
+            {
+                talkingAnimator = candidate;
+                break;
+            }
+        }
+    }
+
+    private void CacheTalkingPlacedTransform()
+    {
+        if (!UsesTalkingPrefabAnimator)
+        {
+            return;
+        }
+
+        talkingRectTransform = talkingAnimator.transform as RectTransform;
+        if (talkingRectTransform == null)
+        {
+            return;
+        }
+
+        talkingPlacedPosition = talkingRectTransform.anchoredPosition;
+        talkingPlacedScale = talkingRectTransform.localScale;
+        talkingPlacedRotation = talkingRectTransform.localRotation;
+        hasTalkingPlacedTransform = true;
+    }
+
+    private void StartTalkingAnimation()
+    {
+        ResolveTalkingAnimator();
+        if (!UsesTalkingPrefabAnimator)
+        {
+            return;
+        }
+
+        GameObject talkingObject = talkingAnimator.gameObject;
+        talkingObject.SetActive(true);
+        RestoreTalkingPlacedTransform();
+        SetOwlFramesAlpha(1f);
+
+        talkingAnimator.speed = GetTalkingAnimatorSpeed();
+        if (!string.IsNullOrWhiteSpace(talkingStateName))
+        {
+            int stateHash = Animator.StringToHash(talkingStateName.Trim());
+            if (talkingAnimator.HasState(0, stateHash))
+            {
+                talkingAnimator.Play(stateHash, 0, 0f);
+            }
+        }
+    }
+
+    private void StopTalkingAnimation()
+    {
+        if (!UsesTalkingPrefabAnimator)
+        {
+            return;
+        }
+
+        talkingAnimator.speed = 0f;
+        RestoreTalkingPlacedTransform();
+
+        if (hideTalkingPrefabWhenSilent)
+        {
+            talkingAnimator.gameObject.SetActive(false);
+        }
+    }
+
+    private void RestoreTalkingPlacedTransform()
+    {
+        if (!hasTalkingPlacedTransform || talkingRectTransform == null)
+        {
+            return;
+        }
+
+        talkingRectTransform.anchoredPosition = talkingPlacedPosition;
+        talkingRectTransform.localScale = talkingPlacedScale;
+        talkingRectTransform.localRotation = talkingPlacedRotation;
+    }
+
+    private float GetTalkingAnimatorSpeed()
+    {
+        if (activeTalkingSecondsPerLoop <= 0f)
+        {
+            return Mathf.Max(0.01f, activeTalkingSpeed);
+        }
+
+        RuntimeAnimatorController controller = talkingAnimator.runtimeAnimatorController;
+        if (controller == null || controller.animationClips == null)
+        {
+            return Mathf.Max(0.01f, activeTalkingSpeed);
+        }
+
+        AnimationClip[] clips = controller.animationClips;
+        AnimationClip selectedClip = null;
+        for (int index = 0; index < clips.Length; index++)
+        {
+            AnimationClip clip = clips[index];
+            if (clip == null)
+            {
+                continue;
+            }
+
+            if (selectedClip == null)
+            {
+                selectedClip = clip;
+            }
+
+            if (string.Equals(clip.name, talkingStateName, StringComparison.OrdinalIgnoreCase))
+            {
+                selectedClip = clip;
+                break;
+            }
+        }
+
+        if (selectedClip == null || selectedClip.length <= 0f)
+        {
+            return Mathf.Max(0.01f, activeTalkingSpeed);
+        }
+
+        return selectedClip.length / Mathf.Max(0.01f, activeTalkingSecondsPerLoop);
     }
 
     private void ShowFrame(int visibleIndex)

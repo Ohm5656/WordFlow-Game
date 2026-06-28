@@ -2,10 +2,11 @@ using UnityEngine;
 
 public class WaypointGizmo : MonoBehaviour
 {
-    public Vector2 size = new Vector2(1f, 1f);
+    // UI canvas units are ~pixels, so a size of 1 is invisible; default big.
+    public Vector2 size = new Vector2(60f, 60f);
     public Color color = Color.yellow;
 
-    private void OnDrawGizmosSelected()
+    private void OnDrawGizmos()
     {
         if (Application.isPlaying) return;
 

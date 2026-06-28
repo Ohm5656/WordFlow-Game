@@ -21,7 +21,12 @@ namespace WordFlow.Adventure.Net
         [SerializeField] private string authorization = "Bearer demo-token";
         [SerializeField] private TelemetryClient telemetry;
 
-        public string KidId => kidId;
+        // A live login always wins. The serialized value stays available for direct scene testing
+        // in the Editor, where the Login scene (and therefore AuthSession) may be skipped.
+        public string KidId =>
+            AuthSession.Instance != null && !string.IsNullOrEmpty(AuthSession.Instance.ChildId)
+                ? AuthSession.Instance.ChildId
+                : kidId;
         public string SessionId { get; private set; }
 
         // Sitting aggregates (sent on close).
@@ -34,7 +39,21 @@ namespace WordFlow.Adventure.Net
 
         private void Awake()
         {
+            // One backend session per app sitting: persist across scene loads and dedupe. Without
+            // this, every scene opened its OWN session (each scene carries a SessionContext), so a
+            // multi-scene flow like CutScene_bear -> practice/reference_forest created an extra
+            // empty 0%/0s session that showed as a second dashboard row per recording. word_build_
+            // paa_polished never hit this because it stays in one scene for the whole encounter.
+            // This GameObject also carries the TelemetryClient, so persisting it keeps the durable
+            // queue alive across scenes too.
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject); // a session is already open for this sitting — keep it
+                return;
+            }
+
             Instance = this;
+            DontDestroyOnLoad(gameObject);
             SessionId = null;
             if (telemetry == null) telemetry = FindObjectOfType<TelemetryClient>();
         }
@@ -43,15 +62,23 @@ namespace WordFlow.Adventure.Net
 
         private IEnumerator OpenSession()
         {
-            string url = $"{baseUrl.TrimEnd('/')}/children/{kidId}/sessions";
+            string kid = KidId;
+            if (string.IsNullOrEmpty(kid))
+            {
+                Debug.LogWarning("[Session] no child id (not logged in?) — session not opened.");
+                yield break;
+            }
+
+            string url = $"{baseUrl.TrimEnd('/')}/children/{kid}/sessions";
             byte[] payload = Encoding.UTF8.GetBytes($"{{\"island\":{island}}}");
             using (var req = new UnityWebRequest(url, "POST"))
             {
                 req.uploadHandler = new UploadHandlerRaw(payload);
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
-                if (!string.IsNullOrWhiteSpace(authorization))
-                    req.SetRequestHeader("Authorization", authorization.Trim());
+                string bearer = ResolveBearer();
+                if (!string.IsNullOrWhiteSpace(bearer))
+                    req.SetRequestHeader("Authorization", bearer);
                 yield return req.SendWebRequest();
 
                 if (req.result != UnityWebRequest.Result.Success)
@@ -62,7 +89,7 @@ namespace WordFlow.Adventure.Net
                 }
                 var parsed = JsonUtility.FromJson<OpenResponse>(req.downloadHandler.text);
                 SessionId = parsed != null ? parsed.sessionId : null;
-                Debug.Log($"[Session] opened {SessionId} for {kidId}");
+                Debug.Log($"[Session] opened {SessionId} for {kid}");
             }
         }
 
@@ -109,7 +136,15 @@ namespace WordFlow.Adventure.Net
                 wordsAttempted = _wordsAttempted,
                 level = _level.ToString()   // backend SessionEndRequest.level is a string
             });
-            telemetry.PostJson($"children/{kidId}/sessions/{SessionId}", body, "PATCH");
+            telemetry.PostJson($"children/{KidId}/sessions/{SessionId}", body, "PATCH");
+        }
+
+        private string ResolveBearer()
+        {
+            if (AuthSession.Instance != null && !string.IsNullOrEmpty(AuthSession.Instance.IdToken))
+                return AuthSession.Instance.BearerHeader;
+
+            return string.IsNullOrWhiteSpace(authorization) ? null : authorization.Trim();
         }
 
         // Final flush on quit (redundant safety net — the per-attempt pushes already keep the

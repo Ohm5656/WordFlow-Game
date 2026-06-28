@@ -1,13 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using WordFlow.Adventure.Core;
 using WordFlow.Adventure.Net;
 
 public sealed class MagicStonePuzzleController : MonoBehaviour
 {
+    // Times the build (stones interactive -> word assembled), like word_build_paa_polished,
+    // so /grade gets a real buildLatencyMs instead of 0.
+    private readonly BuildLatencyTracker _latency = new BuildLatencyTracker();
     private const string DefaultNextSceneName = "Assets/Scenes/region 1/practice.unity";
     private const string RetryAfterCrowPlayerPrefsKey = "MagicStonePuzzleRetryAfterCrow";
 
@@ -27,6 +30,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [Header("Word Recipe")]
     [Tooltip("The assembled word (slot1 + slot2) that triggers the craft result.")]
     [SerializeField] private string targetWord = "ปา";
+    [Tooltip("Real Thai words other than the target that the stones can spell (e.g. กา). Used to tag a wrong build as wrong_word vs non_word, like word_build_paa_polished.")]
+    [SerializeField] private string[] knownWords = { "กา" };
     [Tooltip("GameObject names of the puzzle stones, paired index-for-index with stoneLetters.")]
     [SerializeField] private string[] stoneObjectNames = { "stone1", "stone2", "stone3" };
     [Tooltip("Glyph each stone represents, paired index-for-index with stoneObjectNames.")]
@@ -65,7 +70,12 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [Header("Craft Result")]
     [SerializeField] private RectTransform bookCraftRoot;
     [SerializeField] private RectTransform bookCraftSuccessRoot;
-    [SerializeField] private RectTransform bookCraftCrowRoot;
+    [SerializeField] private RectTransform bookCraftCrowRoot; // the target word (ปา) result page = book_craft_pa
+    [Tooltip("Second valid word (e.g. กา): building it reveals book_craft_ga and ends at Success_ga, using the SAME flow + backend handling as the target word (ปา -> book_craft_pa -> Success_pa). Only the page, wordId and success scene differ. Empty page = found by name 'book_craft_ga'.")]
+    [SerializeField] private RectTransform bookCraftAltRoot;
+    [SerializeField] private string altWord = "กา";
+    [SerializeField] private string altWordId = "kaa";
+    [SerializeField] private string altSceneName = "Assets/Scenes/region 1/Success_ga.unity";
     [SerializeField] private RectTransform soundButtonRoot;
     [SerializeField] private RectTransform micButtonRoot;
     [SerializeField] private float craftResultDelay = 0.08f;
@@ -83,18 +93,15 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [Header("Voice Interaction")]
     [SerializeField] private AudioSource actionAudioSource;
     [SerializeField] private AudioClip soundPlaybackClip;
-    [SerializeField] private string recordingUploadUrl = "http://127.0.0.1:8000/api/v1/grade";
-    [SerializeField] private string recordingFileFieldName = "audio";
-    [SerializeField] private string backendAuthToken = "demo-token";
+    [Tooltip("Result-word echo for the alt word (กา): plays กอ-อา-กา instead of soundPlaybackClip's ปอ-อา-ปา when the alt word was built.")]
+    [SerializeField] private AudioClip altSoundPlaybackClip;
     [SerializeField] private string targetWordId = "paa";
     [SerializeField] private string childId = "kid_demo_01";
     [SerializeField] private string questId = "q_region1_throw";
     [SerializeField] private string sessionId = "";
     [SerializeField] private string recordingSceneId = "cut_scene1";
-    [SerializeField] private string recordingFileName = "cut_scene1_recording.wav";
     [SerializeField] private bool uploadRecordingToBackend = false;
-    [SerializeField] private int recordingSampleRate = 16000;
-    [SerializeField] private float maxRecordingSeconds = 8f;
+    [SerializeField] private float maxRecordingSeconds = 5f; // matches word_build_paa_polished micSeconds
     [SerializeField] private float activeIconPulseScale = 1.12f;
     [SerializeField] private float activeIconPulseSpeed = 5.5f;
 
@@ -109,6 +116,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [Header("Backend Grading (mic upload, like word_build_paa_polished)")]
     [Tooltip("Records the mic clip and POSTs it to /grade, identical to word_build_paa_polished. Auto-added at runtime if left empty.")]
     [SerializeField] private GradeApiClient gradeClient;
+    [Tooltip("Durable build-attempt telemetry, like word_build_paa_polished. Auto-found in scene if left empty.")]
+    [SerializeField] private TelemetryClient telemetry;
 
     [Header("Recording Success")]
     [SerializeField] private Sprite recordingSuccessSprite;
@@ -142,11 +151,14 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private bool hasSoundIconBaseScale;
     private bool hasMicIconBaseScale;
     private bool isRecording;
-    private bool isUploadingRecording;
     private bool recordingSuccessPlaying;
     private bool crowFeedbackPlaying;
-    private AudioClip activeRecordingClip;
-    private string activeMicrophoneDevice;
+    // The result variant chosen at completion (target ปา vs alt กา): which page to reveal, which
+    // wordId to grade, and which success scene to load. Defaults fall back to the ปา fields.
+    private RectTransform activeBookRoot;
+    private string activeWordId;
+    private string activeSceneName;
+    private string activeResultWord;
     private float recordingStartedAt;
     private bool isPlacementVoicePlaying;
     private Coroutine placementVoiceRoutine;
@@ -266,6 +278,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             stones[i].SetInteractable(true);
         }
 
+        _latency.Start(Time.realtimeSinceStartupAsDouble);
         revealFinished = true;
     }
 
@@ -340,6 +353,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         stone.SetCurrentSlot(slotIndex);
         stone.MoveTo(GetSlotPosition(slotIndex), stone.HomeScale * Mathf.Max(0.01f, snappedScaleMultiplier), snapDuration, true);
 
+        _latency.RecordPlacement(Time.realtimeSinceStartupAsDouble);
         PlayPlacementVoice(stone);
 
         TryStartCompletionRitual();
@@ -537,14 +551,59 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             return;
         }
 
-        // Wrong combination: leave the stones in place so the player can tap them back out.
-        if (!IsTargetWord())
+        // Both slots full: route by the assembled word. The target word (ปา) reveals book_craft_pa
+        // and ends at Success_pa; the alt word (กา) reveals book_craft_ga and ends at Success_ga.
+        // Same flow + identical backend handling — only the page, wordId and success scene differ.
+        string built = GetAssembledWord();
+        string target = string.IsNullOrEmpty(targetWord) ? "ปา" : targetWord;
+
+        if (built == target)
         {
+            SetActiveResultVariant(GetCrowBookRoot(), targetWordId, nextSceneName, target);
+        }
+        else if (!string.IsNullOrEmpty(altWord) && built == altWord)
+        {
+            SetActiveResultVariant(GetAltBookRoot(), altWordId, altSceneName, altWord);
+        }
+        else
+        {
+            // Not a valid word: leave the stones in place so the player can tap them back out and
+            // retry. No backend send here — like word_build_paa_polished, the build-attempt (and
+            // /grade) fire together later at mic-stop. Just restart the build timer.
+            _latency.Start(Time.realtimeSinceStartupAsDouble);
             return;
         }
 
         completionRoutine = StartCoroutine(WordResultRoutine());
     }
+
+    // Pick the result page / backend wordId / success scene for the word that was just built.
+    private void SetActiveResultVariant(RectTransform bookRoot, string wordId, string sceneName, string word)
+    {
+        activeBookRoot = bookRoot;
+        activeWordId = wordId;
+        activeSceneName = sceneName;
+        activeResultWord = word;
+    }
+
+    private RectTransform GetCrowBookRoot()
+    {
+        if (bookCraftCrowRoot == null) bookCraftCrowRoot = FindSiblingRect("book_craft_pa");
+        return bookCraftCrowRoot;
+    }
+
+    private RectTransform GetAltBookRoot()
+    {
+        if (bookCraftAltRoot == null) bookCraftAltRoot = FindSiblingRect("book_craft_ga");
+        return bookCraftAltRoot;
+    }
+
+    // The result-word echo clip for the page that's currently showing: กอ-อา-กา for the alt
+    // word (กา), ปอ-อา-ปา (soundPlaybackClip) otherwise.
+    private AudioClip ActiveSoundClip =>
+        (!string.IsNullOrEmpty(altWord) && activeResultWord == altWord && altSoundPlaybackClip != null)
+            ? altSoundPlaybackClip
+            : soundPlaybackClip;
 
     private string GetAssembledWord()
     {
@@ -556,18 +615,26 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         return (slotOccupants[0].Letter ?? "") + (slotOccupants[1].Letter ?? "");
     }
 
-    private bool IsTargetWord()
-    {
-        string target = string.IsNullOrEmpty(targetWord) ? "ปา" : targetWord;
-        return GetAssembledWord() == target;
-    }
-
     // Result for a correctly assembled word: crossfade to the book_craft_crow page
     // (revealing its prefab / stone / stone_example) and fade in the sound + mic icons.
     // Stays on this page — no scene transition.
     private IEnumerator WordResultRoutine()
     {
         ritualPlaying = true;
+        // Freeze buildLatencyMs now; the build-attempt + /grade fire together later at mic-stop
+        // (CompleteRecordingAndUpload), exactly like word_build_paa_polished — so the webapp pairs
+        // them into one row instead of logging a separate attempt at assembly time.
+        _latency.Complete(Time.realtimeSinceStartupAsDouble);
+
+        // Progression telemetry ("where they are"), mirroring word_build_paa_polished on a correct
+        // build: bump the sitting's cleared count and post a quest_completed event.
+        SessionContext clearedSession = SessionContext.Instance;
+        if (clearedSession != null) clearedSession.RecordCleared();
+        if (telemetry != null)
+        {
+            string kid = clearedSession != null && !string.IsNullOrEmpty(clearedSession.KidId) ? clearedSession.KidId : childId;
+            telemetry.PostProgressEvent(kid, "quest_completed", questId);
+        }
 
         for (int i = 0; i < stones.Count; i++)
         {
@@ -762,12 +829,17 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     {
         ResolveCraftResultUi();
 
+        // Reveal the page for the word that was actually built (ปา -> book_craft_pa,
+        // กา -> book_craft_ga); keep the other word's page hidden.
+        RectTransform crowRoot = activeBookRoot != null ? activeBookRoot : bookCraftCrowRoot;
+        RectTransform inactiveRoot = crowRoot == bookCraftAltRoot ? bookCraftCrowRoot : bookCraftAltRoot;
+
         CanvasGroup bookGroup = EnsureCanvasGroup(bookCraftRoot);
         CanvasGroup successGroup = EnsureCanvasGroup(bookCraftSuccessRoot);
-        CanvasGroup crowGroup = EnsureCanvasGroup(bookCraftCrowRoot);
+        CanvasGroup crowGroup = EnsureCanvasGroup(crowRoot);
         CanvasGroup stoneRootGroup = EnsureCanvasGroup(rectTransform);
 
-        Vector3 crowTargetScale = bookCraftCrowRoot != null ? bookCraftCrowRoot.localScale : Vector3.one;
+        Vector3 crowTargetScale = crowRoot != null ? crowRoot.localScale : Vector3.one;
         Vector3 crowStartScale = crowTargetScale * Mathf.Max(0.01f, craftResultStartScale);
 
         if (bookCraftRoot != null)
@@ -777,11 +849,12 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         }
 
         HideUi(bookCraftSuccessRoot);
+        HideUi(inactiveRoot);
 
-        if (bookCraftCrowRoot != null)
+        if (crowRoot != null)
         {
-            bookCraftCrowRoot.gameObject.SetActive(true);
-            bookCraftCrowRoot.localScale = crowStartScale;
+            crowRoot.gameObject.SetActive(true);
+            crowRoot.localScale = crowStartScale;
             SetUiGroup(crowGroup, 0f, false);
         }
 
@@ -800,9 +873,9 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             SetUiGroup(crowGroup, smooth, false);
             SetUiGroup(stoneRootGroup, 1f - smooth, false);
 
-            if (bookCraftCrowRoot != null)
+            if (crowRoot != null)
             {
-                bookCraftCrowRoot.localScale = Vector3.LerpUnclamped(crowStartScale, crowTargetScale, pop);
+                crowRoot.localScale = Vector3.LerpUnclamped(crowStartScale, crowTargetScale, pop);
             }
 
             yield return null;
@@ -817,9 +890,9 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             bookCraftRoot.gameObject.SetActive(false);
         }
 
-        if (bookCraftCrowRoot != null)
+        if (crowRoot != null)
         {
-            bookCraftCrowRoot.localScale = crowTargetScale;
+            crowRoot.localScale = crowTargetScale;
         }
 
         if (crowCraftHoldDuration > 0f)
@@ -842,7 +915,12 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         if (bookCraftCrowRoot == null)
         {
-            bookCraftCrowRoot = FindSiblingRect("book_craft_crow");
+            bookCraftCrowRoot = FindSiblingRect("book_craft_pa");
+        }
+
+        if (bookCraftAltRoot == null)
+        {
+            bookCraftAltRoot = FindSiblingRect("book_craft_ga");
         }
 
         if (soundButtonRoot == null)
@@ -861,12 +939,14 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         SetGraphicRaycastTargets(bookCraftRoot, false);
         SetGraphicRaycastTargets(bookCraftSuccessRoot, false);
         SetGraphicRaycastTargets(bookCraftCrowRoot, false);
+        SetGraphicRaycastTargets(bookCraftAltRoot, false);
     }
 
     private void HideCraftResultUi()
     {
         HideUi(bookCraftSuccessRoot);
         HideUi(bookCraftCrowRoot);
+        HideUi(bookCraftAltRoot);
         HideActionIcons();
     }
 
@@ -960,7 +1040,13 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             button.targetGraphic = image;
         }
 
-        button.onClick.RemoveListener(onClick);
+        // CutScene_bear has several MagicStonePuzzleController instances (book_craft, magic_stone,
+        // icon, ...) that ALL resolve the SAME shared icon/sound + icon/mic buttons and each wire
+        // their own handler — so one click used to fire every instance's record+/grade+build-attempt
+        // (= duplicate dashboard rows). Clear first so each action button keeps exactly ONE listener
+        // (the last instance to reveal owns it); word_build_paa_polished has a single controller so
+        // it never hit this. ponytail: dedupe-by-last-writer; fine because all instances share state.
+        button.onClick.RemoveAllListeners();
         button.onClick.AddListener(onClick);
 
         if (iconRoot == soundButtonRoot)
@@ -979,12 +1065,13 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
     private void HandleSoundButtonClicked()
     {
-        if (!CanUseActionButtons() || isRecording || isUploadingRecording || recordingSuccessPlaying)
+        if (!CanUseActionButtons() || isRecording || recordingSuccessPlaying)
         {
             return;
         }
 
-        if (soundPlaybackClip == null)
+        AudioClip clip = ActiveSoundClip;
+        if (clip == null)
         {
             Debug.LogWarning("Sound button has no playback clip assigned.");
             return;
@@ -997,7 +1084,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         }
 
         StopSoundPlayback();
-        source.clip = soundPlaybackClip;
+        source.clip = clip;
         source.Play();
         SetActionButtonInteractable(micButton, false);
         StartActionPulse(soundButtonRoot, ref soundPulseRoutine);
@@ -1006,7 +1093,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
     private void HandleMicButtonClicked()
     {
-        if (!CanUseActionButtons() || isUploadingRecording || recordingSuccessPlaying)
+        if (!CanUseActionButtons() || recordingSuccessPlaying)
         {
             return;
         }
@@ -1057,7 +1144,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         }
 
         StopActionPulse(soundButtonRoot, ref soundPulseRoutine);
-        SetActionButtonInteractable(micButton, CanUseActionButtons() && !isRecording && !isUploadingRecording);
+        SetActionButtonInteractable(micButton, CanUseActionButtons() && !isRecording);
         soundPlaybackRoutine = null;
     }
 
@@ -1075,7 +1162,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         }
 
         StopActionPulse(soundButtonRoot, ref soundPulseRoutine);
-        SetActionButtonInteractable(micButton, CanUseActionButtons() && !isRecording && !isUploadingRecording);
+        SetActionButtonInteractable(micButton, CanUseActionButtons() && !isRecording);
     }
 
     // ---- stone placement voice (pre-baked phoneme per stone) ----
@@ -1197,14 +1284,24 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         StopActionPulse(micButtonRoot, ref micPulseRoutine);
         SetActionButtonInteractable(soundButton, CanUseActionButtons());
 
-        // Stop the mic and POST the clip to /grade, exactly like word_build_paa_polished
-        // (fire-and-forget — grading is invisible and never blocks the success flow below).
+        // Stop the mic and report, exactly like word_build_paa_polished MicAndResolve: fire /grade
+        // and the build-attempt TOGETHER, once, at mic-stop, with the same word + outcome. This is
+        // what makes the webapp show a single row per recording (the build-attempt opens the row,
+        // /grade fills its accuracy + time) instead of a separate attempt logged at assembly time.
         if (uploadRecordingToBackend)
         {
             GradeApiClient grade = GetOrCreateGradeClient();
             if (grade != null)
             {
-                grade.StopAndGrade(BuildGradeContext(), null);
+                // Grade against the word that was actually crafted (ปา or กา) so its tag is "correct".
+                string target = !string.IsNullOrEmpty(activeResultWord) ? activeResultWord
+                    : (string.IsNullOrEmpty(targetWord) ? "ปา" : targetWord);
+                string tag = OutcomeTag(OutcomeEvaluator.Evaluate(GetAssembledWord(), target, knownWords));
+
+                GradeApiClient.GradeContext ctx = BuildGradeContext();
+                ctx.outcomeTag = tag; // grade carries the outcome too, like word_build's FireGrade
+                grade.StopAndGrade(ctx, OnGraded);
+                FireBuildAttempt(tag);
             }
         }
 
@@ -1229,9 +1326,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             }
         }
 
-        // Point the client at this scene's configured endpoint/token (e.g. port 8001) so the
-        // upload target stays editable from the MagicStonePuzzleController inspector.
-        gradeClient.Configure(recordingUploadUrl, GetAuthorizationHeaderValue());
+        // GradeApiClient self-configures from its own serialized gradeUrl/authorization
+        // (default points at :8001 to match this scene's backend).
         return gradeClient;
     }
 
@@ -1245,30 +1341,51 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         return new GradeApiClient.GradeContext
         {
-            targetWordId = targetWordId,
+            targetWordId = !string.IsNullOrEmpty(activeWordId) ? activeWordId : targetWordId,
             childId = kid,
             questId = questId,
             sessionId = sid,
             sceneId = recordingSceneId,
             outcomeTag = null,
-            buildLatencyMs = 0
+            buildLatencyMs = _latency.HasResult ? _latency.TotalMs : 0
         };
     }
 
-    private int GetRecordedSampleCount()
+    // Durable telemetry, mirroring word_build_paa_polished FireBuildAttempt: one row per build try
+    // (target word + what was assembled + outcome + latency). Independent of the mic, so it lands
+    // even if /grade gets nothing.
+    private void FireBuildAttempt(string outcomeTag)
     {
-        if (activeRecordingClip == null)
-        {
-            return 0;
-        }
+        long latency = _latency.HasResult ? _latency.TotalMs : 0;
+        SessionContext session = SessionContext.Instance;
+        if (session != null) session.RecordAttempt(latency);
 
-        int position = Microphone.GetPosition(activeMicrophoneDevice);
-        if (position <= 0 && Time.realtimeSinceStartup - recordingStartedAt >= Mathf.Max(1f, maxRecordingSeconds) - 0.1f)
-        {
-            position = activeRecordingClip.samples;
-        }
+        if (telemetry == null) telemetry = FindFirstObjectByType<TelemetryClient>();
+        if (telemetry == null) return;
 
-        return Mathf.Clamp(position, 0, activeRecordingClip.samples);
+        string kid = session != null && !string.IsNullOrEmpty(session.KidId) ? session.KidId : childId;
+        string sid = session != null ? session.SessionId : null;
+        string wordId = !string.IsNullOrEmpty(activeWordId) ? activeWordId : targetWordId;
+        telemetry.PostBuildAttempt(kid, sid, wordId, GetAssembledWord(), outcomeTag, latency);
+    }
+
+    private static string OutcomeTag(Outcome outcome)
+    {
+        switch (outcome)
+        {
+            case Outcome.Correct: return "correct";
+            case Outcome.WrongWord: return "wrong_word";
+            default: return "non_word";
+        }
+    }
+
+    // Mirror word_build_paa_polished: feed the hidden /grade result back into the sitting
+    // aggregate so the bear encounter groups under the same session KPIs.
+    private void OnGraded(GradeResponse r)
+    {
+        if (r == null) return;
+        if (SessionContext.Instance != null) SessionContext.Instance.RecordGrade(r.par);
+        Debug.Log($"[MagicStone] /grade (hidden): PAR {r.par:0.00} grade {r.grade}");
     }
 
     private void StopRecordingWithoutUpload()
@@ -1279,26 +1396,15 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             micRecordingRoutine = null;
         }
 
-        if (isRecording || activeRecordingClip != null)
-        {
-            if (!string.IsNullOrEmpty(activeMicrophoneDevice) && Microphone.IsRecording(activeMicrophoneDevice))
-            {
-                Microphone.End(activeMicrophoneDevice);
-            }
-        }
-
         isRecording = false;
-        activeRecordingClip = null;
-        activeMicrophoneDevice = null;
         StopActionPulse(micButtonRoot, ref micPulseRoutine);
         SetActionButtonInteractable(soundButton, CanUseActionButtons());
-        SetActionButtonInteractable(micButton, CanUseActionButtons() && !isUploadingRecording);
+        SetActionButtonInteractable(micButton, CanUseActionButtons());
     }
 
     private IEnumerator RecordingSuccessRoutine()
     {
         recordingSuccessPlaying = true;
-        isUploadingRecording = false;
         SetActionButtonInteractable(soundButton, false);
         SetActionButtonInteractable(micButton, false);
         StopActionPulse(soundButtonRoot, ref soundPulseRoutine);
@@ -1420,140 +1526,6 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         return image;
     }
 
-    private IEnumerator UploadRecordingRoutine(byte[] wavBytes, int sampleRate, int channels, int sampleCount)
-    {
-        if (string.IsNullOrWhiteSpace(recordingUploadUrl))
-        {
-            Debug.LogWarning("Recording upload URL is empty. Set recordingUploadUrl on MagicStonePuzzleController to send audio to the backend.");
-            SetActionButtonInteractable(micButton, CanUseActionButtons());
-            uploadRecordingRoutine = null;
-            yield break;
-        }
-
-        if (string.IsNullOrWhiteSpace(targetWordId) || string.IsNullOrWhiteSpace(childId))
-        {
-            Debug.LogWarning("Recording backend fields are incomplete. Set targetWordId and childId on MagicStonePuzzleController.");
-            SetActionButtonInteractable(micButton, CanUseActionButtons());
-            uploadRecordingRoutine = null;
-            yield break;
-        }
-
-        isUploadingRecording = true;
-        SetActionButtonInteractable(soundButton, false);
-        SetActionButtonInteractable(micButton, false);
-        StartActionPulse(micButtonRoot, ref micPulseRoutine);
-
-        WWWForm form = new WWWForm();
-        form.AddBinaryData(GetSafeUploadFieldName(), wavBytes, GetSafeRecordingFileName(), "audio/wav");
-        form.AddField("targetWordId", targetWordId.Trim());
-        form.AddField("childId", childId.Trim());
-        form.AddField("sampleRate", sampleRate);
-        form.AddField("channels", channels);
-        form.AddField("sampleCount", sampleCount);
-
-        if (!string.IsNullOrWhiteSpace(questId))
-        {
-            form.AddField("questId", questId.Trim());
-        }
-
-        if (!string.IsNullOrWhiteSpace(sessionId))
-        {
-            form.AddField("sessionId", sessionId.Trim());
-        }
-
-        if (!string.IsNullOrWhiteSpace(recordingSceneId))
-        {
-            form.AddField("sceneId", recordingSceneId.Trim());
-        }
-
-        using (UnityWebRequest request = UnityWebRequest.Post(recordingUploadUrl.Trim(), form))
-        {
-            string authorizationHeaderValue = GetAuthorizationHeaderValue();
-            if (!string.IsNullOrWhiteSpace(authorizationHeaderValue))
-            {
-                request.SetRequestHeader("Authorization", authorizationHeaderValue);
-            }
-
-            yield return request.SendWebRequest();
-
-            if (request.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError($"Recording upload failed: {request.error} {request.downloadHandler.text}");
-            }
-            else
-            {
-                Debug.Log($"Recording uploaded successfully. {request.downloadHandler.text}");
-            }
-        }
-
-        isUploadingRecording = false;
-        StopActionPulse(micButtonRoot, ref micPulseRoutine);
-        SetActionButtonInteractable(soundButton, CanUseActionButtons());
-        SetActionButtonInteractable(micButton, CanUseActionButtons());
-        uploadRecordingRoutine = null;
-    }
-
-    // Background POST to /grade with NO UI side effects (no button toggling, no pulses, no
-    // isUploadingRecording). The mic flow's success animation + scene transition own the UI;
-    // grading is fire-and-forget, mirroring GradeApiClient in word_build_paa_polished.
-    private IEnumerator UploadRecordingFireAndForget(byte[] wavBytes, int sampleRate, int channels, int sampleCount)
-    {
-        if (string.IsNullOrWhiteSpace(recordingUploadUrl))
-        {
-            Debug.LogWarning("Recording upload URL is empty. Set recordingUploadUrl on MagicStonePuzzleController to send audio to the backend.");
-            yield break;
-        }
-
-        if (string.IsNullOrWhiteSpace(targetWordId) || string.IsNullOrWhiteSpace(childId))
-        {
-            Debug.LogWarning("Recording backend fields are incomplete. Set targetWordId and childId on MagicStonePuzzleController.");
-            yield break;
-        }
-
-        WWWForm form = new WWWForm();
-        form.AddBinaryData(GetSafeUploadFieldName(), wavBytes, GetSafeRecordingFileName(), "audio/wav");
-        form.AddField("targetWordId", targetWordId.Trim());
-        form.AddField("childId", childId.Trim());
-        form.AddField("sampleRate", sampleRate);
-        form.AddField("channels", channels);
-        form.AddField("sampleCount", sampleCount);
-
-        if (!string.IsNullOrWhiteSpace(questId))
-        {
-            form.AddField("questId", questId.Trim());
-        }
-
-        if (!string.IsNullOrWhiteSpace(sessionId))
-        {
-            form.AddField("sessionId", sessionId.Trim());
-        }
-
-        if (!string.IsNullOrWhiteSpace(recordingSceneId))
-        {
-            form.AddField("sceneId", recordingSceneId.Trim());
-        }
-
-        using (UnityWebRequest request = UnityWebRequest.Post(recordingUploadUrl.Trim(), form))
-        {
-            string authorizationHeaderValue = GetAuthorizationHeaderValue();
-            if (!string.IsNullOrWhiteSpace(authorizationHeaderValue))
-            {
-                request.SetRequestHeader("Authorization", authorizationHeaderValue);
-            }
-
-            yield return request.SendWebRequest();
-
-            if (request.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError($"Recording upload failed: {request.error} {request.downloadHandler.text}");
-            }
-            else
-            {
-                Debug.Log($"Recording uploaded successfully. {request.downloadHandler.text}");
-            }
-        }
-    }
-
     private void StopUploadFeedback()
     {
         if (uploadRecordingRoutine != null)
@@ -1562,29 +1534,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             uploadRecordingRoutine = null;
         }
 
-        isUploadingRecording = false;
         StopActionPulse(micButtonRoot, ref micPulseRoutine);
-    }
-
-    private string GetSafeUploadFieldName()
-    {
-        return string.IsNullOrWhiteSpace(recordingFileFieldName) ? "audio" : recordingFileFieldName.Trim();
-    }
-
-    private string GetSafeRecordingFileName()
-    {
-        return string.IsNullOrWhiteSpace(recordingFileName) ? "recording.wav" : recordingFileName.Trim();
-    }
-
-    private string GetAuthorizationHeaderValue()
-    {
-        if (string.IsNullOrWhiteSpace(backendAuthToken))
-        {
-            return "";
-        }
-
-        string token = backendAuthToken.Trim();
-        return token.StartsWith("Bearer ", System.StringComparison.OrdinalIgnoreCase) ? token : "Bearer " + token;
     }
 
     private void CaptureActionIconBaseScale(RectTransform iconRoot)
@@ -1876,7 +1826,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
     private string GetNextSceneName()
     {
-        return string.IsNullOrWhiteSpace(nextSceneName) ? DefaultNextSceneName : nextSceneName.Trim();
+        string scene = !string.IsNullOrWhiteSpace(activeSceneName) ? activeSceneName : nextSceneName;
+        return string.IsNullOrWhiteSpace(scene) ? DefaultNextSceneName : scene.Trim();
     }
 
     private void PlaySceneTransition(string sceneName, Image flashImage)

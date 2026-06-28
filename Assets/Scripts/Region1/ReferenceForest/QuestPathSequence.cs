@@ -79,7 +79,7 @@ public sealed class QuestPathSequence : MonoBehaviour
 
     [Header("Bear encounter scene link")]
     [Tooltip("Scene loaded when the hero reaches the first quest (the bear word-build encounter).")]
-    [SerializeField] private string bearEncounterSceneName = "word_build_paa_polished";
+    [SerializeField] private string bearEncounterSceneName = "CutScene_bear";
     [Tooltip("Black fade-out duration before loading the bear encounter scene.")]
     [SerializeField] private float sceneExitCoverDuration = 1.0f;
 

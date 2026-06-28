@@ -32,8 +32,9 @@ namespace WordFlow.Adventure.Net
             string url = $"{ttsUrl.Trim()}?line_id={UnityWebRequest.EscapeURL(lineId)}";
             using (UnityWebRequest req = UnityWebRequestMultimedia.GetAudioClip(url, AudioType.WAV))
             {
-                if (!string.IsNullOrWhiteSpace(authorization))
-                    req.SetRequestHeader("Authorization", authorization.Trim());
+                string bearer = ResolveBearer();
+                if (!string.IsNullOrWhiteSpace(bearer))
+                    req.SetRequestHeader("Authorization", bearer);
                 yield return req.SendWebRequest();
 
                 if (req.result != UnityWebRequest.Result.Success)
@@ -49,6 +50,14 @@ namespace WordFlow.Adventure.Net
                 if (clip != null) { clip.name = lineId; _cache[lineId] = clip; }
                 onResult?.Invoke(clip);
             }
+        }
+
+        private string ResolveBearer()
+        {
+            if (AuthSession.Instance != null && !string.IsNullOrEmpty(AuthSession.Instance.IdToken))
+                return AuthSession.Instance.BearerHeader;
+
+            return string.IsNullOrWhiteSpace(authorization) ? null : authorization.Trim();
         }
     }
 }

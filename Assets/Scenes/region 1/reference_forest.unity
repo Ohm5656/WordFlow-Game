@@ -5893,6 +5893,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1472258759}
     m_Modifications:
+    - target: {fileID: 42595278278670128, guid: ad8fac13aaed7564794fbe86551e6b50, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 189290497086464180, guid: ad8fac13aaed7564794fbe86551e6b50, type: 3}
       propertyPath: m_Controller
       value: 
@@ -5907,7 +5911,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2520188153642704604, guid: ad8fac13aaed7564794fbe86551e6b50, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8863357855445527727, guid: ad8fac13aaed7564794fbe86551e6b50, type: 3}
       propertyPath: m_LocalScale.x
@@ -24456,7 +24460,7 @@ MonoBehaviour:
   walkAnimSpeedParam: 1
   faceHoldBeforeQuest: 2
   enableVibration: 1
-  bearEncounterSceneName: word_build_paa_polished
+  bearEncounterSceneName: CutScene_bear
   sceneExitCoverDuration: 1
   crow1PointA: {fileID: 11856744}
   crow1PointB: {fileID: 1972073421}
@@ -52134,7 +52138,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6062732989050541117, guid: aeb32499504499947a904448d66cf1dc, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

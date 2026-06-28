@@ -128,8 +128,9 @@ namespace WordFlow.Adventure.Net
                 req.uploadHandler = new UploadHandlerRaw(payload);
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
-                if (!string.IsNullOrWhiteSpace(authorization))
-                    req.SetRequestHeader("Authorization", authorization.Trim());
+                string bearer = ResolveBearer();
+                if (!string.IsNullOrWhiteSpace(bearer))
+                    req.SetRequestHeader("Authorization", bearer);
                 yield return req.SendWebRequest();
 
                 long code = req.responseCode;
@@ -152,6 +153,14 @@ namespace WordFlow.Adventure.Net
                     _queue.OnFailed(Time.realtimeSinceStartup);
                 }
             }
+        }
+
+        private string ResolveBearer()
+        {
+            if (AuthSession.Instance != null && !string.IsNullOrEmpty(AuthSession.Instance.IdToken))
+                return AuthSession.Instance.BearerHeader;
+
+            return string.IsNullOrWhiteSpace(authorization) ? null : authorization.Trim();
         }
 
         // ---- disk journal ----

@@ -24,7 +24,7 @@ public sealed class CrowCutsceneController : MonoBehaviour
     [SerializeField] private float exitHoldDuration = 0.25f;
 
     [Header("Return")]
-    [SerializeField] private string returnSceneName = "cut_scene1";
+    [SerializeField] private string returnSceneName = "CutScene_bear";
     [SerializeField] private bool playBlackFadeInBeforeReturn = true;
     [SerializeField] private float blackFadeInDuration = 0.5f;
 
@@ -78,7 +78,7 @@ public sealed class CrowCutsceneController : MonoBehaviour
             yield return FadeRoutine(0f, 1f, blackFadeInDuration, false);
         }
 
-        SceneManager.LoadScene(string.IsNullOrWhiteSpace(returnSceneName) ? "cut_scene1" : returnSceneName.Trim());
+        SceneManager.LoadScene(string.IsNullOrWhiteSpace(returnSceneName) ? "CutScene_bear" : returnSceneName.Trim());
     }
 
     private void ResolveReferences()

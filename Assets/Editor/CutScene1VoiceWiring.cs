@@ -8,7 +8,7 @@ using WordFlow.Adventure.Net;
 // Runs atomically in a single menu invocation (edit mode) so nothing is lost to a domain reload.
 public static class CutScene1VoiceWiring
 {
-    private const string ScenePath = "Assets/Scenes/region 1/cut_scene1.unity";
+    private const string ScenePath = "Assets/Scenes/region 1/CutScene_bear.unity";
     private const string GradeUrl = "http://127.0.0.1:8001/api/v1/grade";
 
     // Phoneme clips reused from the word_build_paa_polished stone data (by GUID).
@@ -22,7 +22,7 @@ public static class CutScene1VoiceWiring
     {
         var scene = EditorSceneManager.GetActiveScene();
         string activePath = (scene.path ?? "").Replace("\\", "/");
-        if (!activePath.EndsWith("cut_scene1.unity"))
+        if (!activePath.EndsWith("CutScene_bear.unity"))
         {
             scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         }
