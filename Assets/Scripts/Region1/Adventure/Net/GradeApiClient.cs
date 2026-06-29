@@ -24,6 +24,15 @@ namespace WordFlow.Adventure.Net
 
         public bool IsRecording => _isRecording;
 
+        /// <summary>Override the serialized endpoint/token at runtime so a scene/controller can
+        /// point this client at its configured /grade URL (e.g. :8001). Blank args keep the
+        /// serialized defaults.</summary>
+        public void Configure(string url, string auth)
+        {
+            if (!string.IsNullOrWhiteSpace(url)) gradeUrl = url;
+            if (!string.IsNullOrWhiteSpace(auth)) authorization = auth;
+        }
+
         public struct GradeContext
         {
             public string targetWordId;
