@@ -57,6 +57,8 @@ public sealed class BearCutscene : MonoBehaviour
     [SerializeField] private string nextScene = "";
     [Tooltip("Set the forest's ResumeAtBeat2 flag before loading nextScene so reference_forest skips the bear intro (Beat 1) and resumes at the crow quest (Beat 2).")]
     [SerializeField] private bool resumeForestAtBeat2 = false;
+    [Tooltip("Optional epilogue (e.g. owl speech in Success_pa) that plays after the bear fade-out but before the next scene loads.")]
+    [SerializeField] private SuccessPaOwlEpilogue owlEpilogue;
 
     [SerializeField] private Step[] sequence =
     {
@@ -196,6 +198,7 @@ public sealed class BearCutscene : MonoBehaviour
         if (!string.IsNullOrEmpty(nextScene) || endFadeOutDuration > 0f)
         {
             yield return FadeOutAll(endFadeOutDuration);
+            if (owlEpilogue != null) yield return owlEpilogue.Play();
             // Tell reference_forest to skip Beat 1 (bear) and resume at Beat 2 (crow quest).
             if (resumeForestAtBeat2) BearEncounterFlow.ResumeAtBeat2 = true;
             if (!string.IsNullOrEmpty(nextScene)) SceneManager.LoadScene(nextScene.Trim());

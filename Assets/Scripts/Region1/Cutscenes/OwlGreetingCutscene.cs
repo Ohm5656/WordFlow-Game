@@ -57,21 +57,38 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [SerializeField] private bool restoreBearScaleAfterFocus = true;
     [SerializeField] private bool restoreBackgroundAfterBearFocus = true;
 
-    [Header("Voice")]
+    [Header("Voice — Greeting (3 วรรค)")]
+    [Tooltip("วรรค1: ระวังนะ!")]
+    [SerializeField] private AudioClip greetingPhrase1Clip;
+    [Tooltip("วรรค2: เจ้าหมีตัวใหญ่บุกเข้ามาแล้ว")]
+    [SerializeField] private AudioClip greetingPhrase2Clip;
+    [Tooltip("วรรค3: เราต้องช่วยกันไล่มันไป")]
+    [SerializeField] private AudioClip greetingPhrase3Clip;
+    [HideInInspector] [SerializeField] private AudioClip greetingVoiceClip; // legacy fallback (วรรค1 ถ้าไม่ assign phrase clips)
+
+    [Header("Voice — Bear Focus")]
     [SerializeField] private AudioSource voiceAudioSource;
-    [SerializeField] private AudioClip greetingVoiceClip;
     [SerializeField] private AudioClip bearFocusLookVoiceClip;
     [SerializeField] private AudioClip bearFocusMissionVoiceClip;
 
     [Header("Voice (TTS) — id wins over the baked clip; falls back to the clip on any failure")]
     [SerializeField] private TtsApiClient ttsClient;
-    [Tooltip("/tts line for the first intro greeting (e.g. paa_intro_owl_1).")]
-    [SerializeField] private string greetingLineId;
+    [Tooltip("/tts line for greeting วรรค1 (ระวังนะ!).")]
+    [SerializeField] private string greetingPhrase1LineId;
+    [Tooltip("/tts line for greeting วรรค2 (เจ้าหมีตัวใหญ่บุกเข้ามาแล้ว).")]
+    [SerializeField] private string greetingPhrase2LineId;
+    [Tooltip("/tts line for greeting วรรค3 (เราต้องช่วยกันไล่มันไป).")]
+    [SerializeField] private string greetingPhrase3LineId;
+    [HideInInspector] [SerializeField] private string greetingLineId; // legacy fallback TTS for วรรค1
     [Tooltip("/tts line for the second intro line (bear-focus 'look/mission' clip; e.g. paa_intro_owl_2).")]
     [SerializeField] private string bearFocusLookLineId;
     [SerializeField] private float voiceStartDelay = 0f;
     [SerializeField] private float bearFocusVoiceGap = 0.05f;
     [SerializeField] private bool useVoiceClipLengthForTalkDuration = true;
+
+    [Header("Hello Animation — plays once before the first greeting phrase")]
+    [Tooltip("Wave animation played once per scene before talking starts.")]
+    [SerializeField] private OwlHelloSequence owlHello;
 
     [Header("Talking Prefab Animation")]
     [Tooltip("Animator on the owl prefab under OwlRoot. Empty = find the first child Animator (the Animator on OwlRoot itself is ignored).")]
@@ -79,22 +96,32 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [SerializeField] private string talkingStateName = "Owl";
     // Per-phrase (วรรค) owl mouth speed: Seconds Per Loop = how long one mouth loop takes for that
     // line (smaller = faster); >0 uses it, 0 falls back to that line's Animation Speed multiplier.
-    [Tooltip("Phrase 1 — greeting. Animation Speed multiplier (used when its Seconds Per Loop is 0).")]
+    [Tooltip("Greeting วรรค1 (ระวังนะ!) — Animation Speed multiplier (used when Seconds Per Loop is 0).")]
     [SerializeField, Min(0.01f)] private float talkingAnimationSpeed = 1f;
-    [Tooltip("Phrase 1 — greeting. Seconds per mouth loop (lip-sync knob; 0 = use Animation Speed).")]
+    [Tooltip("Greeting วรรค1 (ระวังนะ!) — Seconds per mouth loop (0 = use Animation Speed).")]
     [SerializeField, Min(0f)] private float talkingSecondsPerLoop = 0f;
-    [Tooltip("Phrase 2 — bear-focus 'look' line. Animation Speed multiplier.")]
+    [Tooltip("Greeting วรรค2 (เจ้าหมีตัวใหญ่บุกเข้ามาแล้ว) — Animation Speed multiplier.")]
+    [SerializeField, Min(0.01f)] private float greetingPhrase2AnimationSpeed = 1f;
+    [Tooltip("Greeting วรรค2 — Seconds per mouth loop (0 = use Animation Speed).")]
+    [SerializeField, Min(0f)] private float greetingPhrase2SecondsPerLoop = 0f;
+    [Tooltip("Greeting วรรค3 (เราต้องช่วยกันไล่มันไป) — Animation Speed multiplier.")]
+    [SerializeField, Min(0.01f)] private float greetingPhrase3AnimationSpeed = 1f;
+    [Tooltip("Greeting วรรค3 — Seconds per mouth loop (0 = use Animation Speed).")]
+    [SerializeField, Min(0f)] private float greetingPhrase3SecondsPerLoop = 0f;
+    [Tooltip("Bear-focus 'look' line — Animation Speed multiplier.")]
     [SerializeField, Min(0.01f)] private float bearFocusLookAnimationSpeed = 1f;
-    [Tooltip("Phrase 2 — bear-focus 'look' line. Seconds per mouth loop (0 = use Animation Speed).")]
+    [Tooltip("Bear-focus 'look' line — Seconds per mouth loop (0 = use Animation Speed).")]
     [SerializeField, Min(0f)] private float bearFocusLookSecondsPerLoop = 0f;
-    [Tooltip("Phrase 3 — bear-focus 'mission' line. Animation Speed multiplier.")]
+    [Tooltip("Bear-focus 'mission' line — Animation Speed multiplier.")]
     [SerializeField, Min(0.01f)] private float bearFocusMissionAnimationSpeed = 1f;
-    [Tooltip("Phrase 3 — bear-focus 'mission' line. Seconds per mouth loop (0 = use Animation Speed).")]
+    [Tooltip("Bear-focus 'mission' line — Seconds per mouth loop (0 = use Animation Speed).")]
     [SerializeField, Min(0f)] private float bearFocusMissionSecondsPerLoop = 0f;
     [Tooltip("Hide the owl prefab whenever no voice line is playing.")]
     [SerializeField] private bool hideTalkingPrefabWhenSilent = true;
     [Tooltip("Seconds to fade the talking owl in when it enters and out when it leaves. 0 = pop instantly.")]
     [SerializeField, Min(0f)] private float talkingFadeDuration = 0.35f;
+    [Tooltip("After a whole talking round finishes (all its phrases), freeze the owl on its current frame for this long before fading out. 0 = no hold.")]
+    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 1f;
 
     [Header("Book Reveal")]
     [SerializeField] private bool playBookRevealAfterBearFocus = true;
@@ -201,8 +228,14 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     {
         if (ttsClient == null) ttsClient = FindObjectOfType<TtsApiClient>();
         if (ttsClient == null) return;
-        if (!string.IsNullOrWhiteSpace(greetingLineId))
-            ttsClient.GetLine(greetingLineId, c => { if (c != null) greetingVoiceClip = c; });
+        if (!string.IsNullOrWhiteSpace(greetingPhrase1LineId))
+            ttsClient.GetLine(greetingPhrase1LineId, c => { if (c != null) greetingPhrase1Clip = c; });
+        else if (!string.IsNullOrWhiteSpace(greetingLineId))
+            ttsClient.GetLine(greetingLineId, c => { if (c != null) { greetingPhrase1Clip = c; greetingVoiceClip = c; } });
+        if (!string.IsNullOrWhiteSpace(greetingPhrase2LineId))
+            ttsClient.GetLine(greetingPhrase2LineId, c => { if (c != null) greetingPhrase2Clip = c; });
+        if (!string.IsNullOrWhiteSpace(greetingPhrase3LineId))
+            ttsClient.GetLine(greetingPhrase3LineId, c => { if (c != null) greetingPhrase3Clip = c; });
         if (!string.IsNullOrWhiteSpace(bearFocusLookLineId))
             ttsClient.GetLine(bearFocusLookLineId, c => { if (c != null) bearFocusLookVoiceClip = c; });
     }
@@ -334,8 +367,23 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             yield return new WaitForSeconds(holdAfterZoom);
         }
 
+        if (owlHello != null)
+        {
+            // Match the wave's frame rate to the talking owl's so the seam owl_hello->owl is continuous.
+            float talkFps = GetTalkingDisplayFps(talkingAnimationSpeed, talkingSecondsPerLoop);
+            if (talkFps > 0f) owlHello.SetPlaybackFps(talkFps);
+            owlHello.SetHideOnComplete(false); // keep the last frame so we can crossfade it out
+            yield return owlHello.Play();
+            // Crossfade: owl_hello fades out while the talking owl (below it) fades in — smooth dissolve.
+            StartCoroutine(owlHello.FadeOut(talkingFadeDuration));
+        }
+
+        // ใช้ greetingPhrase1Clip ก่อน ถ้าไม่ได้ assign ให้ fallback ไปที่ greetingVoiceClip (legacy)
+        AudioClip phrase1 = greetingPhrase1Clip != null ? greetingPhrase1Clip : greetingVoiceClip;
         yield return PlayTalkingSequence(greetingDuration, null,
-            new TalkLine(greetingVoiceClip, talkingAnimationSpeed, talkingSecondsPerLoop));
+            new TalkLine(phrase1, talkingAnimationSpeed, talkingSecondsPerLoop),
+            new TalkLine(greetingPhrase2Clip, greetingPhrase2AnimationSpeed, greetingPhrase2SecondsPerLoop),
+            new TalkLine(greetingPhrase3Clip, greetingPhrase3AnimationSpeed, greetingPhrase3SecondsPerLoop));
 
         if (!UsesTalkingPrefabAnimator)
         {
@@ -814,14 +862,25 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
                 fadedIn = true;
             }
 
-            if (fade && i == lastIndex)
+            // Talk visualization. On the last phrase, reserve the fade-out window.
+            float talkPortion = (fade && i == lastIndex)
+                ? Mathf.Max(0f, hold - talkingFadeDuration)
+                : hold;
+            yield return PlayGreetingFrames(talkPortion, frameSequence);
+
+            // End of the whole round (last phrase): freeze on the current frame, hold, then fade out.
+            if (i == lastIndex)
             {
-                yield return PlayGreetingFrames(Mathf.Max(0f, hold - talkingFadeDuration), frameSequence);
-                yield return FadeTalkingAlpha(1f, 0f, talkingFadeDuration);
-            }
-            else
-            {
-                yield return PlayGreetingFrames(hold, frameSequence);
+                if (holdFrozenAfterRound > 0f)
+                {
+                    if (UsesTalkingPrefabAnimator) talkingAnimator.speed = 0f;
+                    yield return new WaitForSeconds(holdFrozenAfterRound);
+                }
+
+                if (fade)
+                {
+                    yield return FadeTalkingAlpha(1f, 0f, talkingFadeDuration);
+                }
             }
         }
 
@@ -874,6 +933,9 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
     private void PreloadVoiceClips()
     {
+        LoadVoiceClip(greetingPhrase1Clip);
+        LoadVoiceClip(greetingPhrase2Clip);
+        LoadVoiceClip(greetingPhrase3Clip);
         LoadVoiceClip(greetingVoiceClip);
         LoadVoiceClip(bearFocusLookVoiceClip);
         LoadVoiceClip(bearFocusMissionVoiceClip);
@@ -1255,6 +1317,34 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         talkingRectTransform.anchoredPosition = talkingPlacedPosition;
         talkingRectTransform.localScale = talkingPlacedScale;
         talkingRectTransform.localRotation = talkingPlacedRotation;
+    }
+
+    // Effective sprite-swap rate (frames/sec) the talking owl runs at for the given line, so the
+    // owl_hello wave can match it and the seam has no cadence jump. 0 = unknown (caller keeps default).
+    private float GetTalkingDisplayFps(float speed, float secondsPerLoop)
+    {
+        if (!UsesTalkingPrefabAnimator) return 0f;
+        RuntimeAnimatorController controller = talkingAnimator.runtimeAnimatorController;
+        if (controller == null || controller.animationClips == null) return 0f;
+
+        AnimationClip clip = null;
+        AnimationClip[] clips = controller.animationClips;
+        for (int i = 0; i < clips.Length; i++)
+        {
+            if (clips[i] == null) continue;
+            if (clip == null) clip = clips[i];
+            if (string.Equals(clips[i].name, talkingStateName, StringComparison.OrdinalIgnoreCase))
+            {
+                clip = clips[i];
+                break;
+            }
+        }
+
+        if (clip == null || clip.length <= 0f || clip.frameRate <= 0f) return 0f;
+        float animSpeed = secondsPerLoop > 0f
+            ? clip.length / Mathf.Max(0.01f, secondsPerLoop)
+            : Mathf.Max(0.01f, speed);
+        return clip.frameRate * animSpeed;
     }
 
     private float GetTalkingAnimatorSpeed()
