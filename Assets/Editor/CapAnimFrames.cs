@@ -13,6 +13,7 @@ public static class CapAnimFrames
     static readonly string[] Folders =
     {
         "Assets/Art/quest_map/owl",
+        "Assets/Art/quest_map/owl_hello",
         "Assets/Art/quest_map/bear/Thow_cropped",
     };
 

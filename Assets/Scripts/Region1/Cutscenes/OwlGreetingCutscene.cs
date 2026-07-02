@@ -313,9 +313,10 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         MagicStonePuzzleController puzzle = GetMagicStonePuzzle();
         if (puzzle != null)
         {
+            bool simultaneous = MagicStonePuzzleController.ConsumeRetryAfterAlt();
             puzzle.PrepareForIntro();
             yield return null;
-            yield return puzzle.PlayIntroReveal();
+            yield return puzzle.PlayIntroReveal(simultaneous);
         }
 
         greetingRoutine = null;

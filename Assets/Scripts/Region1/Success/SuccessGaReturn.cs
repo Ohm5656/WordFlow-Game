@@ -37,6 +37,7 @@ public sealed class SuccessGaReturn : MonoBehaviour
         fade.color = c;
 
         MagicStonePuzzleController.RequestRetryAfterCrow(); // back to assembly, skip the intro walk
+        MagicStonePuzzleController.RequestRetryAfterAlt();  // signal: show stones all-at-once on return
         SceneManager.LoadScene(returnSceneName);
     }
 

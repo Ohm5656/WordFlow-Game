@@ -13,6 +13,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private readonly BuildLatencyTracker _latency = new BuildLatencyTracker();
     private const string DefaultNextSceneName = "Assets/Scenes/region 1/practice.unity";
     private const string RetryAfterCrowPlayerPrefsKey = "MagicStonePuzzleRetryAfterCrow";
+    private const string RetryAfterAltWordPlayerPrefsKey = "MagicStonePuzzleRetryAfterAlt";
 
     [Header("Stones")]
     [SerializeField] private RectTransform stonePa;
@@ -108,6 +109,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [Header("Stone Placement Voice (pre-baked, like word_build_paa_polished)")]
     [Tooltip("AudioClip per stone, paired index-for-index with stoneLetters. Played when the stone snaps into a slot.")]
     [SerializeField] private AudioClip[] stonePlacementClips;
+    [Tooltip("Volume scale per stone, paired index-for-index with stoneLetters (0-1). Use to equalise clips that were recorded/TTS-generated at different loudness levels. Defaults to 1 if shorter than stoneLetters.")]
+    [SerializeField] private float[] stonePlacementVolumes;
     [Tooltip("While a stone's placement sound is still playing, block placing the next stone into a slot.")]
     [SerializeField] private bool blockPlacementWhileVoicePlaying = true;
     [Tooltip("Auto-play the result word clip (soundPlaybackClip) once when the sound/mic icons appear (the post-build echo the child copies).")]
@@ -187,6 +190,20 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         return true;
     }
 
+    public static void RequestRetryAfterAlt()
+    {
+        PlayerPrefs.SetInt(RetryAfterAltWordPlayerPrefsKey, 1);
+        PlayerPrefs.Save();
+    }
+
+    public static bool ConsumeRetryAfterAlt()
+    {
+        if (PlayerPrefs.GetInt(RetryAfterAltWordPlayerPrefsKey, 0) != 1) return false;
+        PlayerPrefs.DeleteKey(RetryAfterAltWordPlayerPrefsKey);
+        PlayerPrefs.Save();
+        return true;
+    }
+
     private void Awake()
     {
         rectTransform = transform as RectTransform;
@@ -249,7 +266,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         HideCraftResultUi();
     }
 
-    public IEnumerator PlayIntroReveal()
+    public IEnumerator PlayIntroReveal(bool simultaneous = false)
     {
         ResolveStones();
 
@@ -263,13 +280,22 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             yield break;
         }
 
-        for (int i = 0; i < stones.Count; i++)
-        {
-            yield return stones[i].Reveal(revealDuration, new Vector2(0f, revealYOffset), Mathf.Max(0.01f, revealStartScale));
+        Vector2 offset = new Vector2(0f, revealYOffset);
+        float startScale = Mathf.Max(0.01f, revealStartScale);
 
-            if (i < stones.Count - 1 && revealDelayBetweenStones > 0f)
+        if (simultaneous)
+        {
+            for (int i = 0; i < stones.Count; i++)
+                StartCoroutine(stones[i].Reveal(revealDuration, offset, startScale));
+            yield return new WaitForSeconds(revealDuration);
+        }
+        else
+        {
+            for (int i = 0; i < stones.Count; i++)
             {
-                yield return new WaitForSeconds(revealDelayBetweenStones);
+                yield return stones[i].Reveal(revealDuration, offset, startScale);
+                if (i < stones.Count - 1 && revealDelayBetweenStones > 0f)
+                    yield return new WaitForSeconds(revealDelayBetweenStones);
             }
         }
 
@@ -1189,6 +1215,17 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         return null;
     }
 
+    private float GetPlacementVolumeForStone(MagicStonePuzzleStone stone)
+    {
+        if (stone == null || stonePlacementVolumes == null || stoneLetters == null) return 1f;
+        string letter = stone.Letter ?? "";
+        int count = Mathf.Min(stoneLetters.Length, stonePlacementVolumes.Length);
+        for (int i = 0; i < count; i++)
+            if (string.Equals(stoneLetters[i], letter, System.StringComparison.Ordinal))
+                return Mathf.Clamp(stonePlacementVolumes[i], 0f, 1f);
+        return 1f;
+    }
+
     private void PlayPlacementVoice(MagicStonePuzzleStone stone)
     {
         AudioClip clip = GetPlacementClipForStone(stone);
@@ -1209,13 +1246,14 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             StopCoroutine(placementVoiceRoutine);
         }
 
-        placementVoiceRoutine = StartCoroutine(PlacementVoiceRoutine(source, clip));
+        float volume = GetPlacementVolumeForStone(stone);
+        placementVoiceRoutine = StartCoroutine(PlacementVoiceRoutine(source, clip, volume));
     }
 
-    private IEnumerator PlacementVoiceRoutine(AudioSource source, AudioClip clip)
+    private IEnumerator PlacementVoiceRoutine(AudioSource source, AudioClip clip, float volume = 1f)
     {
         isPlacementVoicePlaying = true;
-        source.PlayOneShot(clip);
+        source.PlayOneShot(clip, volume);
 
         float until = Time.realtimeSinceStartup + clip.length;
         while (Time.realtimeSinceStartup < until)
