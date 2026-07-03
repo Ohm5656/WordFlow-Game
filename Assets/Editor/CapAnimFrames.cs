@@ -15,6 +15,12 @@ public static class CapAnimFrames
         "Assets/Art/quest_map/owl",
         "Assets/Art/quest_map/owl_hello",
         "Assets/Art/quest_map/bear/Thow_cropped",
+        "Assets/Art/quest_map/quest_2/eye",
+        "Assets/Art/quest_map/quest_ga/ga_set_free",
+        "Assets/Art/quest_map/quest_ga/ga_set_free2",
+        "Assets/Art/quest_map/quest_ga/ga_stone",
+        "Assets/Art/quest_map/ga_left_cropped",
+        "Assets/Art/quest_map/ga_right_cropped",
     };
 
     [MenuItem("Tools/Optimize/Cap Anim Frames 512")]

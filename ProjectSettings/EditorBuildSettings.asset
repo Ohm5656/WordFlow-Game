@@ -53,5 +53,11 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/region 1/Success_ga.unity
     guid: 6d663ae821c54f2488194521df3cd547
+  - enabled: 1
+    path: Assets/Scenes/region 1/Success_ga_correct.unity
+    guid: 9f55b883a26568f489702875efa43a35
+  - enabled: 1
+    path: Assets/Scenes/region 1/Success_ta_incorrect.unity
+    guid: 766585d227019f24e9295d5014631e70
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
