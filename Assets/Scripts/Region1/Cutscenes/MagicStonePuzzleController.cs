@@ -454,6 +454,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             return;
         }
 
+        GameAudio.PlayClick();
         int currentSlot = stone.CurrentSlot;
 
         // Tapping a stone that is already in a slot sends it back home and frees the slot.
@@ -1235,6 +1236,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             return;
         }
 
+        GameAudio.PlayClick();
         AudioClip clip = ActiveSoundClip;
         if (clip == null)
         {
@@ -1263,6 +1265,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             return;
         }
 
+        GameAudio.PlayClick();
         if (isRecording)
         {
             CompleteRecordingAndUpload();

@@ -73,6 +73,10 @@ public sealed class CrowEntranceCutscene : MonoBehaviour
             transform.position = WaypointPos("wp_center", transform.position);
             crow.Play("ga_stone", 0, 1f); // last frame = stone crow
             fade.alpha = 1f;
+            // Hand off on the next frame, not synchronously inside OnEnable: at scene-load time the
+            // OwlGreetingCutscene isn't active-and-enabled yet, so a same-frame PlayGreeting() would
+            // bail at its isActiveAndEnabled guard and nothing (book/stones) would reveal.
+            yield return null;
             routine = null;
             if (owlGreeting != null) owlGreeting.PlayGreeting();
             yield break;
@@ -81,6 +85,7 @@ public sealed class CrowEntranceCutscene : MonoBehaviour
         transform.position = WaypointPos("wp_0", transform.position);
         crow.speed = 1f;
         crow.Play("ga_fly");
+        GameAudio.PlayCrowLoop();
         yield return FadeTo(1f, fadeInDuration);
 
         yield return MoveTo("wp_1", leg1Duration);
@@ -92,6 +97,7 @@ public sealed class CrowEntranceCutscene : MonoBehaviour
         while (crow.GetCurrentAnimatorStateInfo(0).normalizedTime % 1f < 0.98f)
             yield return null;
         crow.Play("ga_stone", 0, 0f);
+        GameAudio.StopSfxLoop(); // silence the flight as the crow petrifies
         yield return null; // let the state register so length is readable
 
         // wait out the stone clip (it holds its last frame afterwards)

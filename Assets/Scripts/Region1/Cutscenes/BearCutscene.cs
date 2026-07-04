@@ -59,6 +59,8 @@ public sealed class BearCutscene : MonoBehaviour
     [SerializeField] private bool resumeForestAtBeat2 = false;
     [Tooltip("Optional epilogue (e.g. owl speech in Success_pa) that plays after the bear fade-out but before the next scene loads.")]
     [SerializeField] private SuccessPaOwlEpilogue owlEpilogue;
+    [Tooltip("Set the puzzle retry flags before loading nextScene (wrong-word scenes: return to the assembly in retry mode, stones shown all at once).")]
+    [SerializeField] private bool setPuzzleRetryFlags = false;
 
     [SerializeField] private Step[] sequence =
     {
@@ -129,7 +131,7 @@ public sealed class BearCutscene : MonoBehaviour
         if (sequence.Length > 0)
         {
             bear.speed = sequence[0].speed > 0f ? sequence[0].speed : 1f;
-            if (!string.IsNullOrEmpty(sequence[0].state)) bear.Play(sequence[0].state);
+            if (!string.IsNullOrEmpty(sequence[0].state)) { bear.Play(sequence[0].state); GameAudio.OnCutsceneState(sequence[0].state); }
             ApplyScale(sequence[0].scale);
         }
         yield return Fade(0f, 1f, fadeInDuration);
@@ -145,13 +147,13 @@ public sealed class BearCutscene : MonoBehaviour
             if (step.fadeSeconds > 0f)
             {
                 yield return Fade(fade.alpha, 0f, step.fadeSeconds * 0.5f);
-                if (!string.IsNullOrEmpty(step.state)) bear.Play(step.state);
+                if (!string.IsNullOrEmpty(step.state)) { bear.Play(step.state); GameAudio.OnCutsceneState(step.state); }
                 ApplyScale(step.scale);
                 yield return Fade(0f, 1f, step.fadeSeconds * 0.5f);
             }
             else
             {
-                if (!string.IsNullOrEmpty(step.state)) bear.Play(step.state);
+                if (!string.IsNullOrEmpty(step.state)) { bear.Play(step.state); GameAudio.OnCutsceneState(step.state); }
                 ApplyScale(step.scale);
             }
 
@@ -191,6 +193,7 @@ public sealed class BearCutscene : MonoBehaviour
             }
         }
 
+        GameAudio.StopSfxLoop(); // never let footsteps bleed into the owl greeting
         routine = null;
 
         // Ending: fade the bear (and any alsoFade groups, e.g. the throw hands) out and load the
@@ -201,6 +204,11 @@ public sealed class BearCutscene : MonoBehaviour
             if (owlEpilogue != null) yield return owlEpilogue.Play();
             // Tell reference_forest to skip Beat 1 (bear) and resume at Beat 2 (crow quest).
             if (resumeForestAtBeat2) BearEncounterFlow.ResumeAtBeat2 = true;
+            if (setPuzzleRetryFlags)
+            {
+                MagicStonePuzzleController.RequestRetryAfterCrow(); // skip the intro flight
+                MagicStonePuzzleController.RequestRetryAfterAlt();  // show stones all at once
+            }
             if (!string.IsNullOrEmpty(nextScene)) SceneManager.LoadScene(nextScene.Trim());
             yield break;
         }
