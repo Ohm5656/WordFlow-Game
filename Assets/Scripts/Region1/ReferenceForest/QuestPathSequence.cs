@@ -282,6 +282,7 @@ public sealed class QuestPathSequence : MonoBehaviour
             // The bear quest was completed inside word_build_paa_polished: the bear + "!" fade out
             // now, the hero stays where it left off (wp_1), then the remaining quests run unchanged.
             BearEncounterFlow.ResumeAtBeat2 = false;
+            GameAudio.PlayAfterQuest();
             yield return new WaitForSeconds(questAutoHold);
             yield return FadeOutAndHide(new[] { villager, villagerMarkerSprite },
                 new[] { villager != null ? villager.gameObject : null, villagerMarkerRoot });
@@ -308,6 +309,7 @@ public sealed class QuestPathSequence : MonoBehaviour
             // The bear stays visible. Fade to black and enter the word-build (bear) encounter;
             // on a successful build it loads us back and we resume at Beat 2 (bear now gone).
             BearEncounterFlow.ReturnToForest = true;
+            GameAudio.PlayQuestEnter();
             yield return SceneFadeController.Cover(sceneExitCoverDuration);
             SceneManager.LoadScene(bearEncounterSceneName);
             yield break;

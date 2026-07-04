@@ -149,6 +149,7 @@ public sealed class QuestPointInteractable : MonoBehaviour
 
         if (IsClickOnQuestPoint(worldPos))
         {
+            GameAudio.PlayClick();
             TryOpenNextScene();
         }
     }
@@ -160,6 +161,7 @@ public sealed class QuestPointInteractable : MonoBehaviour
 
         if (IsClickOnQuestPoint(worldPos))
         {
+            GameAudio.PlayClick();
             TryOpenNextScene();
         }
     }
