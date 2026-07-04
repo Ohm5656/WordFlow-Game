@@ -249,6 +249,20 @@ MonoBehaviour:
   stonePlacementVolumes: []
   blockPlacementWhileVoicePlaying: 1
   autoPlayResultClip: 1
+  ttsClient: {fileID: 0}
+  stonePlacementLineIds:
+  - gameplay_ko
+  - gameplay_po
+  - gameplay_aa
+  soundPlaybackLineIds:
+  - gameplay_po
+  - gameplay_aa
+  - gameplay_paa
+  altSoundPlaybackLineIds:
+  - gameplay_ko
+  - gameplay_aa
+  - gameplay_kaa
+  ttsEchoGapSeconds: 0.2
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
   recordingSuccessSprite: {fileID: 0}
@@ -1473,6 +1487,20 @@ MonoBehaviour:
   stonePlacementVolumes: []
   blockPlacementWhileVoicePlaying: 1
   autoPlayResultClip: 1
+  ttsClient: {fileID: 0}
+  stonePlacementLineIds:
+  - gameplay_ko
+  - gameplay_po
+  - gameplay_aa
+  soundPlaybackLineIds:
+  - gameplay_po
+  - gameplay_aa
+  - gameplay_paa
+  altSoundPlaybackLineIds:
+  - gameplay_ko
+  - gameplay_aa
+  - gameplay_kaa
+  ttsEchoGapSeconds: 0.2
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
   recordingSuccessSprite: {fileID: 0}
@@ -1994,6 +2022,20 @@ MonoBehaviour:
   stonePlacementVolumes: []
   blockPlacementWhileVoicePlaying: 1
   autoPlayResultClip: 1
+  ttsClient: {fileID: 0}
+  stonePlacementLineIds:
+  - gameplay_ko
+  - gameplay_po
+  - gameplay_aa
+  soundPlaybackLineIds:
+  - gameplay_po
+  - gameplay_aa
+  - gameplay_paa
+  altSoundPlaybackLineIds:
+  - gameplay_ko
+  - gameplay_aa
+  - gameplay_kaa
+  ttsEchoGapSeconds: 0.2
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
   recordingSuccessSprite: {fileID: 8418692620603804807, guid: 237e4d72fdcaced40ad1e241b9c15eda, type: 3}
@@ -2103,6 +2145,8 @@ MonoBehaviour:
   - {fileID: 21300000, guid: bc5ac8cdab45c4545ba6867a85f97456, type: 3}
   fps: 10
   playbackSpeed: 1
+  hideOnComplete: 1
+  holdAfterPlay: 0.5
   zoomTarget: {fileID: 1732396934}
   zoomInDuration: 0.25
   zoomOutDuration: 0.3
@@ -2277,6 +2321,20 @@ MonoBehaviour:
   stonePlacementVolumes: []
   blockPlacementWhileVoicePlaying: 1
   autoPlayResultClip: 1
+  ttsClient: {fileID: 0}
+  stonePlacementLineIds:
+  - gameplay_ko
+  - gameplay_po
+  - gameplay_aa
+  soundPlaybackLineIds:
+  - gameplay_po
+  - gameplay_aa
+  - gameplay_paa
+  altSoundPlaybackLineIds:
+  - gameplay_ko
+  - gameplay_aa
+  - gameplay_kaa
+  ttsEchoGapSeconds: 0.2
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
   recordingSuccessSprite: {fileID: 0}
@@ -2433,6 +2491,7 @@ MonoBehaviour:
   bearFocusMissionSecondsPerLoop: 0
   hideTalkingPrefabWhenSilent: 1
   talkingFadeDuration: 0.35
+  holdFrozenAfterRound: 1
   playBookRevealAfterBearFocus: 1
   bookCraftRoot: {fileID: 0}
   bookCraftImage: {fileID: 0}
@@ -3133,6 +3192,20 @@ MonoBehaviour:
   stonePlacementVolumes: []
   blockPlacementWhileVoicePlaying: 1
   autoPlayResultClip: 1
+  ttsClient: {fileID: 0}
+  stonePlacementLineIds:
+  - gameplay_ko
+  - gameplay_po
+  - gameplay_aa
+  soundPlaybackLineIds:
+  - gameplay_po
+  - gameplay_aa
+  - gameplay_paa
+  altSoundPlaybackLineIds:
+  - gameplay_ko
+  - gameplay_aa
+  - gameplay_kaa
+  ttsEchoGapSeconds: 0.2
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
   recordingSuccessSprite: {fileID: 0}

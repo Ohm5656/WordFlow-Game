@@ -7,19 +7,19 @@ using UnityEngine.UI;
 
 // One-shot: builds the CutScene_ga crow entrance (replaces the bear intro).
 //   1. Caps import settings on the anim frame folders (CapAnimFrames.Run).
-//   2. Builds looping ga_left_loop / ga_right_loop flight clips + the one-shot ga_stone clip
-//      (all bound to Image.m_Sprite like BuildGaAssets), a 3-state CrowController, and a
-//      Crow.prefab (Image + Animator + CanvasGroup + CrowEntranceCutscene).
+//   2. Builds the looping ga_fly flight clip + the one-shot ga_stone petrify clip (frames
+//      0332-0393 / 0394-0452 of ONE continuous sequence, cropped with a shared union bbox so
+//      the switch is seamless; bound to Image.m_Sprite like BuildGaAssets), a 2-state
+//      CrowController, and a Crow.prefab (Image + Animator + CanvasGroup + CrowEntranceCutscene).
 //   3. In CutScene_ga: deletes the Bear prefab instance, drops the Crow in at the bear's
 //      sibling slot, repoints OwlGreetingCutscene at the crow + the kaa_intro voice lines,
-//      wires to.wav / taa_sound_out.wav into every MagicStonePuzzleController, saves scene.
+//      wires the gameplay TTS line ids into every MagicStonePuzzleController, saves scene.
 // Scene edits are atomic in this one script + SaveScene (domain-reload safety).
 public static class BuildCrowCutscene
 {
     const string QuestDir = "Assets/Art/quest_map";
     const string GaDir = "Assets/Art/quest_map/quest_ga";
     const string ScenePath = "Assets/Scenes/region 1/CutScene_ga.unity";
-    const string AudioDir = "Assets/Audio/Adventure";
     const float Fps = 30f;
 
     // Stale retry flags (set by Success_ta_incorrect / crow-scene returns during testing) make
@@ -39,13 +39,12 @@ public static class BuildCrowCutscene
         AssetDatabase.Refresh();
         CapAnimFrames.Run(); // ensure all frame folders are Sprite-imported + capped for mobile
 
-        // flight clips loop while the crow slides between waypoints; ga_stone plays once and holds
-        var left = BuildClip($"{QuestDir}/ga_left_cropped", "ga_left_loop", true);
-        var right = BuildClip($"{QuestDir}/ga_right_cropped", "ga_right_loop", true);
-        var stone = BuildClip($"{GaDir}/ga_stone", "ga_stone", false);
-        if (left == null || right == null || stone == null) return;
+        // ga_fly loops while the crow slides between waypoints; ga_stone plays once and holds
+        var fly = BuildClip($"{GaDir}/ga_fly_cropped", "ga_fly", true);
+        var stone = BuildClip($"{GaDir}/ga_stone_cropped", "ga_stone", false);
+        if (fly == null || stone == null) return;
 
-        var ctrl = BuildController(left, right, stone);
+        var ctrl = BuildController(fly, stone);
         var prefab = BuildPrefab(ctrl);
 
         AssetDatabase.SaveAssets();
@@ -88,26 +87,24 @@ public static class BuildCrowCutscene
         return clip;
     }
 
-    // One controller, three states — CrowEntranceCutscene switches with animator.Play(stateName).
-    static AnimatorController BuildController(AnimationClip left, AnimationClip right, AnimationClip stone)
+    // One controller, two states — CrowEntranceCutscene switches with animator.Play(stateName).
+    static AnimatorController BuildController(AnimationClip fly, AnimationClip stone)
     {
         string path = $"{QuestDir}/CrowController.controller";
         AssetDatabase.DeleteAsset(path);
         var ctrl = AnimatorController.CreateAnimatorControllerAtPath(path);
         var sm = ctrl.layers[0].stateMachine;
-        var stLeft = sm.AddState("ga_left"); stLeft.motion = left;
-        var stRight = sm.AddState("ga_right"); stRight.motion = right;
+        var stFly = sm.AddState("ga_fly"); stFly.motion = fly;
         var stStone = sm.AddState("ga_stone"); stStone.motion = stone;
-        sm.defaultState = stLeft;
+        sm.defaultState = stFly;
         EditorUtility.SetDirty(ctrl);
         return ctrl;
     }
 
     static GameObject BuildPrefab(AnimatorController ctrl)
     {
-        var firstFrame = AssetDatabase.LoadAssetAtPath<Sprite>($"{QuestDir}/ga_left_cropped/0037.png");
-        var freeze = AssetDatabase.LoadAssetAtPath<Sprite>($"{QuestDir}/ga_left_cropped/0038.png");
-        if (freeze == null) Debug.LogWarning("[CrowCutscene] freeze sprite 0038.png not found");
+        var firstFrame = AssetDatabase.LoadAssetAtPath<Sprite>($"{GaDir}/ga_fly_cropped/0332.png");
+        if (firstFrame == null) Debug.LogWarning("[CrowCutscene] first fly frame 0332.png not found");
 
         var go = new GameObject("Crow", typeof(RectTransform), typeof(CanvasRenderer),
             typeof(Image), typeof(Animator), typeof(CanvasGroup), typeof(CrowEntranceCutscene));
@@ -115,10 +112,6 @@ public static class BuildCrowCutscene
         img.sprite = firstFrame;
         if (firstFrame != null) img.SetNativeSize();
         go.GetComponent<Animator>().runtimeAnimatorController = ctrl;
-
-        var so = new SerializedObject(go.GetComponent<CrowEntranceCutscene>());
-        so.FindProperty("freezeSprite").objectReferenceValue = freeze;
-        so.ApplyModifiedPropertiesWithoutUndo();
 
         string prefabPath = $"{QuestDir}/Crow.prefab";
         var prefab = PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
@@ -179,27 +172,12 @@ public static class BuildCrowCutscene
         }
         else Debug.LogWarning("[CrowCutscene] no OwlGreetingCutscene in scene");
 
-        // Word-build audio: ต placement clip + ตา result echo on every puzzle controller copy
-        var toClip = AssetDatabase.LoadAssetAtPath<AudioClip>($"{AudioDir}/to.wav");
-        var taaOut = AssetDatabase.LoadAssetAtPath<AudioClip>($"{AudioDir}/taa_sound_out.wav");
-        if (toClip == null || taaOut == null)
-            Debug.LogWarning("[CrowCutscene] to.wav / taa_sound_out.wav not imported yet");
-        foreach (var puzzle in Object.FindObjectsOfType<MagicStonePuzzleController>(true))
-        {
-            var pso = new SerializedObject(puzzle);
-            pso.FindProperty("altSoundPlaybackClip").objectReferenceValue = taaOut;
-            var letters = pso.FindProperty("stoneLetters");
-            var clips = pso.FindProperty("stonePlacementClips");
-            for (int i = 0; i < letters.arraySize && i < clips.arraySize; i++)
-            {
-                if (letters.GetArrayElementAtIndex(i).stringValue == "ต") // ต
-                    clips.GetArrayElementAtIndex(i).objectReferenceValue = toClip;
-            }
-            pso.ApplyModifiedPropertiesWithoutUndo();
-        }
+        // Word-build audio: gameplay TTS line ids on every puzzle controller copy
+        // (existing wav clips stay assigned as offline fallback)
+        int wired = WireGameplayTts.WireLoadedScene();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        Debug.Log("[CrowCutscene] scene wired: Bear->Crow, kaa_intro lines, ต/ตา audio, saved");
+        Debug.Log($"[CrowCutscene] scene wired: Bear->Crow, kaa_intro lines, gameplay TTS on {wired} controllers, saved");
     }
 }

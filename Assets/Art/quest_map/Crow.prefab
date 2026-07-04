@@ -38,7 +38,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1080, y: 1080}
+  m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2900637014923818656
 CanvasRenderer:
@@ -68,7 +68,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 9c9fb98adbc4e42418c9126bb3fa61c9, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -125,19 +125,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CrowEntranceCutscene
   crow: {fileID: 0}
-  crowImage: {fileID: 0}
   path: {fileID: 0}
   owlGreeting: {fileID: 0}
-  freezeSprite: {fileID: 21300000, guid: 63f94f78a5599b045840fa0da31b78ca, type: 3}
   playOnStart: 1
   fadeInDuration: 0.4
   leg1Duration: 3
-  leg2Duration: 3
-  leg3Duration: 2.4
-  approachSpeedEnd: 2.2
-  freezeHold: 0.5
-  shakeDuration: 0.35
-  shakeStrength: 14
-  flashInDuration: 0.15
-  flashOutDuration: 0.4
-  flashMaxAlpha: 0.85
+  leg2Duration: 2.4

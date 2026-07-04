@@ -116,6 +116,18 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [Tooltip("Auto-play the result word clip (soundPlaybackClip) once when the sound/mic icons appear (the post-build echo the child copies).")]
     [SerializeField] private bool autoPlayResultClip = true;
 
+    [Header("Gameplay TTS (line ids from backend tts_lines.json; the wav clips above stay as offline fallback)")]
+    [Tooltip("Fetches the line ids below from /tts. Empty = first TtsApiClient found in the scene.")]
+    [SerializeField] private TtsApiClient ttsClient;
+    [Tooltip("TTS line id per stone, paired index-for-index with stoneLetters (e.g. gameplay_ko). Replaces that stone's stonePlacementClips entry when the fetch succeeds.")]
+    [SerializeField] private string[] stonePlacementLineIds;
+    [Tooltip("TTS line ids voiced in order as the target-word echo (e.g. gameplay_po, gameplay_aa, gameplay_paa). Replaces soundPlaybackClip when every fetch succeeds.")]
+    [SerializeField] private string[] soundPlaybackLineIds;
+    [Tooltip("TTS line ids voiced in order as the alt-word echo. Replaces altSoundPlaybackClip when every fetch succeeds.")]
+    [SerializeField] private string[] altSoundPlaybackLineIds;
+    [Tooltip("Silence between syllables when stitching the echo TTS lines into one clip.")]
+    [SerializeField] private float ttsEchoGapSeconds = 0.2f;
+
     [Header("Backend Grading (mic upload, like word_build_paa_polished)")]
     [Tooltip("Records the mic clip and POSTs it to /grade, identical to word_build_paa_polished. Auto-added at runtime if left empty.")]
     [SerializeField] private GradeApiClient gradeClient;
@@ -214,6 +226,133 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         }
 
         PrepareForIntro();
+        PrefetchGameplayTts();
+    }
+
+    // Swaps the baked wav audio for backend TTS (same lines the owl uses). Placement lines
+    // replace stonePlacementClips entries; the echo sequences are stitched into ONE clip so
+    // all the existing single-clip playback plumbing (ActiveSoundClip, autoplay, mic gating)
+    // stays untouched. Any failed fetch leaves the wav fallback in place (TtsApiClient is
+    // null-safe and caches by line id).
+    private void PrefetchGameplayTts()
+    {
+        if (ttsClient == null) ttsClient = FindObjectOfType<TtsApiClient>();
+        if (ttsClient == null) return;
+
+        if (stonePlacementLineIds != null && stoneLetters != null)
+        {
+            int count = Mathf.Min(stonePlacementLineIds.Length, stoneLetters.Length);
+            if (count > 0 && (stonePlacementClips == null || stonePlacementClips.Length < count))
+            {
+                System.Array.Resize(ref stonePlacementClips, count);
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                int index = i;
+                if (string.IsNullOrWhiteSpace(stonePlacementLineIds[index]))
+                {
+                    continue;
+                }
+
+                ttsClient.GetLine(stonePlacementLineIds[index], clip =>
+                {
+                    if (clip != null)
+                    {
+                        stonePlacementClips[index] = clip;
+                    }
+                });
+            }
+        }
+
+        PrefetchEchoSequence(soundPlaybackLineIds, clip => soundPlaybackClip = clip);
+        PrefetchEchoSequence(altSoundPlaybackLineIds, clip => altSoundPlaybackClip = clip);
+    }
+
+    private void PrefetchEchoSequence(string[] lineIds, System.Action<AudioClip> assign)
+    {
+        if (lineIds == null || lineIds.Length == 0)
+        {
+            return;
+        }
+
+        AudioClip[] parts = new AudioClip[lineIds.Length];
+        int pending = lineIds.Length;
+        for (int i = 0; i < lineIds.Length; i++)
+        {
+            int index = i;
+            ttsClient.GetLine(lineIds[index], clip =>
+            {
+                parts[index] = clip;
+                if (--pending != 0)
+                {
+                    return;
+                }
+
+                AudioClip merged = ConcatClips(parts, ttsEchoGapSeconds);
+                if (merged != null)
+                {
+                    assign(merged);
+                }
+            });
+        }
+    }
+
+    // Stitches the syllable clips into one, with a silent gap between them. Returns null if
+    // any part is missing (keep the baked wav fallback instead of a partial echo).
+    private static AudioClip ConcatClips(AudioClip[] parts, float gapSeconds)
+    {
+        int frequency = 0;
+        int channels = 0;
+        int totalFrames = 0;
+        foreach (AudioClip part in parts)
+        {
+            if (part == null)
+            {
+                return null;
+            }
+
+            if (frequency == 0)
+            {
+                frequency = part.frequency;
+                channels = part.channels;
+            }
+
+            // ponytail: assumes all /tts lines share one format (backend emits 24kHz mono wav)
+            if (part.frequency != frequency || part.channels != channels)
+            {
+                return null;
+            }
+
+            totalFrames += part.samples;
+        }
+
+        if (totalFrames == 0)
+        {
+            return null;
+        }
+
+        int gapFrames = Mathf.Max(0, Mathf.RoundToInt(gapSeconds * frequency));
+        totalFrames += gapFrames * (parts.Length - 1);
+
+        float[] data = new float[totalFrames * channels];
+        int offset = 0;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (i > 0)
+            {
+                offset += gapFrames * channels;
+            }
+
+            float[] chunk = new float[parts[i].samples * parts[i].channels];
+            parts[i].GetData(chunk, 0);
+            chunk.CopyTo(data, offset);
+            offset += chunk.Length;
+        }
+
+        AudioClip merged = AudioClip.Create("tts_echo", totalFrames, channels, frequency, false);
+        merged.SetData(data, 0);
+        return merged;
     }
 
     private void OnDisable()
