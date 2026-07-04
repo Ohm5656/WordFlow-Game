@@ -15,6 +15,8 @@ namespace WordFlow.Adventure.Data
         public string thai;    // e.g. "ยา"
         public List<StoneTileData> tiles = new List<StoneTileData>(); // ordered left->right
         public string ipa;
+        [Tooltip("Backend word id for grading the spoken sound-out sequence. Empty uses id.")]
+        public string soundOutWordId;
         public string meaning;
         public AudioClip wordAudio;     // nullable; the whole word said once (post-build echo)
         public AudioClip soundOutAudio; // nullable; sounded out then blended, e.g. "ปอ อา ปา" (Listen-while-building)

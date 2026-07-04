@@ -622,16 +622,20 @@ namespace WordFlow.Adventure.View
         {
             if (gradeClient == null) { Debug.LogWarning("[WordBuild] no GradeApiClient; skipping /grade"); return; }
 
-            // Correct/NonWord target the encounter word; WrongWord targets what they actually built.
-            string targetId = config.target.id;
             string tag = null;
             if (outcome == Outcome.NonWord) tag = "non_word";
-            else if (outcome == Outcome.WrongWord)
+            else if (outcome == Outcome.WrongWord) tag = "wrong_word";
+
+            // Correct/NonWord grade the sound-out sequence the child was asked to say.
+            // WrongWord continues to grade the real word that was actually built.
+            string builtWordId = null;
+            if (outcome == Outcome.WrongWord)
             {
-                tag = "wrong_word";
                 var builtWord = database != null ? database.LookupByThai(built) : null;
-                if (builtWord != null) targetId = builtWord.id;
+                if (builtWord != null) builtWordId = builtWord.id;
             }
+            string targetId = GradeTargetResolver.Resolve(
+                outcome, config.target.id, config.target.soundOutWordId, builtWordId);
 
             gradeClient.StopAndGrade(new GradeApiClient.GradeContext
             {
