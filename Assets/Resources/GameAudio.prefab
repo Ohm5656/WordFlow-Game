@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2874321340510639961
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2791393007997872849}
+  - component: {fileID: 306704978057802115}
+  m_Layer: 0
+  m_Name: GameAudio
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2791393007997872849
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2874321340510639961}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &306704978057802115
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2874321340510639961}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3357eb4b131a9054a9d5fa0a14f85af8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Common::GameAudio
+  music: {fileID: 8300000, guid: 2c86a95af6e22164896fa20442cda638, type: 3}
+  musicVolume: 0.85
+  forestDuck: 0.5
+  crossfadeSeconds: 2
+  musicFadeInSeconds: 3.2
+  click: {fileID: 8300000, guid: 36550ee227e21bf42a12a42e59415d85, type: 3}
+  unlockSting: {fileID: 8300000, guid: eada9bda2071d7c48a9b73117aa29503, type: 3}
+  questEnter: {fileID: 8300000, guid: 352d44abccc750f41b2738a7a72ecf5b, type: 3}
+  afterQuest: {fileID: 8300000, guid: edb825ffb89464241a072b7f23fcf2fc, type: 3}
+  winSting: {fileID: 8300000, guid: f0aaab996ebac9c4bb17b79c94bbedfd, type: 3}
+  loseSting: {fileID: 8300000, guid: 45c72c74451a88f418a50a6db07dd6a8, type: 3}
+  bearRun: {fileID: 8300000, guid: 9cfedf24e0d0cbf4f97c2671aa518fbe, type: 3}
+  bearRoar: {fileID: 8300000, guid: 7924afc4a63641247918f8aba05043a5, type: 3}
+  crowFly: {fileID: 8300000, guid: cf2cd0ad1daf25e4da4ec3697ad1069a, type: 3}
+  sfxVolume: 1
