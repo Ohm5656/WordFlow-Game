@@ -12,7 +12,6 @@ namespace WordFlow.Adventure.Net
     /// </summary>
     public sealed class GradeApiClient : MonoBehaviour
     {
-        [SerializeField] private string gradeUrl = "http://127.0.0.1:8001/api/v1/grade";
         [SerializeField] private string authorization = "Bearer demo-token";
         [SerializeField] private int sampleRate = 16000;
         // Recording buffer length. MUST be longer than the controller's mic window (maxRecordingSeconds),
@@ -131,8 +130,9 @@ namespace WordFlow.Adventure.Net
             if (!string.IsNullOrWhiteSpace(ctx.outcomeTag)) form.AddField("outcome", ctx.outcomeTag);
             if (ctx.buildLatencyMs > 0) form.AddField("buildLatencyMs", ctx.buildLatencyMs.ToString());
 
-            using (UnityWebRequest req = UnityWebRequest.Post(gradeUrl.Trim(), form))
+            using (UnityWebRequest req = UnityWebRequest.Post($"{BackendConfig.BaseUrl}/grade", form))
             {
+                BackendConfig.Prepare(req);
                 string bearer = ResolveBearer();
                 if (!string.IsNullOrWhiteSpace(bearer))
                     req.SetRequestHeader("Authorization", bearer);

@@ -20,7 +20,6 @@ namespace WordFlow.Adventure.Net
         private const string RefreshTokenKey = "wf_refresh_token";
 
         [SerializeField] private FirebaseAuthClient auth;
-        [SerializeField] private string baseUrl = "http://127.0.0.1:8000/api/v1";
 
         public string IdToken { get; private set; }
         public string Uid { get; private set; }
@@ -109,8 +108,9 @@ namespace WordFlow.Adventure.Net
 
         private IEnumerator Bootstrap(Action<bool, string> onDone)
         {
-            using (var req = UnityWebRequest.Get($"{baseUrl.TrimEnd('/')}/bootstrap"))
+            using (var req = UnityWebRequest.Get($"{BackendConfig.BaseUrl}/bootstrap"))
             {
+                BackendConfig.Prepare(req);
                 req.SetRequestHeader("Authorization", BearerHeader);
                 yield return req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success)
@@ -150,12 +150,13 @@ namespace WordFlow.Adventure.Net
         private IEnumerator SendAuthedJson(string method, string path, string body,
             Action<bool, string> onDone, string genericError, string notFoundError = null)
         {
-            using (var req = new UnityWebRequest($"{baseUrl.TrimEnd('/')}/{path}", method)
+            using (var req = new UnityWebRequest($"{BackendConfig.BaseUrl}/{path}", method)
             {
                 uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body ?? "{}")),
                 downloadHandler = new DownloadHandlerBuffer(),
             })
             {
+                BackendConfig.Prepare(req);
                 req.SetRequestHeader("Content-Type", "application/json");
                 req.SetRequestHeader("Authorization", BearerHeader);
                 yield return req.SendWebRequest();

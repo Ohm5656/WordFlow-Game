@@ -14,7 +14,6 @@ namespace WordFlow.Adventure.Net
     /// </summary>
     public sealed class TtsApiClient : MonoBehaviour
     {
-        [SerializeField] private string ttsUrl = "http://127.0.0.1:8000/api/v1/tts";
         [SerializeField] private string authorization = "Bearer demo-token";
 
         private readonly Dictionary<string, AudioClip> _cache = new Dictionary<string, AudioClip>();
@@ -29,9 +28,10 @@ namespace WordFlow.Adventure.Net
 
         private IEnumerator GetLineRoutine(string lineId, Action<AudioClip> onResult)
         {
-            string url = $"{ttsUrl.Trim()}?line_id={UnityWebRequest.EscapeURL(lineId)}";
+            string url = $"{BackendConfig.BaseUrl}/tts?line_id={UnityWebRequest.EscapeURL(lineId)}";
             using (UnityWebRequest req = UnityWebRequestMultimedia.GetAudioClip(url, AudioType.WAV))
             {
+                BackendConfig.Prepare(req);
                 string bearer = ResolveBearer();
                 if (!string.IsNullOrWhiteSpace(bearer))
                     req.SetRequestHeader("Authorization", bearer);

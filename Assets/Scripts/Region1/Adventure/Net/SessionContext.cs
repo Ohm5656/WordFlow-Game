@@ -17,7 +17,6 @@ namespace WordFlow.Adventure.Net
 
         [SerializeField] private string kidId = "kid_demo_01";
         [SerializeField] private int island = 1;
-        [SerializeField] private string baseUrl = "http://127.0.0.1:8000/api/v1";
         [SerializeField] private string authorization = "Bearer demo-token";
         [SerializeField] private TelemetryClient telemetry;
 
@@ -69,13 +68,14 @@ namespace WordFlow.Adventure.Net
                 yield break;
             }
 
-            string url = $"{baseUrl.TrimEnd('/')}/children/{kid}/sessions";
+            string url = $"{BackendConfig.BaseUrl}/children/{kid}/sessions";
             byte[] payload = Encoding.UTF8.GetBytes($"{{\"island\":{island}}}");
             using (var req = new UnityWebRequest(url, "POST"))
             {
                 req.uploadHandler = new UploadHandlerRaw(payload);
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
+                BackendConfig.Prepare(req);
                 string bearer = ResolveBearer();
                 if (!string.IsNullOrWhiteSpace(bearer))
                     req.SetRequestHeader("Authorization", bearer);

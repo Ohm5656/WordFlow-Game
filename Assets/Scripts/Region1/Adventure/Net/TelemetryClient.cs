@@ -18,7 +18,6 @@ namespace WordFlow.Adventure.Net
     {
         public const string JournalFile = "telemetry_queue.jsonl";
 
-        [SerializeField] private string baseUrl = "http://127.0.0.1:8000/api/v1";
         [SerializeField] private string authorization = "Bearer demo-token";
         [Tooltip("Seconds between pump ticks (also the floor on retry latency).")]
         [SerializeField] private float pumpIntervalSeconds = 1f;
@@ -121,13 +120,14 @@ namespace WordFlow.Adventure.Net
                 yield break;
             }
 
-            string url = $"{baseUrl.TrimEnd('/')}/{env.path}";
+            string url = $"{BackendConfig.BaseUrl}/{env.path}";
             byte[] payload = Encoding.UTF8.GetBytes(env.body ?? "{}");
             using (var req = new UnityWebRequest(url, string.IsNullOrEmpty(env.method) ? "POST" : env.method))
             {
                 req.uploadHandler = new UploadHandlerRaw(payload);
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
+                BackendConfig.Prepare(req);
                 string bearer = ResolveBearer();
                 if (!string.IsNullOrWhiteSpace(bearer))
                     req.SetRequestHeader("Authorization", bearer);

@@ -1506,8 +1506,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             }
         }
 
-        // GradeApiClient self-configures from its own serialized gradeUrl/authorization
-        // (default points at :8001 to match this scene's backend).
+        // GradeApiClient posts to BackendConfig.BaseUrl/grade (central host, ngrok-aware).
         return gradeClient;
     }
 
