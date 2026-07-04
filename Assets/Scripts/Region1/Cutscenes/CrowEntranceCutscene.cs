@@ -44,7 +44,9 @@ public sealed class CrowEntranceCutscene : MonoBehaviour
 
         fade = GetComponent<CanvasGroup>();
         if (fade == null) fade = gameObject.AddComponent<CanvasGroup>();
-        fade.alpha = 0f;
+        // Some result scenes disable this flow and use the Crow prefab as a static stone result.
+        // Do not make those disabled instances invisible during Awake.
+        if (enabled && playOnStart) fade.alpha = 0f;
     }
 
     private void OnEnable()

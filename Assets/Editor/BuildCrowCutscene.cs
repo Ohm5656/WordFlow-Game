@@ -55,7 +55,8 @@ public static class BuildCrowCutscene
     }
 
     // Sprite clip bound to Image.m_Sprite (UGUI), one keyframe per frame PNG.
-    static AnimationClip BuildClip(string srcDir, string name, bool loop)
+    // Internal: BuildSuccessScenes reuses it for the success-scene clips.
+    internal static AnimationClip BuildClip(string srcDir, string name, bool loop)
     {
         if (!AssetDatabase.IsValidFolder(srcDir)) { Debug.LogError($"[CrowCutscene] missing {srcDir}"); return null; }
 

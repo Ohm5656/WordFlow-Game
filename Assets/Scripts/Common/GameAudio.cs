@@ -17,7 +17,7 @@ public sealed class GameAudio : MonoBehaviour
     [Tooltip("Music volume multiplier in every scene EXCEPT WorldMap (a touch quieter so it doesn't dominate).")]
     [SerializeField] private float otherSceneDuck = 0.7f;
     [Tooltip("Music volume multiplier while the owl is speaking, so the voice sits on top.")]
-    [SerializeField] private float voiceDuck = 0.5f;
+    [SerializeField] private float voiceDuck = 0.2f;
     [Tooltip("How fast the music ducks in/out when the owl starts/stops speaking (per second).")]
     [SerializeField] private float duckLerpSpeed = 2.5f;
     [Tooltip("Crossfade overlap at the loop seam, seconds.")]
@@ -35,6 +35,15 @@ public sealed class GameAudio : MonoBehaviour
     [SerializeField] private AudioClip bearRun;               // Bear.mp3 (loops)
     [SerializeField] private AudioClip bearRoar;              // bear-kamram.mp3
     [SerializeField] private AudioClip crowFly;               // Crow.mp3 (loops)
+    [SerializeField] private AudioClip paaThrow;              // paa.wav (one shot)
+    [SerializeField, Min(1f)] private float paaThrowGain = 1.5f;
+    [SerializeField] private AudioClip rockBreak;             // rock-break.mp3 (one shot)
+    [Tooltip("Perceived loudness boost for Crow.mp3. Applied once to a runtime copy with soft limiting, so all crow scenes stay equally loud without clipping.")]
+    [SerializeField, Min(1f)] private float crowGain = 1.8f;
+    [Header("Forest footsteps")]
+    [Tooltip("Played in order while the reference_forest hero walks, then repeated from the first clip.")]
+    [SerializeField] private AudioClip[] forestFootsteps;
+    [SerializeField, Range(0f, 1f)] private float forestFootstepVolume = 0.85f;
     [SerializeField] private float sfxVolume = 1f;
 
     private static GameAudio instance;
@@ -54,6 +63,7 @@ public sealed class GameAudio : MonoBehaviour
     private AudioSource bgmB;
     private AudioSource sfx;
     private AudioSource sfxLoop;
+    private AudioSource footstepSource;
     private AudioListener ownListener; // fallback listener for scenes whose camera has none (e.g. reference_forest)
     private double nextLoopDspTime;     // when the idle source takes over
     private AudioSource activeBgm;      // the source currently mid-track
@@ -64,6 +74,10 @@ public sealed class GameAudio : MonoBehaviour
     private float fadeIn = 1f;          // 0->1 over musicFadeInSeconds at start
     private float fadeInElapsed;
     private bool musicStarted;
+    private AudioClip amplifiedCrowFly;
+    private AudioClip amplifiedPaaThrow;
+    private Coroutine footstepRoutine;
+    private int footstepIndex;
 
     private static GameAudio Instance
     {
@@ -88,11 +102,23 @@ public sealed class GameAudio : MonoBehaviour
     public static void PlayClick() { GameAudio audio = Instance; if (audio != null) audio.PlayOneShot(audio.click); }
     public static void PlayUnlock() { GameAudio audio = Instance; if (audio != null) audio.PlayOneShot(audio.unlockSting); }
     public static void PlayQuestEnter() { GameAudio audio = Instance; if (audio != null) audio.PlayOneShot(audio.questEnter); }
+    public static float QuestEnterDuration
+    {
+        get
+        {
+            GameAudio audio = Instance;
+            return audio != null && audio.questEnter != null ? audio.questEnter.length : 0f;
+        }
+    }
     public static void PlayAfterQuest() { GameAudio audio = Instance; if (audio != null) audio.PlayOneShot(audio.afterQuest); }
     public static void PlayWin() { GameAudio audio = Instance; if (audio != null) audio.PlayOneShot(audio.winSting); }
     public static void PlayLose() { GameAudio audio = Instance; if (audio != null) audio.PlayOneShot(audio.loseSting); }
-    public static void PlayCrowLoop() { GameAudio audio = Instance; if (audio != null) audio.StartLoop(audio.crowFly); }
+    public static void PlayCrowLoop() { GameAudio audio = Instance; if (audio != null) audio.StartLoop(audio.GetCrowLoopClip()); }
     public static void StopSfxLoop() { GameAudio audio = Instance; if (audio != null) audio.StopLoop(); }
+    public static void PlayPaaThrow() { GameAudio audio = Instance; if (audio != null) audio.PlayOneShot(audio.GetPaaThrowClip()); }
+    public static void PlayRockBreak() { GameAudio audio = Instance; if (audio != null) audio.PlayOneShot(audio.rockBreak); }
+    public static void StartForestFootsteps() { GameAudio audio = Instance; if (audio != null) audio.StartFootsteps(); }
+    public static void StopForestFootsteps() { if (instance != null) instance.StopFootsteps(); }
 
     // Duck the music under the owl's voice. No spawn on a stray false call.
     public static void SetVoiceDucking(bool on) { if (instance != null) instance.voiceActive = on; }
@@ -116,7 +142,8 @@ public sealed class GameAudio : MonoBehaviour
         bgmB = gameObject.AddComponent<AudioSource>();
         sfx = gameObject.AddComponent<AudioSource>();
         sfxLoop = gameObject.AddComponent<AudioSource>();
-        foreach (AudioSource source in new[] { bgmA, bgmB, sfx, sfxLoop })
+        footstepSource = gameObject.AddComponent<AudioSource>();
+        foreach (AudioSource source in new[] { bgmA, bgmB, sfx, sfxLoop, footstepSource })
         {
             source.playOnAwake = false;
             source.spatialBlend = 0f;
@@ -148,6 +175,9 @@ public sealed class GameAudio : MonoBehaviour
     private void OnDestroy()
     {
         if (instance == this) SceneManager.sceneLoaded -= HandleSceneLoaded;
+        StopFootsteps();
+        if (amplifiedCrowFly != null) Destroy(amplifiedCrowFly);
+        if (amplifiedPaaThrow != null) Destroy(amplifiedPaaThrow);
     }
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -242,8 +272,119 @@ public sealed class GameAudio : MonoBehaviour
         sfxLoop.Play();
     }
 
+    private AudioClip GetCrowLoopClip()
+    {
+        if (crowFly == null || crowGain <= 1.001f) return crowFly;
+        if (amplifiedCrowFly != null) return amplifiedCrowFly;
+
+        // AudioSource.volume is already at its safe maximum (1). Build a louder in-memory copy
+        // instead, using a soft limiter so quiet parts rise while peaks remain inside [-1, 1].
+        if (crowFly.loadState != AudioDataLoadState.Loaded && !crowFly.LoadAudioData())
+        {
+            Debug.LogWarning("[GameAudio] Could not load Crow.mp3 for gain boost; using the original clip.");
+            return crowFly;
+        }
+
+        int sampleCount = crowFly.samples * crowFly.channels;
+        float[] samples = new float[sampleCount];
+        if (!crowFly.GetData(samples, 0))
+        {
+            Debug.LogWarning("[GameAudio] Crow.mp3 is not readable; using the original clip.");
+            return crowFly;
+        }
+
+        double drive = Mathf.Max(1f, crowGain);
+        double normalizer = System.Math.Tanh(drive);
+        for (int i = 0; i < samples.Length; i++)
+        {
+            samples[i] = (float)(System.Math.Tanh(samples[i] * drive) / normalizer);
+        }
+
+        amplifiedCrowFly = AudioClip.Create(
+            crowFly.name + "_Louder",
+            crowFly.samples,
+            crowFly.channels,
+            crowFly.frequency,
+            false);
+        amplifiedCrowFly.SetData(samples, 0);
+        return amplifiedCrowFly;
+    }
+
+    private AudioClip GetPaaThrowClip()
+    {
+        if (paaThrow == null || paaThrowGain <= 1.001f) return paaThrow;
+        if (amplifiedPaaThrow != null) return amplifiedPaaThrow;
+
+        if (paaThrow.loadState != AudioDataLoadState.Loaded && !paaThrow.LoadAudioData())
+        {
+            Debug.LogWarning("[GameAudio] Could not load paa.wav for gain boost; using the original clip.");
+            return paaThrow;
+        }
+
+        int sampleCount = paaThrow.samples * paaThrow.channels;
+        float[] samples = new float[sampleCount];
+        if (!paaThrow.GetData(samples, 0))
+        {
+            Debug.LogWarning("[GameAudio] paa.wav is not readable; using the original clip.");
+            return paaThrow;
+        }
+
+        double drive = Mathf.Max(1f, paaThrowGain);
+        double normalizer = System.Math.Tanh(drive);
+        for (int i = 0; i < samples.Length; i++)
+        {
+            samples[i] = (float)(System.Math.Tanh(samples[i] * drive) / normalizer);
+        }
+
+        amplifiedPaaThrow = AudioClip.Create(
+            paaThrow.name + "_Louder",
+            paaThrow.samples,
+            paaThrow.channels,
+            paaThrow.frequency,
+            false);
+        amplifiedPaaThrow.SetData(samples, 0);
+        return amplifiedPaaThrow;
+    }
+
     private void StopLoop()
     {
         if (sfxLoop.isPlaying) sfxLoop.Stop();
+    }
+
+    private void StartFootsteps()
+    {
+        if (footstepRoutine != null || forestFootsteps == null || forestFootsteps.Length == 0) return;
+        footstepRoutine = StartCoroutine(FootstepSequence());
+    }
+
+    private void StopFootsteps()
+    {
+        if (footstepRoutine != null)
+        {
+            StopCoroutine(footstepRoutine);
+            footstepRoutine = null;
+        }
+
+        if (footstepSource != null) footstepSource.Stop();
+    }
+
+    private System.Collections.IEnumerator FootstepSequence()
+    {
+        while (true)
+        {
+            AudioClip clip = forestFootsteps[footstepIndex % forestFootsteps.Length];
+            footstepIndex = (footstepIndex + 1) % forestFootsteps.Length;
+
+            if (clip == null)
+            {
+                yield return null;
+                continue;
+            }
+
+            footstepSource.clip = clip;
+            footstepSource.volume = sfxVolume * forestFootstepVolume;
+            footstepSource.Play();
+            yield return new WaitForSeconds(clip.length);
+        }
     }
 }

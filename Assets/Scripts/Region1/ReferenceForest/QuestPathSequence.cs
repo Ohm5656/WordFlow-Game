@@ -80,6 +80,8 @@ public sealed class QuestPathSequence : MonoBehaviour
     [Header("Bear encounter scene link")]
     [Tooltip("Scene loaded when the hero reaches the first quest (the bear word-build encounter).")]
     [SerializeField] private string bearEncounterSceneName = "CutScene_bear";
+    [Tooltip("Scene loaded when the hero reaches the second quest (the crow / ga encounter).")]
+    [SerializeField] private string crowEncounterSceneName = "CutScene_ga";
     [Tooltip("Black fade-out duration before loading the bear encounter scene.")]
     [SerializeField] private float sceneExitCoverDuration = 1.0f;
 
@@ -203,6 +205,11 @@ public sealed class QuestPathSequence : MonoBehaviour
         StartCoroutine(RunSequence());
     }
 
+    private void OnDisable()
+    {
+        GameAudio.StopForestFootsteps();
+    }
+
     // Keep the character facing a fixed direction while it is stopped at a quest beat,
     // overriding CharacterAppearance (which only sets orientation while moving).
     private void LateUpdate()
@@ -247,13 +254,23 @@ public sealed class QuestPathSequence : MonoBehaviour
         }
     }
 
+    // Re-show the two crows fully visible (used on return from the ga encounter so they can fade off).
+    private void ShowResumeCrows()
+    {
+        if (crow1Root != null) crow1Root.SetActive(true);
+        if (crow1Sprite != null) SetAlpha(crow1Sprite, 1f);
+        if (crow2Root != null) crow2Root.SetActive(true);
+        if (crow2Sprite != null) SetAlpha(crow2Sprite, 1f);
+    }
+
     private IEnumerator RunSequence()
     {
         // Returned from the bear encounter? Pre-place the hero at wp_1 and re-show the bear + "!"
         // (they were left visible when we entered) BEFORE the black reveal finishes, so they are
         // already on screen as it fades in - matching how the player left them.
-        bool resuming = BearEncounterFlow.ResumeAtBeat2;
-        if (resuming)
+        bool resuming2 = BearEncounterFlow.ResumeAtBeat2; // back from the bear -> do the crow (ga) quest
+        bool resuming3 = BearEncounterFlow.ResumeAtBeat3; // back from the crow (ga) -> skip to Beat 3 (foxes)
+        if (resuming2)
         {
             if (wp1 != null && body != null)
             {
@@ -267,6 +284,22 @@ public sealed class QuestPathSequence : MonoBehaviour
             }
             ShowQuest1Actor();
         }
+        else if (resuming3)
+        {
+            // Land at the crow quest spot (wp_2) facing the next quest; re-show the crows so they
+            // can fly off as the black reveal fades in — matching how the bear return re-shows the bear.
+            if (wp2 != null && body != null)
+            {
+                Vector3 resumePos = wp2.position;
+                resumePos.z = body.position.z;
+                body.position = resumePos;
+            }
+            if (wp2 != null && wp3 != null)
+            {
+                facingLock = OrientationFor(wp3.position - wp2.position);
+            }
+            ShowResumeCrows();
+        }
 
         // Wait for the scene's black fade-in (reveal) to finish before any gameplay begins, so the
         // hero never moves while the screen is still covered.
@@ -277,7 +310,7 @@ public sealed class QuestPathSequence : MonoBehaviour
             yield return new WaitForSeconds(startDelay);
         }
 
-        if (resuming)
+        if (resuming2)
         {
             // The bear quest was completed inside word_build_paa_polished: the bear + "!" fade out
             // now, the hero stays where it left off (wp_1), then the remaining quests run unchanged.
@@ -286,6 +319,16 @@ public sealed class QuestPathSequence : MonoBehaviour
             yield return new WaitForSeconds(questAutoHold);
             yield return FadeOutAndHide(new[] { villager, villagerMarkerSprite },
                 new[] { villager != null ? villager.gameObject : null, villagerMarkerRoot });
+        }
+        else if (resuming3)
+        {
+            // The crow (ga) quest is done: the freed crows fade off, then Beat 3 (foxes) continues.
+            BearEncounterFlow.ResumeAtBeat3 = false;
+            GameAudio.PlayAfterQuest();
+            yield return new WaitForSeconds(questAutoHold);
+            crowPatrolActive = false;
+            yield return FadeOutAndHide(new[] { crow1Sprite, crow2Sprite },
+                new[] { crow1Root, crow2Root });
         }
         else
         {
@@ -309,38 +352,46 @@ public sealed class QuestPathSequence : MonoBehaviour
             // The bear stays visible. Fade to black and enter the word-build (bear) encounter;
             // on a successful build it loads us back and we resume at Beat 2 (bear now gone).
             BearEncounterFlow.ReturnToForest = true;
-            GameAudio.PlayQuestEnter();
-            yield return SceneFadeController.Cover(sceneExitCoverDuration);
+            yield return PlayQuestEnterThenCover();
             SceneManager.LoadScene(bearEncounterSceneName);
             yield break;
         }
 
-        // ---- Beat 2: walk to wp_2, crows fly in and block, reveal crow "!" ----
-        facingLock = -1;
-        if (wp2 != null)
+        // ---- Beat 2: walk to wp_2, crows fly in and block, reveal crow "!", then enter the crow
+        //      (ga) encounter — the SAME fade + click-quest hand-off Beat 1 uses for the bear.
+        //      Skipped when resuming3 (we already came back FROM the ga encounter).
+        if (!resuming3)
         {
-            yield return MoveTo(wp2.position);
+            facingLock = -1;
+            if (wp2 != null)
+            {
+                yield return MoveTo(wp2.position);
+            }
+
+            if (wp2 != null && wp3 != null)
+            {
+                facingLock = OrientationFor(wp3.position - wp2.position);
+            }
+
+            // Crows fade in at their placed spots while they begin their straight back-and-forth flight.
+            ActivateForFade(crow1Root, crow1Sprite);
+            ActivateForFade(crow2Root, crow2Sprite);
+            StartCrowFlight();
+            yield return Fade(new[] { crow1Sprite, crow2Sprite }, 0f, 1f);
+
+            // Now the "!" appears on the crow.
+            Vibrate();
+            yield return Reveal(crowMarkRoot, crowMarkSprite, null, null);
+
+            yield return new WaitForSeconds(questAutoHold);   // auto-completes on arrival (no tap)
+
+            // The crows stay visible; fade to black and enter CutScene_ga. On success the crow
+            // scene sets ResumeAtBeat3 and loads us back here, resuming past the crow quest.
+            crowPatrolActive = false;
+            yield return PlayQuestEnterThenCover();
+            SceneManager.LoadScene(crowEncounterSceneName);
+            yield break;
         }
-
-        if (wp2 != null && wp3 != null)
-        {
-            facingLock = OrientationFor(wp3.position - wp2.position);
-        }
-
-        // Crows fade in at their placed spots while they begin their straight back-and-forth flight.
-        ActivateForFade(crow1Root, crow1Sprite);
-        ActivateForFade(crow2Root, crow2Sprite);
-        StartCrowFlight();
-        yield return Fade(new[] { crow1Sprite, crow2Sprite }, 0f, 1f);
-
-        // Now the "!" appears on the crow.
-        Vibrate();
-        yield return Reveal(crowMarkRoot, crowMarkSprite, null, null);
-
-        yield return new WaitForSeconds(questAutoHold);   // auto-completes on arrival (no tap)
-        crowPatrolActive = false;
-        yield return FadeOutAndHide(new[] { crow1Sprite, crow2Sprite, crowMarkSprite },
-            new[] { crow1Root, crow2Root, crowMarkRoot });
 
         // ---- Beat 3: walk wp_2 -> wp_3; partway, the walking foxes turn sick ----
         facingLock = -1;
@@ -511,6 +562,20 @@ public sealed class QuestPathSequence : MonoBehaviour
         }
     }
 
+    // Let the quest-enter cue finish while the encounter is still visible, then cover the screen.
+    // The duration comes from the assigned clip, so changing click-quest.mp3 stays in sync.
+    private IEnumerator PlayQuestEnterThenCover()
+    {
+        GameAudio.PlayQuestEnter();
+        float cueDuration = GameAudio.QuestEnterDuration;
+        if (cueDuration > 0f)
+        {
+            yield return new WaitForSeconds(cueDuration);
+        }
+
+        yield return SceneFadeController.Cover(sceneExitCoverDuration);
+    }
+
     // Turn to face 'to' (relative to 'from'), hold briefly, then walk to 'to'.
     private IEnumerator WalkFacing(Transform from, Transform to)
     {
@@ -575,6 +640,12 @@ public sealed class QuestPathSequence : MonoBehaviour
         }
 
         targetWorld.z = body.position.z;
+        bool isWalking = Vector3.Distance(body.position, targetWorld) > arriveDistance;
+        if (isWalking)
+        {
+            GameAudio.StartForestFootsteps();
+        }
+
         while (true)
         {
             Vector3 current = body.position;
@@ -600,6 +671,10 @@ public sealed class QuestPathSequence : MonoBehaviour
         }
 
         body.position = targetWorld;
+        if (isWalking)
+        {
+            GameAudio.StopForestFootsteps();
+        }
     }
 
     // Matches SuperRetroMainBundle.CharacterAppearance: 0 up / 2 left / 4 down / 6 right.

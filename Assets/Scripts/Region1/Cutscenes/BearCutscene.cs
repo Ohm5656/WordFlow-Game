@@ -45,8 +45,14 @@ public sealed class BearCutscene : MonoBehaviour
 
     [Header("Flow")]
     [SerializeField] private bool playOnStart = true;
+    [Tooltip("Success_pa only: play paa.wav once when the separate Thow animation starts with this cutscene.")]
+    [SerializeField] private bool playPaaThrowSfxOnStart = false;
     [SerializeField] private int startWaypoint = 0;       // teleport here before the sequence
     [SerializeField] private float fadeInDuration = 0.6f; // bear appearance fade
+
+    [Header("Optional visual crop")]
+    [Tooltip("Crop this many local UI pixels from only the left edge. Used to hide a thin render border on the Eye result.")]
+    [SerializeField, Min(0f)] private float cropLeftPixels = 0f;
 
     [Header("Ending (optional — defaults keep the owl hand-off)")]
     [Tooltip("Fade these out together with the bear at the end (e.g. the throw hands).")]
@@ -88,6 +94,8 @@ public sealed class BearCutscene : MonoBehaviour
         }
         if (owlGreeting == null) owlGreeting = FindObjectOfType<OwlGreetingCutscene>(true);
 
+        ApplyLeftEdgeCrop();
+
         baseScale = transform.localScale;
 
         fade = GetComponent<CanvasGroup>();
@@ -122,6 +130,11 @@ public sealed class BearCutscene : MonoBehaviour
             routine = null;
             if (owlGreeting != null) owlGreeting.PlayGreeting();
             yield break;
+        }
+
+        if (playPaaThrowSfxOnStart)
+        {
+            GameAudio.PlayPaaThrow();
         }
 
         transform.position = WaypointPos(startWaypoint, transform.position);
@@ -215,6 +228,30 @@ public sealed class BearCutscene : MonoBehaviour
 
         // hand off to the existing flow: owl greeting -> book/stone puzzle reveal
         if (owlGreeting != null) owlGreeting.PlayGreeting();
+    }
+
+    private void ApplyLeftEdgeCrop()
+    {
+        RectTransform target = transform as RectTransform;
+        if (cropLeftPixels <= 0f || target == null || target.parent == null) return;
+
+        Transform originalParent = target.parent;
+        int originalSibling = target.GetSiblingIndex();
+
+        GameObject maskObject = new GameObject(name + "_CropMask", typeof(RectTransform), typeof(RectMask2D));
+        maskObject.layer = gameObject.layer;
+        RectTransform maskRect = maskObject.GetComponent<RectTransform>();
+        maskRect.SetParent(originalParent, false);
+        maskRect.SetSiblingIndex(originalSibling);
+        maskRect.anchorMin = target.anchorMin;
+        maskRect.anchorMax = target.anchorMax;
+        maskRect.pivot = target.pivot;
+        maskRect.anchoredPosition3D = target.anchoredPosition3D + new Vector3(cropLeftPixels * 0.5f, 0f, 0f);
+        maskRect.sizeDelta = new Vector2(Mathf.Max(1f, target.sizeDelta.x - cropLeftPixels), target.sizeDelta.y);
+        maskRect.localRotation = target.localRotation;
+        maskRect.localScale = target.localScale;
+
+        target.SetParent(maskRect, true);
     }
 
     // Fade the bear and every alsoFade group from their current alpha to 0 in lockstep.

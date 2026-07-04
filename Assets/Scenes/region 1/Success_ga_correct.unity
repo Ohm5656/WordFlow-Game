@@ -1033,7 +1033,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7c0f9baae98d804ca8cf05228d08165, type: 3}
   m_Name: 
   m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Net.TtsApiClient
-  ttsUrl: http://127.0.0.1:8001/api/v1/tts
   authorization: Bearer demo-token
 --- !u!114 &427317406
 MonoBehaviour:
@@ -1177,7 +1176,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Net.SessionContext
   kidId: kid_demo_01
   island: 1
-  baseUrl: http://127.0.0.1:8001/api/v1
   authorization: Bearer demo-token
   telemetry: {fileID: 0}
 --- !u!4 &510158524
@@ -1911,7 +1909,8 @@ MonoBehaviour:
   expandStartScale: 1
   expandEndScale: 3.5
   nextScene: reference_forest
-  resumeForestAtBeat2: 1
+  resumeForestAtBeat2: 0
+  resumeForestAtBeat3: 1
 --- !u!225 &1740811460
 CanvasGroup:
   m_ObjectHideFlags: 0

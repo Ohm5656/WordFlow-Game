@@ -47,7 +47,7 @@ MonoBehaviour:
   music: {fileID: 8300000, guid: 2c86a95af6e22164896fa20442cda638, type: 3}
   musicVolume: 0.85
   otherSceneDuck: 0.7
-  voiceDuck: 0.5
+  voiceDuck: 0.2
   duckLerpSpeed: 2.5
   crossfadeSeconds: 2
   musicFadeInSeconds: 3.2
@@ -60,4 +60,13 @@ MonoBehaviour:
   bearRun: {fileID: 8300000, guid: 9cfedf24e0d0cbf4f97c2671aa518fbe, type: 3}
   bearRoar: {fileID: 8300000, guid: 7924afc4a63641247918f8aba05043a5, type: 3}
   crowFly: {fileID: 8300000, guid: cf2cd0ad1daf25e4da4ec3697ad1069a, type: 3}
+  paaThrow: {fileID: 8300000, guid: 67b36206a930fd44a8ab694b1afd5f59, type: 3}
+  paaThrowGain: 1.5
+  rockBreak: {fileID: 8300000, guid: f3667b902a9115740ba579e761c31847, type: 3}
+  crowGain: 1.8
+  forestFootsteps:
+  - {fileID: 8300000, guid: bcde8cfa85609c44ba6b2ce9d7562bc2, type: 3}
+  - {fileID: 8300000, guid: 172ab4db8668cca4faaff5a55f934ec6, type: 3}
+  - {fileID: 8300000, guid: 4a2156d8285edaf48932cc236790f5fc, type: 3}
+  forestFootstepVolume: 0.85
   sfxVolume: 1

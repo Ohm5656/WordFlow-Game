@@ -20,6 +20,9 @@ public static class BearEncounterFlow
     /// <summary>Set by the forest before entering the encounter; the encounter returns to the forest on success.</summary>
     public static bool ReturnToForest;
 
-    /// <summary>Set while returning; tells the forest to skip Beat 1 and resume at Beat 2.</summary>
+    /// <summary>Set while returning; tells the forest to skip Beat 1 and resume at Beat 2 (crow/ga quest).</summary>
     public static bool ResumeAtBeat2;
+
+    /// <summary>Set while returning from the crow (ga) encounter; the forest skips Beat 1+2 and resumes at Beat 3.</summary>
+    public static bool ResumeAtBeat3;
 }

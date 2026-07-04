@@ -19,10 +19,15 @@ public sealed class SuccessGaReturn : MonoBehaviour
 
     private IEnumerator Run()
     {
+        // Match the other crow scenes: loop Crow.mp3 only while the celebration animation plays.
+        GameAudio.PlayCrowLoop();
+
         if (playSeconds > 0f)
         {
             yield return new WaitForSeconds(playSeconds);
         }
+
+        GameAudio.StopSfxLoop();
 
         Image fade = CreateFadeImage(fadeColor);
         Color c = fadeColor;
@@ -39,6 +44,11 @@ public sealed class SuccessGaReturn : MonoBehaviour
         MagicStonePuzzleController.RequestRetryAfterCrow(); // back to assembly, skip the intro walk
         MagicStonePuzzleController.RequestRetryAfterAlt();  // signal: show stones all-at-once on return
         SceneManager.LoadScene(returnSceneName);
+    }
+
+    private void OnDisable()
+    {
+        GameAudio.StopSfxLoop();
     }
 
     private static Image CreateFadeImage(Color color)
