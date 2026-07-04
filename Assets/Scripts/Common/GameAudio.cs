@@ -15,7 +15,11 @@ public sealed class GameAudio : MonoBehaviour
     [Tooltip("Master music volume (played at full in WorldMap).")]
     [SerializeField] private float musicVolume = 0.85f;
     [Tooltip("Music volume multiplier in every scene EXCEPT WorldMap (a touch quieter so it doesn't dominate).")]
-    [SerializeField] private float otherSceneDuck = 0.5f;
+    [SerializeField] private float otherSceneDuck = 0.7f;
+    [Tooltip("Music volume multiplier while the owl is speaking, so the voice sits on top.")]
+    [SerializeField] private float voiceDuck = 0.5f;
+    [Tooltip("How fast the music ducks in/out when the owl starts/stops speaking (per second).")]
+    [SerializeField] private float duckLerpSpeed = 2.5f;
     [Tooltip("Crossfade overlap at the loop seam, seconds.")]
     [SerializeField] private float crossfadeSeconds = 2f;
     [Tooltip("Music fade-in when it first starts (WorldMap black reveal).")]
@@ -54,7 +58,9 @@ public sealed class GameAudio : MonoBehaviour
     private double nextLoopDspTime;     // when the idle source takes over
     private AudioSource activeBgm;      // the source currently mid-track
     private AudioSource pendingBgm;     // scheduled to start at nextLoopDspTime
-    private float duck = 1f;            // 1 outside forest, forestDuck inside
+    private float duck = 1f;            // scene duck: 1 in WorldMap, otherSceneDuck elsewhere
+    private bool voiceActive;           // owl currently speaking -> duck further to voiceDuck
+    private float dampedDuck = 1f;      // smoothed duck actually applied (no hard volume jumps)
     private float fadeIn = 1f;          // 0->1 over musicFadeInSeconds at start
     private float fadeInElapsed;
     private bool musicStarted;
@@ -87,6 +93,9 @@ public sealed class GameAudio : MonoBehaviour
     public static void PlayLose() { GameAudio audio = Instance; if (audio != null) audio.PlayOneShot(audio.loseSting); }
     public static void PlayCrowLoop() { GameAudio audio = Instance; if (audio != null) audio.StartLoop(audio.crowFly); }
     public static void StopSfxLoop() { GameAudio audio = Instance; if (audio != null) audio.StopLoop(); }
+
+    // Duck the music under the owl's voice. No spawn on a stray false call.
+    public static void SetVoiceDucking(bool on) { if (instance != null) instance.voiceActive = on; }
 
     // Cutscene state -> sound. Called by BearCutscene as each step's state starts.
     public static void OnCutsceneState(string state)
@@ -144,6 +153,7 @@ public sealed class GameAudio : MonoBehaviour
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         ApplyDuckForScene(scene.name);
+        voiceActive = false; // clear any voice duck left over from a scene that unloaded mid-speech
         EnsureListener();
     }
 
@@ -160,6 +170,7 @@ public sealed class GameAudio : MonoBehaviour
         musicStarted = true;
         fadeIn = musicFadeInSeconds > 0f ? 0f : 1f;
         fadeInElapsed = 0f;
+        dampedDuck = duck; // start at the scene's duck, don't lerp from 1
 
         activeBgm = bgmA;
         pendingBgm = bgmB;
@@ -189,7 +200,9 @@ public sealed class GameAudio : MonoBehaviour
             fadeIn = Mathf.Clamp01(fadeInElapsed / Mathf.Max(0.01f, musicFadeInSeconds));
         }
 
-        float target = musicVolume * duck * fadeIn;
+        float targetDuck = voiceActive ? Mathf.Min(duck, voiceDuck) : duck;
+        dampedDuck = Mathf.MoveTowards(dampedDuck, targetDuck, Mathf.Max(0.01f, duckLerpSpeed) * Time.unscaledDeltaTime);
+        float target = musicVolume * dampedDuck * fadeIn;
         double now = AudioSettings.dspTime;
         double intoCross = now - nextLoopDspTime; // <0 before the seam, 0..crossfade inside it
 

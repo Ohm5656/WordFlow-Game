@@ -103,6 +103,7 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
         float[] spls = { phrase1SecondsPerLoop, phrase2SecondsPerLoop, phrase3SecondsPerLoop };
 
         Debug.Log($"[OwlEpilogue] Play — phrase1Clip={phrase1Clip}, phrase2Clip={phrase2Clip}, phrase3Clip={phrase3Clip}");
+        GameAudio.SetVoiceDucking(true); // drop the music under the owl's voice
         bool playedAny = false;
         bool first = true;
         for (int i = 0; i < clips.Length; i++)
@@ -122,6 +123,7 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
         if (!playedAny && fallbackHoldSeconds > 0f)
             yield return new WaitForSeconds(fallbackHoldSeconds);
 
+        GameAudio.SetVoiceDucking(false); // owl done speaking — let the music back up
         owlAnimator.speed = 0f; // freeze on the last frame
         if (playedAny && holdFrozenAfterRound > 0f)
             yield return new WaitForSeconds(holdFrozenAfterRound);

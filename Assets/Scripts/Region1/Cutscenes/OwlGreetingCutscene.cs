@@ -821,6 +821,7 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         StopVoice();
         AudioSource source = GetOrCreateVoiceAudioSource();
         StartTalkingAnimation();
+        GameAudio.SetVoiceDucking(true); // drop the music under the owl's voice
 
         bool fade = UsesTalkingPrefabAnimator && talkingFadeDuration > 0f;
         int lastIndex = LastNonNullLineIndex(lines);
@@ -885,6 +886,7 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             }
         }
 
+        GameAudio.SetVoiceDucking(false); // owl finished this round — let the music back up
         StopTalkingAnimation();
     }
 
@@ -952,6 +954,7 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
     private void StopVoice()
     {
+        GameAudio.SetVoiceDucking(false); // owl no longer speaking (interrupt / round end)
         if (voiceRoutine != null)
         {
             StopCoroutine(voiceRoutine);
