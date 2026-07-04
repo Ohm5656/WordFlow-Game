@@ -341,6 +341,7 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
             yield return new WaitForSeconds(unlockAnimationDelay);
         }
 
+        GameAudio.PlayUnlock();
         playablePromptReady = false;
         if (island.Lock != null)
         {
@@ -601,6 +602,7 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
             return;
         }
 
+        GameAudio.PlayClick();
         StartCoroutine(LoadNextSceneRoutine());
     }
 

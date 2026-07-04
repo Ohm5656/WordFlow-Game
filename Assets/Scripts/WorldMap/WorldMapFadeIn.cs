@@ -76,6 +76,7 @@ public sealed class WorldMapFadeIn : MonoBehaviour
 
     private IEnumerator FadeInRoutine()
     {
+        GameAudio.EnsureMusic(); // BGM fades in alongside the black reveal
         fadeExpected = true;
         fadeRunning = true;
         expectedFadeFinishedRealtime = Time.realtimeSinceStartup + Mathf.Max(0f, fadeStartDelay) + Mathf.Max(0.01f, fadeInDuration);
