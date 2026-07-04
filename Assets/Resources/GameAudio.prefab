@@ -46,7 +46,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Common::GameAudio
   music: {fileID: 8300000, guid: 2c86a95af6e22164896fa20442cda638, type: 3}
   musicVolume: 0.85
-  otherSceneDuck: 0.7
+  otherSceneDuck: 0.5
   crossfadeSeconds: 2
   musicFadeInSeconds: 3.2
   click: {fileID: 8300000, guid: 36550ee227e21bf42a12a42e59415d85, type: 3}

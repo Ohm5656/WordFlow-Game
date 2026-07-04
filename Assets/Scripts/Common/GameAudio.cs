@@ -15,7 +15,7 @@ public sealed class GameAudio : MonoBehaviour
     [Tooltip("Master music volume (played at full in WorldMap).")]
     [SerializeField] private float musicVolume = 0.85f;
     [Tooltip("Music volume multiplier in every scene EXCEPT WorldMap (a touch quieter so it doesn't dominate).")]
-    [SerializeField] private float otherSceneDuck = 0.7f;
+    [SerializeField] private float otherSceneDuck = 0.5f;
     [Tooltip("Crossfade overlap at the loop seam, seconds.")]
     [SerializeField] private float crossfadeSeconds = 2f;
     [Tooltip("Music fade-in when it first starts (WorldMap black reveal).")]
