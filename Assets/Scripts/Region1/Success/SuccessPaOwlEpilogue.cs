@@ -41,6 +41,8 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
     [SerializeField] private OwlHelloSequence owlHello;
     [SerializeField] private TtsApiClient ttsClient;
     [SerializeField] private AudioSource voiceSource;
+    [Tooltip("Wrong-word scene: play lose.wav instead of win.wav when the owl appears.")]
+    [SerializeField] private bool playLoseSting = false;
 
     private RectTransform owlRect;
     private CanvasGroup owlCanvasGroup;
@@ -75,6 +77,8 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
     public IEnumerator Play()
     {
         if (owlAnimator == null) yield break;
+
+        if (playLoseSting) GameAudio.PlayLose(); else GameAudio.PlayWin();
 
         if (owlRect != null) owlRect.anchoredPosition = owlPosition;
 
