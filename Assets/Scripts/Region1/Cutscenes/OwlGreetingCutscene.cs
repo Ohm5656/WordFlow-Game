@@ -121,7 +121,7 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [Tooltip("Seconds to fade the talking owl in when it enters and out when it leaves. 0 = pop instantly.")]
     [SerializeField, Min(0f)] private float talkingFadeDuration = 0.35f;
     [Tooltip("After a whole talking round finishes (all its phrases), freeze the owl on its current frame for this long before fading out. 0 = no hold.")]
-    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 1f;
+    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.5f;
 
     [Header("Book Reveal")]
     [SerializeField] private bool playBookRevealAfterBearFocus = true;

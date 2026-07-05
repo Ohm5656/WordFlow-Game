@@ -760,10 +760,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 3840, y: 2160}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
@@ -2491,7 +2491,7 @@ MonoBehaviour:
   bearFocusMissionSecondsPerLoop: 0
   hideTalkingPrefabWhenSilent: 1
   talkingFadeDuration: 0.35
-  holdFrozenAfterRound: 1
+  holdFrozenAfterRound: 0.5
   playBookRevealAfterBearFocus: 1
   bookCraftRoot: {fileID: 0}
   bookCraftImage: {fileID: 0}
@@ -2520,7 +2520,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7c0f9baae98d804ca8cf05228d08165, type: 3}
   m_Name: 
   m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Net.TtsApiClient
-  ttsUrl: http://127.0.0.1:8001/api/v1/tts
   authorization: Bearer demo-token
 --- !u!1 &1912081049
 GameObject:
@@ -2727,13 +2726,16 @@ MonoBehaviour:
   path: {fileID: 0}
   owlGreeting: {fileID: 0}
   playOnStart: 1
+  playPaaThrowSfxOnStart: 0
   startWaypoint: 0
   fadeInDuration: 0.6
+  cropLeftPixels: 0
   alsoFade: []
   endFadeOutDuration: 0
   nextScene: 
   resumeForestAtBeat2: 0
   owlEpilogue: {fileID: 0}
+  setPuzzleRetryFlags: 0
   sequence:
   - state: bear_run2
     toWaypoint: 1
@@ -2803,7 +2805,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Net.SessionContext
   kidId: kid_demo_01
   island: 1
-  baseUrl: http://127.0.0.1:8001/api/v1
   authorization: Bearer demo-token
   telemetry: {fileID: 1927823508}
 --- !u!4 &1927823507
@@ -2833,7 +2834,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ab9e7e41829fbd46ad1a75f66f0ab74, type: 3}
   m_Name: 
   m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Net.TelemetryClient
-  baseUrl: http://127.0.0.1:8001/api/v1
   authorization: Bearer demo-token
   pumpIntervalSeconds: 1
 --- !u!1 &1946246605

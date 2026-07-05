@@ -15,7 +15,7 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
     [SerializeField] private float fadeInDuration = 0.35f;
     [SerializeField] private float fadeOutDuration = 0.35f;
     [Tooltip("After the owl finishes all phrases, freeze on its current frame for this long before fading out. 0 = no hold.")]
-    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 1f;
+    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.5f;
     [SerializeField] private float phraseGap = 0.05f;
     [Tooltip("If TTS fails / no clip assigned, hold this long before fading out (so owl isn't invisible).")]
     [SerializeField] private float fallbackHoldSeconds = 6f;

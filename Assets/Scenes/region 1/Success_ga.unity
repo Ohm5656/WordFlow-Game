@@ -794,21 +794,38 @@ MonoBehaviour:
   bearFocusExcludedFrames: owl (5)
   restoreBearScaleAfterFocus: 1
   restoreBackgroundAfterBearFocus: 1
-  voiceAudioSource: {fileID: 0}
+  greetingPhrase1Clip: {fileID: 0}
+  greetingPhrase2Clip: {fileID: 0}
+  greetingPhrase3Clip: {fileID: 0}
   greetingVoiceClip: {fileID: 8300000, guid: a7f0e9c1d2b34f9e8a6c5b4d3e2f1098, type: 3}
+  voiceAudioSource: {fileID: 0}
   bearFocusLookVoiceClip: {fileID: 8300000, guid: b8d4a62e1f934d6bb2c75a4f9013de8c, type: 3}
   bearFocusMissionVoiceClip: {fileID: 0}
   ttsClient: {fileID: 0}
+  greetingPhrase1LineId: 
+  greetingPhrase2LineId: 
+  greetingPhrase3LineId: 
   greetingLineId: 
   bearFocusLookLineId: 
   voiceStartDelay: 0
   bearFocusVoiceGap: 0.05
   useVoiceClipLengthForTalkDuration: 1
+  owlHello: {fileID: 0}
   talkingAnimator: {fileID: 0}
   talkingStateName: Owl
   talkingAnimationSpeed: 1
   talkingSecondsPerLoop: 0
+  greetingPhrase2AnimationSpeed: 1
+  greetingPhrase2SecondsPerLoop: 0
+  greetingPhrase3AnimationSpeed: 1
+  greetingPhrase3SecondsPerLoop: 0
+  bearFocusLookAnimationSpeed: 1
+  bearFocusLookSecondsPerLoop: 0
+  bearFocusMissionAnimationSpeed: 1
+  bearFocusMissionSecondsPerLoop: 0
   hideTalkingPrefabWhenSilent: 1
+  talkingFadeDuration: 0.35
+  holdFrozenAfterRound: 0.5
   playBookRevealAfterBearFocus: 1
   bookCraftRoot: {fileID: 0}
   bookCraftImage: {fileID: 0}
@@ -1033,7 +1050,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Net.SessionContext
   kidId: kid_demo_01
   island: 1
-  baseUrl: http://127.0.0.1:8001/api/v1
   authorization: Bearer demo-token
   telemetry: {fileID: 0}
 --- !u!4 &510158524
@@ -1325,10 +1341,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 3840, y: 2160}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3

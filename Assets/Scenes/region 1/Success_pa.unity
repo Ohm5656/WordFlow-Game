@@ -433,6 +433,8 @@ MonoBehaviour:
   - {fileID: 21300000, guid: bc5ac8cdab45c4545ba6867a85f97456, type: 3}
   fps: 10
   playbackSpeed: 1
+  hideOnComplete: 1
+  holdAfterPlay: 0.5
   zoomTarget: {fileID: 204810062}
   zoomInDuration: 0.25
   zoomOutDuration: 0.3
@@ -969,6 +971,7 @@ MonoBehaviour:
   bearFocusMissionSecondsPerLoop: 0
   hideTalkingPrefabWhenSilent: 1
   talkingFadeDuration: 0.35
+  holdFrozenAfterRound: 0.5
   playBookRevealAfterBearFocus: 1
   bookCraftRoot: {fileID: 0}
   bookCraftImage: {fileID: 0}
@@ -1035,7 +1038,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7c0f9baae98d804ca8cf05228d08165, type: 3}
   m_Name: 
   m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Net.TtsApiClient
-  ttsUrl: http://127.0.0.1:8001/api/v1/tts
   authorization: Bearer demo-token
 --- !u!114 &427317406
 MonoBehaviour:
@@ -1054,6 +1056,7 @@ MonoBehaviour:
   owlPosition: {x: 0, y: -89}
   fadeInDuration: 0.35
   fadeOutDuration: 0.35
+  holdFrozenAfterRound: 0.5
   phraseGap: 0.05
   fallbackHoldSeconds: 6
   phrase1Clip: {fileID: 0}
@@ -1071,6 +1074,7 @@ MonoBehaviour:
   owlHello: {fileID: 204810063}
   ttsClient: {fileID: 427317405}
   voiceSource: {fileID: 0}
+  playLoseSting: 0
 --- !u!1 &453703994
 GameObject:
   m_ObjectHideFlags: 0
@@ -1177,7 +1181,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Net.SessionContext
   kidId: kid_demo_01
   island: 1
-  baseUrl: http://127.0.0.1:8001/api/v1
   authorization: Bearer demo-token
   telemetry: {fileID: 0}
 --- !u!4 &510158524
@@ -1836,10 +1839,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 3840, y: 2160}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
@@ -2233,12 +2236,14 @@ MonoBehaviour:
   playPaaThrowSfxOnStart: 1
   startWaypoint: -1
   fadeInDuration: 0
+  cropLeftPixels: 0
   alsoFade:
   - {fileID: 1075745848}
   endFadeOutDuration: 0.6
   nextScene: reference_forest
   resumeForestAtBeat2: 1
   owlEpilogue: {fileID: 427317406}
+  setPuzzleRetryFlags: 0
   sequence:
   - state: bear_run_back
     toWaypoint: 1
