@@ -438,9 +438,9 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
         if (owlHello != null)
         {
-            // Match the wave's frame rate to the talking owl's so the seam owl_hello->owl is continuous.
-            float talkFps = GetTalkingDisplayFps(talkingAnimationSpeed, talkingSecondsPerLoop);
-            if (talkFps > 0f) owlHello.SetPlaybackFps(talkFps);
+            // Pacing: play the wave at its own authored fps (smooth ~10fps) instead of matching the
+            // owl's slow talking fps — the old override dropped it to ~3fps, which read as a choppy,
+            // unnaturally sped-up wave AND stretched it to ~9.5s. Its own fps is smoother and shorter.
             owlHello.SetHideOnComplete(false); // keep the last frame so we can crossfade it out
             yield return owlHello.Play();
             // Crossfade: owl_hello fades out while the talking owl (below it) fades in — smooth dissolve.

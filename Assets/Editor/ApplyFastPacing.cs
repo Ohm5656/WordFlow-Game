@@ -34,7 +34,7 @@ public static class ApplyFastPacing
         },
         ["OwlHelloSequence"] = new (string, float)[]
         {
-            ("playbackSpeed", 1.8f),
+            ("playbackSpeed", 1f), // natural, undistorted; wave now plays smooth at its own ~10fps
             ("holdAfterPlay", 0.1f),
             ("zoomInDuration", 0.15f),
             ("zoomOutDuration", 0.15f),
