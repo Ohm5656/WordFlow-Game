@@ -500,6 +500,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         _latency.Start(Time.realtimeSinceStartupAsDouble);
         revealFinished = true;
+        Debug.Log($"[Pacing] stones interactive at {Time.timeSinceLevelLoad:0.0}s");
     }
 
     public void HandleStoneClicked(MagicStonePuzzleStone stone)
@@ -1682,7 +1683,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         if (recordingSuccessSfx != null)
         {
-            holdDuration = Mathf.Max(holdDuration, Mathf.Min(recordingSuccessSfx.length, 1.1f));
+            holdDuration = Mathf.Max(holdDuration, Mathf.Min(recordingSuccessSfx.length, 0.6f));
         }
 
         if (successImage == null)
