@@ -263,6 +263,7 @@ MonoBehaviour:
   - gameplay_aa
   - gameplay_kaa
   ttsEchoGapSeconds: 0.2
+  ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
   recordingSuccessSprite: {fileID: 0}
@@ -1501,6 +1502,7 @@ MonoBehaviour:
   - gameplay_aa
   - gameplay_kaa
   ttsEchoGapSeconds: 0.2
+  ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
   recordingSuccessSprite: {fileID: 0}
@@ -2036,6 +2038,7 @@ MonoBehaviour:
   - gameplay_aa
   - gameplay_kaa
   ttsEchoGapSeconds: 0.2
+  ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
   recordingSuccessSprite: {fileID: 8418692620603804807, guid: 237e4d72fdcaced40ad1e241b9c15eda, type: 3}
@@ -2335,6 +2338,7 @@ MonoBehaviour:
   - gameplay_aa
   - gameplay_kaa
   ttsEchoGapSeconds: 0.2
+  ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
   recordingSuccessSprite: {fileID: 0}
@@ -2473,6 +2477,7 @@ MonoBehaviour:
   greetingPhrase3LineId: paa_intro_owl_1c
   greetingLineId: 
   bearFocusLookLineId: paa_intro_owl_2
+  ttsWaitTimeoutSeconds: 8
   voiceStartDelay: 0
   bearFocusVoiceGap: 0.05
   useVoiceClipLengthForTalkDuration: 1
@@ -2521,6 +2526,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Net.TtsApiClient
   authorization: Bearer demo-token
+  requestTimeoutSeconds: 8
 --- !u!1 &1912081049
 GameObject:
   m_ObjectHideFlags: 0
@@ -3206,6 +3212,7 @@ MonoBehaviour:
   - gameplay_aa
   - gameplay_kaa
   ttsEchoGapSeconds: 0.2
+  ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
   recordingSuccessSprite: {fileID: 0}

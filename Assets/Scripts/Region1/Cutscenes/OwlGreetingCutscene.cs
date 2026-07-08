@@ -82,6 +82,8 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [HideInInspector] [SerializeField] private string greetingLineId; // legacy fallback TTS for วรรค1
     [Tooltip("/tts line for the second intro line (bear-focus 'look/mission' clip; e.g. paa_intro_owl_2).")]
     [SerializeField] private string bearFocusLookLineId;
+    [Tooltip("Maximum time to wait for the prefetched TTS lines before using the offline clips.")]
+    [SerializeField, Min(0.1f)] private float ttsWaitTimeoutSeconds = 8f;
     [SerializeField] private float voiceStartDelay = 0f;
     [SerializeField] private float bearFocusVoiceGap = 0.05f;
     [SerializeField] private bool useVoiceClipLengthForTalkDuration = true;
@@ -165,6 +167,8 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     // each round — greeting vs bear-focus — uses its own inspector values).
     private float activeTalkingSpeed = 1f;
     private float activeTalkingSecondsPerLoop = 0f;
+    private int pendingTtsLines;
+    private bool ttsResolutionStarted;
 
     private struct OwlFrame
     {
@@ -226,18 +230,39 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     // is ready by the time the greeting plays (after the intro zoom). Any failure -> keep the clip.
     private void ResolveTtsLines()
     {
+        if (ttsResolutionStarted) return;
+        ttsResolutionStarted = true;
         if (ttsClient == null) ttsClient = FindObjectOfType<TtsApiClient>();
         if (ttsClient == null) return;
         if (!string.IsNullOrWhiteSpace(greetingPhrase1LineId))
-            ttsClient.GetLine(greetingPhrase1LineId, c => { if (c != null) greetingPhrase1Clip = c; });
+            RequestTtsLine(greetingPhrase1LineId, c => greetingPhrase1Clip = c);
         else if (!string.IsNullOrWhiteSpace(greetingLineId))
-            ttsClient.GetLine(greetingLineId, c => { if (c != null) { greetingPhrase1Clip = c; greetingVoiceClip = c; } });
+            RequestTtsLine(greetingLineId, c => { greetingPhrase1Clip = c; greetingVoiceClip = c; });
         if (!string.IsNullOrWhiteSpace(greetingPhrase2LineId))
-            ttsClient.GetLine(greetingPhrase2LineId, c => { if (c != null) greetingPhrase2Clip = c; });
+            RequestTtsLine(greetingPhrase2LineId, c => greetingPhrase2Clip = c);
         if (!string.IsNullOrWhiteSpace(greetingPhrase3LineId))
-            ttsClient.GetLine(greetingPhrase3LineId, c => { if (c != null) greetingPhrase3Clip = c; });
+            RequestTtsLine(greetingPhrase3LineId, c => greetingPhrase3Clip = c);
         if (!string.IsNullOrWhiteSpace(bearFocusLookLineId))
-            ttsClient.GetLine(bearFocusLookLineId, c => { if (c != null) bearFocusLookVoiceClip = c; });
+            RequestTtsLine(bearFocusLookLineId, c => bearFocusLookVoiceClip = c);
+    }
+
+    private void RequestTtsLine(string lineId, Action<AudioClip> assign)
+    {
+        pendingTtsLines++;
+        ttsClient.GetLine(lineId, clip =>
+        {
+            if (clip != null) assign(clip);
+            pendingTtsLines = Mathf.Max(0, pendingTtsLines - 1);
+        });
+    }
+
+    private IEnumerator WaitForTtsLines()
+    {
+        ResolveTtsLines();
+        float deadline = Time.realtimeSinceStartup + Mathf.Max(0.1f, ttsWaitTimeoutSeconds);
+        while (pendingTtsLines > 0 && Time.realtimeSinceStartup < deadline) yield return null;
+        if (pendingTtsLines > 0)
+            Debug.LogWarning($"[OwlGreeting] TTS prefetch timed out with {pendingTtsLines} line(s) pending");
     }
 
     private void OnDisable()
@@ -378,6 +403,10 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             // Crossfade: owl_hello fades out while the talking owl (below it) fades in — smooth dissolve.
             StartCoroutine(owlHello.FadeOut(talkingFadeDuration));
         }
+
+        // Do not start the mouth animation or fall back to an old baked clip while the
+        // requested backend voice is still in flight.
+        yield return WaitForTtsLines();
 
         // ใช้ greetingPhrase1Clip ก่อน ถ้าไม่ได้ assign ให้ fallback ไปที่ greetingVoiceClip (legacy)
         AudioClip phrase1 = greetingPhrase1Clip != null ? greetingPhrase1Clip : greetingVoiceClip;

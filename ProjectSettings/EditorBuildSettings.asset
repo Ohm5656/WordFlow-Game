@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Login.unity
     guid: a4b53bf16bd5c9649a0b5aa75c158834
   - enabled: 0
@@ -26,7 +26,7 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/region 1/cut_scene2.unity
     guid: 31d25230ae15a634db427810665af9d1
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/region 1/cut_scene3.unity
     guid: 1266d39769cfc7e4ab0cb98d2fe847d6
   - enabled: 0
@@ -47,7 +47,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/region 1/reference_forest.unity
     guid: 32210b23d8c9a974aa3e9371256251af
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/region 1/adventure/word_build_paa_polished.unity
     guid: 4d099a26f787a9c4e9268cc5c4dec9b6
   - enabled: 1

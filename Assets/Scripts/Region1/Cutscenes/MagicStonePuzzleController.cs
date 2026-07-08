@@ -127,6 +127,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [SerializeField] private string[] altSoundPlaybackLineIds;
     [Tooltip("Silence between syllables when stitching the echo TTS lines into one clip.")]
     [SerializeField] private float ttsEchoGapSeconds = 0.2f;
+    [Tooltip("Block stone input while gameplay TTS is being prefetched, then allow the offline fallback after this timeout.")]
+    [SerializeField, Min(0.1f)] private float ttsPrefetchTimeoutSeconds = 8f;
 
     [Header("Backend Grading (mic upload, like word_build_paa_polished)")]
     [Tooltip("Records the mic clip and POSTs it to /grade, identical to word_build_paa_polished. Auto-added at runtime if left empty.")]
@@ -177,9 +179,13 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private float recordingStartedAt;
     private bool isPlacementVoicePlaying;
     private Coroutine placementVoiceRoutine;
+    private int pendingGameplayTts;
+    private bool gameplayAudioReady = true;
+    private bool gameplayTtsStarted;
 
     public RectTransform DragParent => rectTransform;
-    public bool CanInteract => revealFinished && !ritualPlaying && !ritualCompleted && !crowFeedbackPlaying;
+    public bool CanInteract => revealFinished && gameplayAudioReady
+        && !ritualPlaying && !ritualCompleted && !crowFeedbackPlaying;
     public float ReturnDuration => returnDuration;
 
     public static bool IsRetryAfterCrowRequested => PlayerPrefs.GetInt(RetryAfterCrowPlayerPrefsKey, 0) == 1;
@@ -236,8 +242,11 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     // null-safe and caches by line id).
     private void PrefetchGameplayTts()
     {
+        if (gameplayTtsStarted) return;
+        gameplayTtsStarted = true;
         if (ttsClient == null) ttsClient = FindObjectOfType<TtsApiClient>();
-        if (ttsClient == null) return;
+        if (ttsClient == null) { gameplayAudioReady = true; return; }
+        gameplayAudioReady = false;
 
         if (stonePlacementLineIds != null && stoneLetters != null)
         {
@@ -255,7 +264,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
                     continue;
                 }
 
-                ttsClient.GetLine(stonePlacementLineIds[index], clip =>
+                RequestGameplayTts(stonePlacementLineIds[index], clip =>
                 {
                     if (clip != null)
                     {
@@ -267,6 +276,28 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         PrefetchEchoSequence(soundPlaybackLineIds, clip => soundPlaybackClip = clip);
         PrefetchEchoSequence(altSoundPlaybackLineIds, clip => altSoundPlaybackClip = clip);
+
+        if (pendingGameplayTts == 0) gameplayAudioReady = true;
+        else StartCoroutine(WaitForGameplayTts());
+    }
+
+    private void RequestGameplayTts(string lineId, System.Action<AudioClip> onResult)
+    {
+        pendingGameplayTts++;
+        ttsClient.GetLine(lineId, clip =>
+        {
+            onResult(clip);
+            pendingGameplayTts = Mathf.Max(0, pendingGameplayTts - 1);
+        });
+    }
+
+    private IEnumerator WaitForGameplayTts()
+    {
+        float deadline = Time.realtimeSinceStartup + Mathf.Max(0.1f, ttsPrefetchTimeoutSeconds);
+        while (pendingGameplayTts > 0 && Time.realtimeSinceStartup < deadline) yield return null;
+        if (pendingGameplayTts > 0)
+            Debug.LogWarning($"[MagicStonePuzzle] TTS prefetch timed out with {pendingGameplayTts} line(s) pending; using offline audio");
+        gameplayAudioReady = true;
     }
 
     private void PrefetchEchoSequence(string[] lineIds, System.Action<AudioClip> assign)
@@ -281,7 +312,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         for (int i = 0; i < lineIds.Length; i++)
         {
             int index = i;
-            ttsClient.GetLine(lineIds[index], clip =>
+            RequestGameplayTts(lineIds[index], clip =>
             {
                 parts[index] = clip;
                 if (--pending != 0)
