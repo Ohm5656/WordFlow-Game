@@ -420,7 +420,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         if (wp3 != null && wp4 != null)
         {
             facingLock = OrientationFor(wp4.position - wp3.position);
-            yield return new WaitForSeconds(0.4f);   // brief turn before moving
+            yield return new WaitForSeconds(0.15f);   // brief turn before moving
             facingLock = -1;
             yield return MoveTo(wp4.position);
             facingLock = OrientationFor(wp4.position - wp3.position);   // hold facing the stable
@@ -449,7 +449,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         if (wp5 != null && wp6 != null)
         {
             facingLock = OrientationFor(wp6.position - wp5.position);
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.15f);
         }
 
         // Crows + "!" fade in as the walk to wp_6 begins; the crows circle the crop field on the frame loop.
@@ -491,7 +491,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         if (wp6 != null && wp7 != null)
         {
             facingLock = OrientationFor(wp7.position - wp6.position);   // turn to face wp_7 (up)
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.15f);
         }
 
         facingLock = -1;
@@ -520,7 +520,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         if (wp7 != null && wp8 != null)
         {
             facingLock = OrientationFor(wp8.position - wp7.position);
-            yield return new WaitForSeconds(0.4f);   // brief turn before moving
+            yield return new WaitForSeconds(0.15f);   // brief turn before moving
             facingLock = -1;
             yield return MoveTo(wp8.position);
             facingLock = OrientationFor(wp8.position - wp7.position);   // hold facing wp_8
@@ -542,7 +542,7 @@ public sealed class QuestPathSequence : MonoBehaviour
             if (wp8 != null && wp9 != null)
             {
                 facingLock = OrientationFor(wp9.position - wp8.position);
-                yield return new WaitForSeconds(0.4f);
+                yield return new WaitForSeconds(0.15f);
             }
 
             facingLock = -1;
@@ -588,7 +588,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         if (reference != null)
         {
             facingLock = OrientationFor(to.position - reference.position);
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.15f);
         }
 
         facingLock = -1;

@@ -82,10 +82,61 @@ public static class ApplyFastPacing
         "Assets/Scenes/region 1/Success_ta_incorrect.unity",
     };
 
-    // Filled by Task 7 (Phase 2).
     private static readonly Dictionary<string, (string field, float value)[]> WorldValues =
-        new Dictionary<string, (string, float)[]>();
-    private static readonly string[] WorldScenes = Array.Empty<string>();
+        new Dictionary<string, (string, float)[]>
+    {
+        ["QuestPathSequence"] = new (string, float)[]
+        {
+            ("startDelay", 0.15f),
+            ("moveSpeed", 1.5f),           // was 1
+            ("walkAnimSpeedParam", 1.5f),  // keep feet in sync with the faster walk
+            ("questAutoHold", 0.6f),       // was 1.5, hit 5 times per walk
+            ("faceHoldBeforeQuest", 0.7f), // was 2
+            ("sceneExitCoverDuration", 0.6f),
+        },
+        // QuestMapIntroFlow intentionally omitted: it is not present in any scene or prefab
+        // (verified via search_by_component + grep), so there is nothing to stamp. The quest map
+        // uses QuestPointInteractable / QuestMapSimpleCharacterWalk, which were not flagged slow.
+        ["WorldMapProblemIslands"] = new (string, float)[]
+        {
+            ("unlockAnimationDelay", 0.2f),      // was 0.45
+            ("unlockAnimationDuration", 1f),     // was 1.8
+            ("unlockHoldDuration", 0.5f),        // was 1.1
+            ("unlockFadeOutDuration", 0.5f),
+            ("playableIslandPromptDuration", 1.2f), // was 2.1
+            ("sceneExitCoverDuration", 0.5f),
+        },
+        ["CutScene2ChaseController"] = new (string, float)[]
+        {
+            ("startDelayAfterFade", 0.1f),   // was 0.35
+            ("whiteFadeOutDuration", 0.6f),  // was 1.05
+            ("bearRunDuration", 1f),         // was 1.35
+            ("stoneChaseDuration", 0.9f),    // was 1.25
+            ("completeHoldDuration", 0.15f), // was 0.3
+            ("blackFadeInDuration", 0.5f),   // was 0.85
+        },
+        ["CrowCutsceneController"] = new (string, float)[]
+        {
+            ("blackFadeOutDuration", 0.35f),
+            ("flyDuration", 1.5f),           // was 2.25
+            ("blackFadeInDuration", 0.35f),
+        },
+        ["CrowSetFreeCutscene"] = new (string, float)[]
+        {
+            ("fadeInDuration", 0.25f),
+            ("fadeOutDuration", 0.6f),       // was 1
+            ("clip2FadeInDuration", 0.4f),
+        },
+    };
+
+    private static readonly string[] WorldScenes =
+    {
+        "Assets/Scenes/region 1/reference_forest.unity",
+        "Assets/Scenes/WorldMap.unity",
+        "Assets/Scenes/region 1/cut_scene2.unity",
+        "Assets/Scenes/region 1/cut_scene3.unity",
+        "Assets/Scenes/region 1/Success_ga_correct.unity", // CrowSetFreeCutscene lives here
+    };
 
     [MenuItem("Tools/Pacing/Apply Fast Pacing (Core Loop)")]
     public static void ApplyCore() => Apply(CoreScenes, CoreValues);

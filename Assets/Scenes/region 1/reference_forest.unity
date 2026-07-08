@@ -24451,17 +24451,18 @@ MonoBehaviour:
   crowMarkRoot: {fileID: 1339021964}
   crowMarkSprite: {fileID: 1339021967}
   crowSpritesResourcePath: Characters/Animals/birds/bird6_16x20
-  startDelay: 0.3
-  moveSpeed: 1
+  startDelay: 0.15
+  moveSpeed: 1.5
   arriveDistance: 0.05
   fadeDuration: 0.5
   clickPadding: 0.35
-  questAutoHold: 1.5
-  walkAnimSpeedParam: 1
-  faceHoldBeforeQuest: 2
+  questAutoHold: 0.6
+  walkAnimSpeedParam: 1.5
+  faceHoldBeforeQuest: 0.7
   enableVibration: 1
   bearEncounterSceneName: CutScene_bear
-  sceneExitCoverDuration: 1
+  crowEncounterSceneName: CutScene_ga
+  sceneExitCoverDuration: 0.6
   crow1PointA: {fileID: 11856744}
   crow1PointB: {fileID: 1972073421}
   crow2PointA: {fileID: 1138346002}

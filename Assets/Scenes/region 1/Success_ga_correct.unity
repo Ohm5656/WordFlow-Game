@@ -1905,9 +1905,9 @@ MonoBehaviour:
   crow: {fileID: 0}
   owlEpilogue: {fileID: 427317406}
   playOnStart: 1
-  fadeInDuration: 0.4
-  fadeOutDuration: 1
-  clip2FadeInDuration: 0.6
+  fadeInDuration: 0.25
+  fadeOutDuration: 0.6
+  clip2FadeInDuration: 0.4
   setFreeState: ga_set_free
   setFree2State: ga_set_free2
   expandStartFrame: 37
