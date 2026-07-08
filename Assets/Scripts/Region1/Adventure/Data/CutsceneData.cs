@@ -45,8 +45,8 @@ namespace WordFlow.Adventure.Data
         //  -1 = none (all full), 0 = the primary `npc`, 1..N = extraCharacters[focusIndex-1].
         public int focusIndex = -1;
 
-        public string voiceLineId;       // -> GET /tts?line_id=...
-        public AudioClip voiceClip;      // nullable override (offline/baked); wins over voiceLineId
+        public string voiceLineId;       // -> approved TTS line id (baked Resources/TTS first)
+        public AudioClip voiceClip;      // legacy fallback only when voiceLineId is empty
         public float holdSeconds = 1.5f; // minimum on-screen time
     }
 

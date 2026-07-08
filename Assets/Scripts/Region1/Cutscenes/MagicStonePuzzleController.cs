@@ -116,10 +116,10 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [Tooltip("Auto-play the result word clip (soundPlaybackClip) once when the sound/mic icons appear (the post-build echo the child copies).")]
     [SerializeField] private bool autoPlayResultClip = true;
 
-    [Header("Gameplay TTS (line ids from backend tts_lines.json; the wav clips above stay as offline fallback)")]
-    [Tooltip("Fetches the line ids below from /tts. Empty = first TtsApiClient found in the scene.")]
+    [Header("Gameplay TTS (line ids from backend tts_lines.json; baked clips live in Resources/TTS)")]
+    [Tooltip("Loads the line ids below through TtsApiClient. Empty = first TtsApiClient found in the scene.")]
     [SerializeField] private TtsApiClient ttsClient;
-    [Tooltip("TTS line id per stone, paired index-for-index with stoneLetters (e.g. gameplay_ko). Replaces that stone's stonePlacementClips entry when the fetch succeeds.")]
+    [Tooltip("TTS line id per stone, paired index-for-index with stoneLetters (e.g. gameplay_ko). Replaces that stone's stonePlacementClips entry.")]
     [SerializeField] private string[] stonePlacementLineIds;
     [Tooltip("TTS line ids voiced in order as the target-word echo (e.g. gameplay_po, gameplay_aa, gameplay_paa). Replaces soundPlaybackClip when every fetch succeeds.")]
     [SerializeField] private string[] soundPlaybackLineIds;
@@ -127,6 +127,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [SerializeField] private string[] altSoundPlaybackLineIds;
     [Tooltip("Silence between syllables when stitching the echo TTS lines into one clip.")]
     [SerializeField] private float ttsEchoGapSeconds = 0.2f;
+    [Tooltip("Block stone input while gameplay TTS is being resolved, then continue without non-TTS fallback after this timeout.")]
+    [SerializeField, Min(0.1f)] private float ttsPrefetchTimeoutSeconds = 8f;
 
     [Header("Backend Grading (mic upload, like word_build_paa_polished)")]
     [Tooltip("Records the mic clip and POSTs it to /grade, identical to word_build_paa_polished. Auto-added at runtime if left empty.")]
@@ -177,9 +179,13 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private float recordingStartedAt;
     private bool isPlacementVoicePlaying;
     private Coroutine placementVoiceRoutine;
+    private int pendingGameplayTts;
+    private bool gameplayAudioReady = true;
+    private bool gameplayTtsStarted;
 
     public RectTransform DragParent => rectTransform;
-    public bool CanInteract => revealFinished && !ritualPlaying && !ritualCompleted && !crowFeedbackPlaying;
+    public bool CanInteract => revealFinished && gameplayAudioReady
+        && !ritualPlaying && !ritualCompleted && !crowFeedbackPlaying;
     public float ReturnDuration => returnDuration;
 
     public static bool IsRetryAfterCrowRequested => PlayerPrefs.GetInt(RetryAfterCrowPlayerPrefsKey, 0) == 1;
@@ -229,15 +235,19 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         PrefetchGameplayTts();
     }
 
-    // Swaps the baked wav audio for backend TTS (same lines the owl uses). Placement lines
+    // Swaps legacy wav audio for approved TTS line ids (same registry the owl uses). Placement lines
     // replace stonePlacementClips entries; the echo sequences are stitched into ONE clip so
     // all the existing single-clip playback plumbing (ActiveSoundClip, autoplay, mic gating)
-    // stays untouched. Any failed fetch leaves the wav fallback in place (TtsApiClient is
-    // null-safe and caches by line id).
+    // stays untouched. When a line id is configured, the old clip is cleared first so a miss
+    // cannot silently fall back to non-TTS audio.
     private void PrefetchGameplayTts()
     {
+        if (gameplayTtsStarted) return;
+        gameplayTtsStarted = true;
+        ClearLegacyGameplayClipsForConfiguredLineIds();
         if (ttsClient == null) ttsClient = FindObjectOfType<TtsApiClient>();
-        if (ttsClient == null) return;
+        if (ttsClient == null) { gameplayAudioReady = true; return; }
+        gameplayAudioReady = false;
 
         if (stonePlacementLineIds != null && stoneLetters != null)
         {
@@ -255,18 +265,63 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
                     continue;
                 }
 
-                ttsClient.GetLine(stonePlacementLineIds[index], clip =>
+                stonePlacementClips[index] = null;
+                RequestGameplayTts(stonePlacementLineIds[index], clip =>
                 {
-                    if (clip != null)
-                    {
-                        stonePlacementClips[index] = clip;
-                    }
+                    stonePlacementClips[index] = clip;
                 });
             }
         }
 
+        if (HasAnyLineId(soundPlaybackLineIds)) soundPlaybackClip = null;
+        if (HasAnyLineId(altSoundPlaybackLineIds)) altSoundPlaybackClip = null;
         PrefetchEchoSequence(soundPlaybackLineIds, clip => soundPlaybackClip = clip);
         PrefetchEchoSequence(altSoundPlaybackLineIds, clip => altSoundPlaybackClip = clip);
+
+        if (pendingGameplayTts == 0) gameplayAudioReady = true;
+        else StartCoroutine(WaitForGameplayTts());
+    }
+
+    private void RequestGameplayTts(string lineId, System.Action<AudioClip> onResult)
+    {
+        pendingGameplayTts++;
+        ttsClient.GetLine(lineId, clip =>
+        {
+            onResult(clip);
+            pendingGameplayTts = Mathf.Max(0, pendingGameplayTts - 1);
+        });
+    }
+
+    private IEnumerator WaitForGameplayTts()
+    {
+        float deadline = Time.realtimeSinceStartup + Mathf.Max(0.1f, ttsPrefetchTimeoutSeconds);
+        while (pendingGameplayTts > 0 && Time.realtimeSinceStartup < deadline) yield return null;
+        if (pendingGameplayTts > 0)
+            Debug.LogWarning($"[MagicStonePuzzle] TTS prefetch timed out with {pendingGameplayTts} line(s) pending; continuing without non-TTS fallback");
+        gameplayAudioReady = true;
+    }
+
+    private static bool HasAnyLineId(string[] lineIds)
+    {
+        if (lineIds == null) return false;
+        for (int i = 0; i < lineIds.Length; i++)
+            if (!string.IsNullOrWhiteSpace(lineIds[i]))
+                return true;
+        return false;
+    }
+
+    private void ClearLegacyGameplayClipsForConfiguredLineIds()
+    {
+        if (stonePlacementLineIds != null && stonePlacementClips != null)
+        {
+            int count = Mathf.Min(stonePlacementLineIds.Length, stonePlacementClips.Length);
+            for (int i = 0; i < count; i++)
+                if (!string.IsNullOrWhiteSpace(stonePlacementLineIds[i]))
+                    stonePlacementClips[i] = null;
+        }
+
+        if (HasAnyLineId(soundPlaybackLineIds)) soundPlaybackClip = null;
+        if (HasAnyLineId(altSoundPlaybackLineIds)) altSoundPlaybackClip = null;
     }
 
     private void PrefetchEchoSequence(string[] lineIds, System.Action<AudioClip> assign)
@@ -281,7 +336,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         for (int i = 0; i < lineIds.Length; i++)
         {
             int index = i;
-            ttsClient.GetLine(lineIds[index], clip =>
+            RequestGameplayTts(lineIds[index], clip =>
             {
                 parts[index] = clip;
                 if (--pending != 0)
@@ -787,6 +842,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private IEnumerator WordResultRoutine()
     {
         ritualPlaying = true;
+        WordAssemblyTimer.Instance?.Pause(); // word built -> craft/sound/mic: stop timing (resumes only if they come back to fix a wrong word)
         // Freeze buildLatencyMs now; the build-attempt + /grade fire together later at mic-stop
         // (CompleteRecordingAndUpload), exactly like word_build_paa_polished — so the webapp pairs
         // them into one row instead of logging a separate attempt at assembly time.

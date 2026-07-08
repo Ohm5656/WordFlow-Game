@@ -17,6 +17,8 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
     [Tooltip("After the owl finishes all phrases, freeze on its current frame for this long before fading out. 0 = no hold.")]
     [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.5f;
     [SerializeField] private float phraseGap = 0.05f;
+    [Tooltip("Maximum time to wait for TTS before continuing without non-TTS fallback.")]
+    [SerializeField, Min(0.1f)] private float ttsWaitTimeoutSeconds = 8f;
     [Tooltip("If TTS fails / no clip assigned, hold this long before fading out (so owl isn't invisible).")]
     [SerializeField] private float fallbackHoldSeconds = 6f;
 
@@ -46,6 +48,8 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
 
     private RectTransform owlRect;
     private CanvasGroup owlCanvasGroup;
+    private int pendingTtsLines;
+    private bool ttsResolutionStarted;
 
     private void Awake()
     {
@@ -60,23 +64,65 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
 
     private void ResolveTts()
     {
+        if (ttsResolutionStarted) return;
+        ttsResolutionStarted = true;
+        ClearNonTtsVoiceFallbacks();
         if (ttsClient == null) ttsClient = FindObjectOfType<TtsApiClient>();
         if (ttsClient == null) { Debug.LogWarning("[OwlEpilogue] No TtsApiClient found"); return; }
         Debug.Log($"[OwlEpilogue] ResolveTts — ttsClient={ttsClient.gameObject.name}");
         if (!string.IsNullOrWhiteSpace(phrase1LineId))
-            ttsClient.GetLine(phrase1LineId, c => {
+        {
+            phrase1Clip = null;
+            RequestTtsLine(phrase1LineId, c => {
                 Debug.Log($"[OwlEpilogue] phrase1 '{phrase1LineId}' → {(c != null ? c.name + " len=" + c.length : "NULL")}");
-                if (c != null) phrase1Clip = c;
+                phrase1Clip = c;
             });
+        }
         if (!string.IsNullOrWhiteSpace(phrase2LineId))
-            ttsClient.GetLine(phrase2LineId, c => { if (c != null) phrase2Clip = c; });
+        {
+            phrase2Clip = null;
+            RequestTtsLine(phrase2LineId, c => phrase2Clip = c);
+        }
         if (!string.IsNullOrWhiteSpace(phrase3LineId))
-            ttsClient.GetLine(phrase3LineId, c => { if (c != null) phrase3Clip = c; });
+        {
+            phrase3Clip = null;
+            RequestTtsLine(phrase3LineId, c => phrase3Clip = c);
+        }
+    }
+
+    private void ClearNonTtsVoiceFallbacks()
+    {
+        if (string.IsNullOrWhiteSpace(phrase1LineId)) phrase1Clip = null;
+        if (string.IsNullOrWhiteSpace(phrase2LineId)) phrase2Clip = null;
+        if (string.IsNullOrWhiteSpace(phrase3LineId)) phrase3Clip = null;
+    }
+
+    private void RequestTtsLine(string lineId, System.Action<AudioClip> assign)
+    {
+        pendingTtsLines++;
+        ttsClient.GetLine(lineId, clip =>
+        {
+            if (clip != null) assign(clip);
+            pendingTtsLines = Mathf.Max(0, pendingTtsLines - 1);
+        });
+    }
+
+    private IEnumerator WaitForTts()
+    {
+        ResolveTts();
+        float deadline = Time.realtimeSinceStartup + Mathf.Max(0.1f, ttsWaitTimeoutSeconds);
+        while (pendingTtsLines > 0 && Time.realtimeSinceStartup < deadline) yield return null;
+        if (pendingTtsLines > 0)
+            Debug.LogWarning($"[OwlEpilogue] TTS prefetch timed out with {pendingTtsLines} line(s) pending");
     }
 
     public IEnumerator Play()
     {
         if (owlAnimator == null) yield break;
+
+        // The old implementation started the owl immediately even when its async TTS request
+        // had not completed, producing a silent animation that then disappeared.
+        yield return WaitForTts();
 
         if (playLoseSting) GameAudio.PlayLose(); else GameAudio.PlayWin();
 

@@ -28,8 +28,8 @@ MonoBehaviour:
       entrance: 2
       entranceSeconds: 1
     focusIndex: 1
-    voiceLineId: e_paa_wrong_effect
-    voiceClip: {fileID: 8300000, guid: bbb84ea89aa76b84f879e9dcf401583d, type: 3}
+    voiceLineId: kaa_try_again
+    voiceClip: {fileID: 0}
     holdSeconds: 2
   backdropDim: 0.35
   focusDimAlpha: 0.5

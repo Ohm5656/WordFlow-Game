@@ -14,6 +14,7 @@ public static class WireGameplayTts
     {
         "Assets/Scenes/region 1/CutScene_bear.unity",
         "Assets/Scenes/region 1/CutScene_ga.unity",
+        "Assets/Scenes/region 1/CutScene_ta.unity",
     };
 
     static readonly Dictionary<string, string> LetterLine = new Dictionary<string, string>
