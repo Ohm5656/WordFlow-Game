@@ -409,19 +409,26 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             yield return new WaitForSeconds(startDelay);
         }
 
+        // Pacing: dim, legacy owl fade-in and zoom all run together (they used to run serially).
+        Coroutine dimIn = null;
         if (dimBackgroundBeforeZoom)
         {
-            yield return FadeDimOverlay(true, GetOwlOnlyDimSiblingIndex());
+            dimIn = StartCoroutine(FadeDimOverlay(true, GetOwlOnlyDimSiblingIndex()));
         }
 
         if (!UsesTalkingPrefabAnimator)
         {
-            yield return FadeOwlInRoutine();
+            StartCoroutine(FadeOwlInRoutine());
         }
 
         if (zoomBeforeGreeting && zoomDuration > 0f)
         {
             yield return ZoomInRoutine();
+        }
+
+        if (dimIn != null)
+        {
+            yield return dimIn; // zoom is usually the longer of the two; this is a no-op then
         }
 
         if (holdAfterZoom > 0f)
@@ -455,14 +462,20 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             ShowFrame(holdLastFrame ? frames.Count - 1 : 0);
         }
 
+        Coroutine dimOut = null;
+        if (dimBackgroundBeforeZoom)
+        {
+            dimOut = StartCoroutine(FadeDimOverlay(false, -1));
+        }
+
         if (restoreZoomAfterGreeting && hasZoomState)
         {
             yield return RestoreZoomRoutine();
         }
 
-        if (dimBackgroundBeforeZoom)
+        if (dimOut != null)
         {
-            yield return FadeDimOverlay(false, -1);
+            yield return dimOut;
         }
 
         if (playBearFocusAfterGreeting)
@@ -472,7 +485,8 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
         if (playBookRevealAfterBearFocus)
         {
-            yield return FadeOwlOutBeforeBookRevealRoutine();
+            // Pacing: the owl fades while the book flies in — no dead frame between them.
+            StartCoroutine(FadeOwlOutBeforeBookRevealRoutine());
             WordAssemblyTimer.Instance?.BeginFresh(); // start the 30s clock as the craft book pops
             yield return PlayBookRevealRoutine();
         }
@@ -501,7 +515,7 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
         if (dimBackgroundBeforeZoom)
         {
-            yield return FadeDimOverlay(true, GetBearAndOwlDimSiblingIndex(targetBearRoot));
+            StartCoroutine(FadeDimOverlay(true, GetBearAndOwlDimSiblingIndex(targetBearRoot)));
         }
 
         Vector3 bearStartScale = targetBearRoot.localScale;
@@ -528,14 +542,14 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             ShowFrame(holdLastFrame ? GetLastSequenceFrameIndex(bearFocusSequence) : 0);
         }
 
+        if (restoreBackgroundAfterBearFocus && dimBackgroundBeforeZoom)
+        {
+            StartCoroutine(FadeDimOverlay(false, -1));
+        }
+
         if (restoreBearScaleAfterFocus)
         {
             yield return ScaleRectTransform(targetBearRoot, bearTargetScale, bearStartScale, bearGrowDuration);
-        }
-
-        if (restoreBackgroundAfterBearFocus && dimBackgroundBeforeZoom)
-        {
-            yield return FadeDimOverlay(false, -1);
         }
     }
 
