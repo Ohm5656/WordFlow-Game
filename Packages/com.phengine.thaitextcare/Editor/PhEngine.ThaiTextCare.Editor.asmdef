@@ -1,0 +1,30 @@
+{
+    "name": "PhEngine.ThaiTextCare.Editor",
+    "rootNamespace": "",
+    "references": [
+        "PhEngine.ThaiTextCare",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "3.2.0-pre.2",
+            "define": "TMP_3_2_0_PRE_2"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.0.0",
+            "define": "UGUI_2_0"
+        }
+    ],
+    "noEngineReferences": false
+}
