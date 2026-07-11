@@ -77,6 +77,10 @@ public sealed class QuestPathSequence : MonoBehaviour
     [Tooltip("Buzz the device (tablet) like a notification when a quest appears.")]
     [SerializeField] private bool enableVibration = true;
 
+    [Header("Bear intro (owl / zoom / spotlight)")]
+    [Tooltip("Plays once when the hero first reaches the bear: zoom in, darken, owl speaks. Skipped on return.")]
+    [SerializeField] private BearIntroSequence bearIntro;
+
     [Header("Bear encounter scene link")]
     [Tooltip("Scene loaded when the hero reaches the first quest (the bear word-build encounter).")]
     [SerializeField] private string bearEncounterSceneName = "CutScene_bear";
@@ -362,6 +366,14 @@ public sealed class QuestPathSequence : MonoBehaviour
 
             yield return questReveal;   // make sure the "!" is fully in before the beat
             yield return new WaitForSeconds(questAutoHold);   // brief beat looking at the bear + "!"
+
+            // First arrival only: zoom in, darken to a spotlight on the bear + "!", and let the
+            // owl explain the village needs help (owl_wow "แย่แล้ว" then owl_talk). On return
+            // (resuming2) this whole branch is skipped, so the intro never replays.
+            if (bearIntro != null)
+            {
+                yield return bearIntro.PlayIntro();
+            }
 
             // The bear stays visible. Fade to black and enter the word-build (bear) encounter;
             // on a successful build it loads us back and we resume at Beat 2 (bear now gone).

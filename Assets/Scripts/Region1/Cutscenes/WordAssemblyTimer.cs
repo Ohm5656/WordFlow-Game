@@ -37,6 +37,16 @@ public sealed class WordAssemblyTimer : MonoBehaviour
 
     public static WordAssemblyTimer Instance { get; private set; }
 
+    /// <summary>True once the puzzle clock has begun (fresh or resumed). The smoke fog reads this
+    /// so it only creeps in during the build, never during the preceding bear cutscene.</summary>
+    public bool SmokeActive => started;
+
+    /// <summary>0 at the start of the countdown, 1 when time is up — drives the edge fog's reach so
+    /// the smoke ceiling lands exactly when the clock runs out. Frozen while paused (word built).</summary>
+    public float SmokeProgress01 =>
+        started && totalSeconds > 0f ? Mathf.Clamp01(1f - remaining / totalSeconds) : 0f;
+
+    private bool started;
     private CanvasGroup group;
     private Vector3 baseScale = Vector3.one;
     private Coroutine tickRoutine;
@@ -62,16 +72,27 @@ public sealed class WordAssemblyTimer : MonoBehaviour
         }
 
         HideBoard(); // stays hidden until BeginFresh/Resume
+
+        // Let the smoke fog (FogController, in Game.Common) read our progress without a hard
+        // cross-assembly reference back to this Region1 type.
+        FogController.SmokeActiveProvider = () => Instance != null && Instance.SmokeActive;
+        FogController.SmokeProgressProvider = () => Instance != null ? Instance.SmokeProgress01 : 0f;
     }
 
     private void OnDestroy()
     {
-        if (Instance == this) Instance = null;
+        if (Instance == this)
+        {
+            Instance = null;
+            FogController.SmokeActiveProvider = null;
+            FogController.SmokeProgressProvider = null;
+        }
     }
 
     /// <summary>New attempt: reset to the full timer and start counting with a pop-in.</summary>
     public void BeginFresh()
     {
+        started = true;
         remaining = Mathf.Max(0f, totalSeconds);
         Save();
         StartCounting();
@@ -80,6 +101,7 @@ public sealed class WordAssemblyTimer : MonoBehaviour
     /// <summary>Returning to fix a wrong word: continue from the persisted remaining time.</summary>
     public void Resume()
     {
+        started = true;
         remaining = PlayerPrefs.GetFloat(RemainingKey, totalSeconds);
         if (remaining <= 0f)
         {
