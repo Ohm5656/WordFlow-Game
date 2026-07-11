@@ -8,8 +8,8 @@ public sealed class WorldMapFadeIn : MonoBehaviour
     private const string WorldMapSceneName = "WorldMap";
     private const string FadeSetupName = "WorldMap Fade In";
     private const string FadeCanvasName = "WorldMap Fade Canvas";
-    private const float DefaultFadeInDuration = 3.2f;
-    private const float DefaultFadeStartDelay = 0.12f;
+    private const float DefaultFadeInDuration = 1.6f;
+    private const float DefaultFadeStartDelay = 0.08f;
 
     private static bool fadeExpected;
     private static bool fadeRunning;

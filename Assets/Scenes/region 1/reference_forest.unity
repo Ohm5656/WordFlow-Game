@@ -239,8 +239,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7000896}
-  - component: {fileID: 7000898}
   - component: {fileID: 7000897}
+  - component: {fileID: 7000898}
   m_Layer: 0
   m_Name: wp_10
   m_TagString: Untagged
@@ -272,11 +272,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 7000895}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &7000898
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -286,12 +287,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 7000895}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &11856743
 GameObject:
   m_ObjectHideFlags: 0
@@ -301,8 +301,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 11856744}
-  - component: {fileID: 11856746}
   - component: {fileID: 11856745}
+  - component: {fileID: 11856746}
   m_Layer: 0
   m_Name: wp_ga1
   m_TagString: Untagged
@@ -335,9 +335,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
+  m_Name:
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
   pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &11856746
@@ -350,9 +350,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_Name:
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &27591049
 GameObject:
@@ -543,8 +543,8 @@ Transform:
   m_GameObject: {fileID: 54379679}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 30, y: 13.59, z: 0}
-  m_LocalScale: {x: 0.203925, y: 0.2083, z: 1}
+  m_LocalPosition: {x: 29.996, y: 13.571, z: 0}
+  m_LocalScale: {x: 0.23296392, y: 0.23102552, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1558344640}
@@ -1896,8 +1896,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 399150331}
-  - component: {fileID: 399150333}
   - component: {fileID: 399150332}
+  - component: {fileID: 399150333}
   m_Layer: 0
   m_Name: wp_12
   m_TagString: Untagged
@@ -1929,11 +1929,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 399150330}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &399150333
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1943,12 +1944,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 399150330}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1001 &402127649
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2110,8 +2110,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 442731372}
-  - component: {fileID: 442731371}
-  - component: {fileID: 442731370}
+  - component: {fileID: 442731374}
+  - component: {fileID: 442731373}
   m_Layer: 0
   m_Name: frame
   m_TagString: Untagged
@@ -2119,35 +2119,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &442731370
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 442731369}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0, b: 0, a: 1}
-  lineColor: {r: 0, g: 0, b: 1, a: 1}
---- !u!114 &442731371
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 442731369}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.9803922, b: 0.9803922, a: 1}
 --- !u!4 &442731372
 Transform:
   m_ObjectHideFlags: 0
@@ -2168,6 +2139,35 @@ Transform:
   - {fileID: 561786457}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &442731373
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 442731369}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
+--- !u!114 &442731374
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 442731369}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1001 &442982257
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2658,8 +2658,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 559681835}
-  - component: {fileID: 559681837}
   - component: {fileID: 559681836}
+  - component: {fileID: 559681837}
   m_Layer: 0
   m_Name: wp_7
   m_TagString: Untagged
@@ -2691,11 +2691,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 559681834}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &559681837
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2705,12 +2706,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 559681834}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &561786456
 GameObject:
   m_ObjectHideFlags: 0
@@ -2720,7 +2720,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 561786457}
-  - component: {fileID: 561786459}
   - component: {fileID: 561786458}
   m_Layer: 0
   m_Name: wp_5 (4)
@@ -2755,24 +2754,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
---- !u!114 &561786459
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 561786456}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!1 &578070573 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1612941885868869832, guid: baeb2b6ff0e51fcbc8cbd9ca47c2a842, type: 3}
@@ -2938,7 +2922,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1145589859}
+  - {fileID: 1659720017}
   m_Father: {fileID: 75448851}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &602841135
@@ -4287,8 +4271,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 825005420}
-  - component: {fileID: 825005422}
   - component: {fileID: 825005421}
+  - component: {fileID: 825005422}
   m_Layer: 0
   m_Name: wp_9
   m_TagString: Untagged
@@ -4320,11 +4304,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 825005419}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &825005422
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4334,12 +4319,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 825005419}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &835306814 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2196536988872005113, guid: 1a4a9229f8aab4b4ea08edbb674c0559, type: 3}
@@ -4460,7 +4444,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 868409232}
-  - component: {fileID: 868409234}
   - component: {fileID: 868409233}
   m_Layer: 0
   m_Name: wp_5 (2)
@@ -4495,24 +4478,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
---- !u!114 &868409234
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 868409231}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!1 &885841962
 GameObject:
   m_ObjectHideFlags: 0
@@ -4522,8 +4490,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 885841963}
-  - component: {fileID: 885841965}
   - component: {fileID: 885841964}
+  - component: {fileID: 885841965}
   m_Layer: 0
   m_Name: wp_11
   m_TagString: Untagged
@@ -4555,11 +4523,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 885841962}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &885841965
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4569,12 +4538,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 885841962}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1001 &889476591
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4732,7 +4700,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 905720414}
-  - component: {fileID: 905720416}
   - component: {fileID: 905720415}
   m_Layer: 0
   m_Name: wp_5 (1)
@@ -4767,24 +4734,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
---- !u!114 &905720416
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 905720413}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!4 &925312045 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1529103976170357437, guid: d8d891081de5fe8828bca95685ac84e8, type: 3}
@@ -4984,7 +4936,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 948014162}
-  - component: {fileID: 948014164}
   - component: {fileID: 948014163}
   m_Layer: 0
   m_Name: wp_5
@@ -5019,24 +4970,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
---- !u!114 &948014164
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 948014161}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!1001 &953294099
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5899,7 +5835,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 189290497086464180, guid: ad8fac13aaed7564794fbe86551e6b50, type: 3}
       propertyPath: m_Controller
-      value: 
+      value:
       objectReference: {fileID: 9100000, guid: 8decb13f1ea86e64895c234819140896, type: 2}
     - target: {fileID: 317221873002656370, guid: ad8fac13aaed7564794fbe86551e6b50, type: 3}
       propertyPath: m_SortingOrder
@@ -5992,8 +5928,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1138346002}
-  - component: {fileID: 1138346004}
   - component: {fileID: 1138346003}
+  - component: {fileID: 1138346004}
   m_Layer: 0
   m_Name: wp_ga2
   m_TagString: Untagged
@@ -6026,9 +5962,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
+  m_Name:
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
   pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &1138346004
@@ -6042,160 +5978,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
---- !u!1001 &1145589858
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 600167769}
-    m_Modifications:
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 1.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 1.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalScale.z
-      value: 1.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 24.16
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 16.21
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3773789292355046751, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      propertyPath: m_Name
-      value: spritesheet_7
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 3773789292355046751, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1145589864}
-    - targetCorrespondingSourceObject: {fileID: 3773789292355046751, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1145589863}
-    - targetCorrespondingSourceObject: {fileID: 3773789292355046751, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1145589862}
-  m_SourcePrefab: {fileID: 100100000, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
---- !u!4 &1145589859 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-  m_PrefabInstance: {fileID: 1145589858}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &1145589860 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3773789292355046751, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-  m_PrefabInstance: {fileID: 1145589858}
-  m_PrefabAsset: {fileID: 0}
---- !u!212 &1145589861 stripped
-SpriteRenderer:
-  m_CorrespondingSourceObject: {fileID: 7436953009017515960, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
-  m_PrefabInstance: {fileID: 1145589858}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1145589862
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1145589860}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 072e3dac96bbbf64486ef28d5a266118, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::QuestAutoWalker
-  questRoot: {fileID: 1472258759}
-  explicitTarget: {fileID: 0}
-  moveSpeed: 1
-  arriveDistance: 2
-  targetNameContains: QuestMarker
-  walkOnStart: 1
-  ignoreZ: 1
---- !u!114 &1145589863
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1145589860}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: efe7024308bf728439c2e7fee6d6eb17, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SuperRetroMainBundle.CharacterAppearance
-  tf: {fileID: 1145589859}
-  movement: {x: 0, y: 0}
-  animator: {fileID: 1145589864}
-  spriteRenderer: {fileID: 1145589861}
-  SpriteSheetName: chara_03
---- !u!95 &1145589864
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1145589860}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 221c70e95b8c1584a94f75f1b1dedaa4, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &1152673067
 GameObject:
   m_ObjectHideFlags: 0
@@ -23616,8 +23401,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1392743460}
-  - component: {fileID: 1392743462}
   - component: {fileID: 1392743461}
+  - component: {fileID: 1392743462}
   m_Layer: 0
   m_Name: wp_1
   m_TagString: Untagged
@@ -23634,7 +23419,7 @@ Transform:
   m_GameObject: {fileID: 1392743459}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3, y: 3.59, z: 0}
+  m_LocalPosition: {x: 3, y: 3.28, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -23649,11 +23434,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1392743459}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &1392743462
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23663,12 +23449,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 1392743459}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1001 &1410300294
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -23764,8 +23549,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1422709483}
-  - component: {fileID: 1422709485}
   - component: {fileID: 1422709484}
+  - component: {fileID: 1422709485}
   m_Layer: 0
   m_Name: wp_ga2 (1)
   m_TagString: Untagged
@@ -23799,8 +23584,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
   pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &1422709485
@@ -23814,8 +23599,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &1429807275 stripped
 GameObject:
@@ -23913,7 +23698,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1431796479}
-  - component: {fileID: 1431796481}
   - component: {fileID: 1431796480}
   m_Layer: 0
   m_Name: wp_5 (3)
@@ -23948,24 +23732,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
---- !u!114 &1431796481
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1431796478}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!4 &1441633496 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5198905663294206253, guid: 191c39811df2807f14a0d9cde1fcdb74, type: 3}
@@ -24078,7 +23847,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50c7fe0ac65dd3244a0e25e55c40192c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::QuestProximityReveal
-  player: {fileID: 1145589859}
+  player: {fileID: 1659720017}
   playerTag: Player
   playerNameFallbacks:
   - playerRoot
@@ -24425,10 +24194,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4971501e729673c49846b9f71de4c26d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::QuestPathSequence
-  body: {fileID: 1145589859}
-  bodyAnimator: {fileID: 1145589864}
-  bodySprite: {fileID: 1145589861}
-  autoWalkerToDisable: {fileID: 1145589862}
+  body: {fileID: 1659720017}
+  bodyAnimator: {fileID: 1659720019}
+  bodySprite: {fileID: 1659720015}
+  autoWalkerToDisable: {fileID: 0}
   wp1: {fileID: 1392743460}
   wp2: {fileID: 1733590941}
   wp3: {fileID: 1816584160}
@@ -24451,18 +24220,18 @@ MonoBehaviour:
   crowMarkRoot: {fileID: 1339021964}
   crowMarkSprite: {fileID: 1339021967}
   crowSpritesResourcePath: Characters/Animals/birds/bird6_16x20
-  startDelay: 0.15
-  moveSpeed: 1.5
+  startDelay: 0.22
+  moveSpeed: 1.3
   arriveDistance: 0.05
   fadeDuration: 0.5
   clickPadding: 0.35
-  questAutoHold: 0.6
-  walkAnimSpeedParam: 1.5
-  faceHoldBeforeQuest: 0.7
+  questAutoHold: 0.95
+  walkAnimSpeedParam: 1.25
+  questApproachFraction: 0.6
   enableVibration: 1
   bearEncounterSceneName: CutScene_bear
   crowEncounterSceneName: CutScene_ga
-  sceneExitCoverDuration: 0.6
+  sceneExitCoverDuration: 0.75
   crow1PointA: {fileID: 11856744}
   crow1PointB: {fileID: 1972073421}
   crow2PointA: {fileID: 1138346002}
@@ -24945,6 +24714,141 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1750101191}
   m_SourcePrefab: {fileID: 100100000, guid: 645cb8b325dbcb5146538df50e70314b, type: 3}
+--- !u!1001 &1659720014
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 600167769}
+    m_Modifications:
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 24.29
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 15.35
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3773789292355046751, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_Name
+      value: spritesheet_7
+      objectReference: {fileID: 0}
+    - target: {fileID: 7436953009017515960, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      propertyPath: m_Sprite
+      value:
+      objectReference: {fileID: 21300000, guid: 6ecf07ea3fdd571478875f1a8db3c9ad, type: 3}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3773789292355046751, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1659720019}
+    - targetCorrespondingSourceObject: {fileID: 3773789292355046751, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1659720018}
+  m_SourcePrefab: {fileID: 100100000, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+--- !u!212 &1659720015 stripped
+SpriteRenderer:
+  m_CorrespondingSourceObject: {fileID: 7436953009017515960, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+  m_PrefabInstance: {fileID: 1659720014}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1659720016 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3773789292355046751, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+  m_PrefabInstance: {fileID: 1659720014}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1659720017 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3080504638814622970, guid: 9812f049c0ed9ffc7db3d92bb2cd7933, type: 3}
+  m_PrefabInstance: {fileID: 1659720014}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1659720018
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1659720016}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2daf9def3c3ba44faebe1e7d1c1e5df, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Common::CharacterRunDirection
+  animator: {fileID: 0}
+  unitsPerStep: 0.3
+  idleDelay: 0.15
+  animSpeedUp: 1
+  animSpeedLeft: 1
+  animSpeedFront: 0.6
+  animSpeedRight: 0.6
+--- !u!95 &1659720019
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1659720016}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: ff14b67716d172a40ac7703a752f54fd, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage:
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &1670860092
 GameObject:
   m_ObjectHideFlags: 0
@@ -25350,8 +25254,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1733590941}
-  - component: {fileID: 1733590943}
   - component: {fileID: 1733590942}
+  - component: {fileID: 1733590943}
   m_Layer: 0
   m_Name: wp_2
   m_TagString: Untagged
@@ -25385,8 +25289,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
   pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &1733590943
@@ -25400,8 +25304,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!4 &1744733420 stripped
 Transform:
@@ -45629,8 +45533,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1816584160}
-  - component: {fileID: 1816584162}
   - component: {fileID: 1816584161}
+  - component: {fileID: 1816584162}
   m_Layer: 0
   m_Name: wp_3
   m_TagString: Untagged
@@ -45662,11 +45566,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1816584159}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &1816584162
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -45676,12 +45581,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 1816584159}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1001 &1820736355
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -50272,8 +50176,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1925346025}
-  - component: {fileID: 1925346027}
   - component: {fileID: 1925346026}
+  - component: {fileID: 1925346027}
   m_Layer: 0
   m_Name: wp_8
   m_TagString: Untagged
@@ -50305,11 +50209,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1925346024}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &1925346027
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -50319,12 +50224,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 1925346024}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1001 &1930845489
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -50596,8 +50500,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1972073421}
-  - component: {fileID: 1972073423}
   - component: {fileID: 1972073422}
+  - component: {fileID: 1972073423}
   m_Layer: 0
   m_Name: wp_ga1 (1)
   m_TagString: Untagged
@@ -50631,8 +50535,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
   pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &1972073423
@@ -50646,8 +50550,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &1974649940
 GameObject:
@@ -50658,8 +50562,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1974649941}
-  - component: {fileID: 1974649943}
   - component: {fileID: 1974649942}
+  - component: {fileID: 1974649943}
   m_Layer: 0
   m_Name: wp_5
   m_TagString: Untagged
@@ -50691,11 +50595,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1974649940}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &1974649943
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -50705,12 +50610,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 1974649940}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &1994881756
 GameObject:
   m_ObjectHideFlags: 0
@@ -50969,10 +50873,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0, b: 0, a: 1}
-  lineColor: {r: 0, g: 0, b: 1, a: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &2001593551
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -50984,9 +50888,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.9803922, b: 0.9803922, a: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1001 &2002032006
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -51062,8 +50966,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2004475158}
-  - component: {fileID: 2004475160}
   - component: {fileID: 2004475159}
+  - component: {fileID: 2004475160}
   m_Layer: 0
   m_Name: wp_6
   m_TagString: Untagged
@@ -51095,11 +50999,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 2004475157}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
+  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
+  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &2004475160
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -51109,12 +51014,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 2004475157}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
+  m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
-  pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &2010033014 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2245664966391081876, guid: a0d0e605e2629d18c308de9e2cf92ff9, type: 3}
@@ -51477,8 +51381,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2039299994}
-  - component: {fileID: 2039299996}
   - component: {fileID: 2039299995}
+  - component: {fileID: 2039299996}
   m_Layer: 0
   m_Name: wp_4
   m_TagString: Untagged
@@ -51512,8 +51416,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bab19e40471550a42b032bc78a91d7e0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PathGizmoDrawer
-  pointSize: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::PathGizmoDrawer
+  pointSize: {x: 60, y: 60}
   pointColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   lineColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!114 &2039299996
@@ -51527,8 +51431,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06d91de3fab781545baf730832ac0950, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaypointGizmo
-  size: {x: 1, y: 1}
+  m_EditorClassIdentifier: Game.Common::WaypointGizmo
+  size: {x: 60, y: 60}
   color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1001 &2041174077
 PrefabInstance:

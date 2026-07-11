@@ -126,7 +126,11 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [Tooltip("TTS line ids voiced in order as the alt-word echo. Replaces altSoundPlaybackClip when every fetch succeeds.")]
     [SerializeField] private string[] altSoundPlaybackLineIds;
     [Tooltip("Silence between syllables when stitching the echo TTS lines into one clip.")]
-    [SerializeField] private float ttsEchoGapSeconds = 0.2f;
+    [SerializeField] private float ttsEchoGapSeconds = 0.45f;
+    [Tooltip("Longer pause before the final whole-word clip in the echo sequence (e.g. ปอ ... อา ...... ปา).")]
+    [SerializeField] private float ttsEchoFinalWordGapSeconds = 0.7f;
+    [Tooltip("Breathing room after each stone placement voice before the next placement is accepted.")]
+    [SerializeField] private float placementVoicePostGapSeconds = 0.25f;
     [Tooltip("Block stone input while gameplay TTS is being resolved, then continue without non-TTS fallback after this timeout.")]
     [SerializeField, Min(0.1f)] private float ttsPrefetchTimeoutSeconds = 8f;
 
@@ -344,7 +348,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
                     return;
                 }
 
-                AudioClip merged = ConcatClips(parts, ttsEchoGapSeconds);
+                AudioClip merged = ConcatClips(parts, ttsEchoGapSeconds, ttsEchoFinalWordGapSeconds);
                 if (merged != null)
                 {
                     assign(merged);
@@ -355,7 +359,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
     // Stitches the syllable clips into one, with a silent gap between them. Returns null if
     // any part is missing (keep the baked wav fallback instead of a partial echo).
-    private static AudioClip ConcatClips(AudioClip[] parts, float gapSeconds)
+    private static AudioClip ConcatClips(AudioClip[] parts, float gapSeconds, float finalWordGapSeconds)
     {
         int frequency = 0;
         int channels = 0;
@@ -388,7 +392,12 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         }
 
         int gapFrames = Mathf.Max(0, Mathf.RoundToInt(gapSeconds * frequency));
-        totalFrames += gapFrames * (parts.Length - 1);
+        int finalWordGapFrames = Mathf.Max(gapFrames, Mathf.RoundToInt(finalWordGapSeconds * frequency));
+        for (int i = 1; i < parts.Length; i++)
+        {
+            bool beforeWholeWord = parts.Length > 2 && i == parts.Length - 1;
+            totalFrames += beforeWholeWord ? finalWordGapFrames : gapFrames;
+        }
 
         float[] data = new float[totalFrames * channels];
         int offset = 0;
@@ -396,7 +405,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         {
             if (i > 0)
             {
-                offset += gapFrames * channels;
+                bool beforeWholeWord = parts.Length > 2 && i == parts.Length - 1;
+                offset += (beforeWholeWord ? finalWordGapFrames : gapFrames) * channels;
             }
 
             float[] chunk = new float[parts[i].samples * parts[i].channels];
@@ -1454,7 +1464,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         isPlacementVoicePlaying = true;
         source.PlayOneShot(clip, volume);
 
-        float until = Time.realtimeSinceStartup + clip.length;
+        float until = Time.realtimeSinceStartup + clip.length + Mathf.Max(0f, placementVoicePostGapSeconds);
         while (Time.realtimeSinceStartup < until)
         {
             yield return null;

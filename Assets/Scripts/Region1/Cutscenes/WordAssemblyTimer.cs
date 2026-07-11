@@ -69,7 +69,7 @@ public sealed class WordAssemblyTimer : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    /// <summary>New attempt: reset to the full 30s and start counting with a pop-in.</summary>
+    /// <summary>New attempt: reset to the full timer and start counting with a pop-in.</summary>
     public void BeginFresh()
     {
         remaining = Mathf.Max(0f, totalSeconds);

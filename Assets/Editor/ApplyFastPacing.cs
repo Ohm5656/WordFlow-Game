@@ -6,9 +6,9 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 
 /// <summary>
-/// Stamps the fast-pacing timing values into scene-serialized component fields.
-/// Scene values override C# defaults, so this (not code-default edits) is how the
-/// game actually speeds up. Idempotent — safe to re-run after any scene edit.
+/// Stamps balanced pacing values into scene-serialized component fields.
+/// Scene values override C# defaults, so this editor tool is the reliable way to
+/// tune pacing across the playable build. Idempotent: safe to re-run after scene edits.
 /// </summary>
 public static class ApplyFastPacing
 {
@@ -18,56 +18,73 @@ public static class ApplyFastPacing
     {
         ["OwlGreetingCutscene"] = new (string, float)[]
         {
-            ("startDelay", 0.05f),
-            ("dimFadeInDuration", 0.2f),
-            ("dimFadeOutDuration", 0.25f),
-            ("zoomDuration", 0.4f),
-            ("holdAfterZoom", 0f),
-            ("restoreZoomDuration", 0.35f),
-            ("talkingFadeDuration", 0.2f),
-            ("holdFrozenAfterRound", 0.15f),
-            ("bearFocusDelay", 0f),
-            ("bearGrowDuration", 0.3f),
-            ("bookRevealDelay", 0.1f),
-            ("bookRevealDuration", 0.7f),
-            ("owlFadeOutBeforeBookDuration", 0.35f),
+            ("startDelay", 0.1f),
+            ("dimFadeInDuration", 0.3f),
+            ("dimFadeOutDuration", 0.35f),
+            ("zoomDuration", 0.55f),
+            ("holdAfterZoom", 0.08f),
+            ("restoreZoomDuration", 0.45f),
+            ("talkingFadeDuration", 0.28f),
+            ("holdFrozenAfterRound", 0.25f),
+            ("voiceStartDelay", 0.08f),
+            ("bearFocusVoiceGap", 0.35f),
+            ("bearFocusDelay", 0.1f),
+            ("bearGrowDuration", 0.4f),
+            ("bookRevealDelay", 0.25f),
+            ("bookRevealDuration", 0.9f),
+            ("owlFadeOutBeforeBookDuration", 0.5f),
         },
         ["OwlHelloSequence"] = new (string, float)[]
         {
-            ("playbackSpeed", 1f), // natural, undistorted; wave now plays smooth at its own ~10fps
-            ("holdAfterPlay", 0.1f),
-            ("zoomInDuration", 0.15f),
-            ("zoomOutDuration", 0.15f),
+            ("fps", 18f), // 42-frame wave ~= 2.4s: quick enough to feel alive, not rushed
+            ("playbackSpeed", 1f), // natural, undistorted; timing comes from fps
+            ("holdAfterPlay", 0.06f),
+            ("zoomInDuration", 0.16f),
+            ("zoomOutDuration", 0.16f),
+            ("zoomScale", 1f),
         },
         ["MagicStonePuzzleController"] = new (string, float)[]
         {
-            ("revealDuration", 0.3f),
-            ("revealDelayBetweenStones", 0.08f),
-            ("craftResultFadeDuration", 0.25f),
-            ("crowCraftHoldDuration", 0.2f),
-            ("actionIconFadeDelay", 0f),
-            ("actionIconFadeDuration", 0.2f),
-            ("ritualShakeDuration", 0.8f),
-            ("whiteFlashFadeInDuration", 0.18f),
-            ("whiteFlashHoldDuration", 0.1f),
-            ("whiteFlashFadeOutDuration", 0.45f),
-            ("recordingSuccessPopDuration", 0.3f),
-            ("recordingSuccessHoldDuration", 0.25f),
+            ("revealDuration", 0.38f),
+            ("revealDelayBetweenStones", 0.12f),
+            ("craftResultFadeDuration", 0.32f),
+            ("crowCraftHoldDuration", 0.35f),
+            ("actionIconFadeDelay", 0.08f),
+            ("actionIconFadeDuration", 0.28f),
+            ("ritualShakeDuration", 1.2f),
+            ("whiteFlashFadeInDuration", 0.22f),
+            ("whiteFlashHoldDuration", 0.14f),
+            ("whiteFlashFadeOutDuration", 0.55f),
+            ("recordingSuccessPopDuration", 0.34f),
+            ("recordingSuccessHoldDuration", 0.35f),
+            ("ttsEchoGapSeconds", 0.45f),
+            ("ttsEchoFinalWordGapSeconds", 0.7f),
+            ("placementVoicePostGapSeconds", 0.25f),
+        },
+        ["WordAssemblyTimer"] = new (string, float)[]
+        {
+            ("totalSeconds", 30f),
+            ("countdownAt", 10f),
+            ("popDuration", 0.5f),
         },
         ["SuccessPaOwlEpilogue"] = new (string, float)[]
         {
-            ("fallbackHoldSeconds", 2f),
-            ("holdFrozenAfterRound", 0.15f),
+            ("fadeInDuration", 0.32f),
+            ("fadeOutDuration", 0.32f),
+            ("fallbackHoldSeconds", 2.4f),
+            ("holdFrozenAfterRound", 0.3f),
+            ("phraseGap", 0.35f),
         },
         ["SuccessGaReturn"] = new (string, float)[]
         {
-            ("playSeconds", 4f), // ga clip is ~4s; 4.5 held on 0.5s of nothing
+            ("playSeconds", 4.1f), // ga clip is about 4s; avoid holding on empty frames
+            ("fadeDuration", 0.8f),
         },
         ["CrowEntranceCutscene"] = new (string, float)[]
         {
-            ("fadeInDuration", 0.25f),
-            ("leg1Duration", 2f),
-            ("leg2Duration", 1.6f),
+            ("fadeInDuration", 0.35f),
+            ("leg1Duration", 2.4f),
+            ("leg2Duration", 1.9f),
         },
     };
 
@@ -87,45 +104,43 @@ public static class ApplyFastPacing
     {
         ["QuestPathSequence"] = new (string, float)[]
         {
-            ("startDelay", 0.15f),
-            ("moveSpeed", 1.5f),           // was 1
-            ("walkAnimSpeedParam", 1.5f),  // keep feet in sync with the faster walk
-            ("questAutoHold", 0.6f),       // was 1.5, hit 5 times per walk
-            ("faceHoldBeforeQuest", 0.7f), // was 2
-            ("sceneExitCoverDuration", 0.6f),
+            ("startDelay", 0.22f),
+            ("moveSpeed", 1.25f),
+            ("walkAnimSpeedParam", 1.25f),
+            ("questAutoHold", 0.95f),
+            ("faceHoldBeforeQuest", 1.0f),
+            ("sceneExitCoverDuration", 0.75f),
         },
-        // QuestMapIntroFlow intentionally omitted: it is not present in any scene or prefab
-        // (verified via search_by_component + grep), so there is nothing to stamp. The quest map
-        // uses QuestPointInteractable / QuestMapSimpleCharacterWalk, which were not flagged slow.
         ["WorldMapProblemIslands"] = new (string, float)[]
         {
-            ("unlockAnimationDelay", 0.2f),      // was 0.45
-            ("unlockAnimationDuration", 1f),     // was 1.8
-            ("unlockHoldDuration", 0.5f),        // was 1.1
-            ("unlockFadeOutDuration", 0.5f),
-            ("playableIslandPromptDuration", 1.2f), // was 2.1
-            ("sceneExitCoverDuration", 0.5f),
+            ("sceneFadeFallbackWait", 1.8f),
+            ("unlockAnimationDelay", 0.3f),
+            ("unlockAnimationDuration", 1.25f),
+            ("unlockHoldDuration", 0.75f),
+            ("unlockFadeOutDuration", 0.6f),
+            ("playableIslandPromptDuration", 1.5f),
+            ("sceneExitCoverDuration", 0.65f),
         },
         ["CutScene2ChaseController"] = new (string, float)[]
         {
-            ("startDelayAfterFade", 0.1f),   // was 0.35
-            ("whiteFadeOutDuration", 0.6f),  // was 1.05
-            ("bearRunDuration", 1f),         // was 1.35
-            ("stoneChaseDuration", 0.9f),    // was 1.25
-            ("completeHoldDuration", 0.15f), // was 0.3
-            ("blackFadeInDuration", 0.5f),   // was 0.85
+            ("startDelayAfterFade", 0.16f),
+            ("whiteFadeOutDuration", 0.75f),
+            ("bearRunDuration", 1.15f),
+            ("stoneChaseDuration", 1.05f),
+            ("completeHoldDuration", 0.22f),
+            ("blackFadeInDuration", 0.6f),
         },
         ["CrowCutsceneController"] = new (string, float)[]
         {
-            ("blackFadeOutDuration", 0.35f),
-            ("flyDuration", 1.5f),           // was 2.25
-            ("blackFadeInDuration", 0.35f),
+            ("blackFadeOutDuration", 0.45f),
+            ("flyDuration", 1.8f),
+            ("blackFadeInDuration", 0.45f),
         },
         ["CrowSetFreeCutscene"] = new (string, float)[]
         {
-            ("fadeInDuration", 0.25f),
-            ("fadeOutDuration", 0.6f),       // was 1
-            ("clip2FadeInDuration", 0.4f),
+            ("fadeInDuration", 0.35f),
+            ("fadeOutDuration", 0.75f),
+            ("clip2FadeInDuration", 0.5f),
         },
     };
 
@@ -135,14 +150,21 @@ public static class ApplyFastPacing
         "Assets/Scenes/WorldMap.unity",
         "Assets/Scenes/region 1/cut_scene2.unity",
         "Assets/Scenes/region 1/cut_scene3.unity",
-        "Assets/Scenes/region 1/Success_ga_correct.unity", // CrowSetFreeCutscene lives here
+        "Assets/Scenes/region 1/Success_ga_correct.unity",
     };
 
-    [MenuItem("Tools/Pacing/Apply Fast Pacing (Core Loop)")]
+    [MenuItem("Tools/Pacing/Apply Balanced Pacing (Core Loop)")]
     public static void ApplyCore() => Apply(CoreScenes, CoreValues);
 
-    [MenuItem("Tools/Pacing/Apply Fast Pacing (World)")]
+    [MenuItem("Tools/Pacing/Apply Balanced Pacing (World)")]
     public static void ApplyWorld() => Apply(WorldScenes, WorldValues);
+
+    [MenuItem("Tools/Pacing/Apply Balanced Pacing (Build Scenes)")]
+    public static void ApplyBuildScenes()
+    {
+        Apply(CoreScenes, CoreValues);
+        Apply(WorldScenes, WorldValues);
+    }
 
     private static void Apply(string[] scenes, Dictionary<string, (string field, float value)[]> table)
     {
@@ -156,11 +178,11 @@ public static class ApplyFastPacing
                 Type type = FindType(kv.Key);
                 if (type == null)
                 {
-                    Debug.LogError($"[FastPacing] Unknown component type '{kv.Key}'");
+                    Debug.LogError($"[BalancedPacing] Unknown component type '{kv.Key}'");
                     continue;
                 }
 
-                // Include inactive objects — several book/icon roots start disabled.
+                // Include inactive objects: several book/icon roots start disabled.
                 foreach (var comp in UnityEngine.Object.FindObjectsByType(
                     type, FindObjectsInactive.Include, FindObjectsSortMode.None))
                 {
@@ -171,15 +193,17 @@ public static class ApplyFastPacing
                         SerializedProperty p = so.FindProperty(field);
                         if (p == null)
                         {
-                            Debug.LogError($"[FastPacing] {kv.Key}.{field} not found in {scenePath}");
+                            Debug.LogError($"[BalancedPacing] {kv.Key}.{field} not found in {scenePath}");
                             continue;
                         }
+
                         if (!Mathf.Approximately(p.floatValue, value))
                         {
                             p.floatValue = value;
                             changed = true;
                         }
                     }
+
                     if (changed)
                     {
                         so.ApplyModifiedPropertiesWithoutUndo();
@@ -191,7 +215,7 @@ public static class ApplyFastPacing
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
-            Debug.Log($"[FastPacing] {scene.name}: updated {touched} component(s)");
+            Debug.Log($"[BalancedPacing] {scene.name}: updated {touched} component(s)");
         }
     }
 

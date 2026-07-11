@@ -188,15 +188,15 @@ MonoBehaviour:
   - "\u0E01"
   - "\u0E15"
   - "\u0E32"
-  revealDelayBetweenStones: 0.08
-  revealDuration: 0.3
+  revealDelayBetweenStones: 0.12
+  revealDuration: 0.38
   revealYOffset: -120
   revealStartScale: 0.2
   snapDuration: 0.25
   returnDuration: 0.22
   playRitualWhenBothSlotsFilled: 1
   ritualShakeRoot: {fileID: 971624839}
-  ritualShakeDuration: 0.8
+  ritualShakeDuration: 1.2
   ritualShakeStrength: 60
   ritualShakeFrequency: 26
   ritualShakeStartIntensity: 0.02
@@ -207,9 +207,9 @@ MonoBehaviour:
   ritualChargeFlashMaxAlpha: 0.45
   ritualFinalPulseStart: 0.72
   ritualFinalPulseAlpha: 1
-  whiteFlashFadeInDuration: 0.18
-  whiteFlashHoldDuration: 0.1
-  whiteFlashFadeOutDuration: 0.45
+  whiteFlashFadeInDuration: 0.22
+  whiteFlashHoldDuration: 0.14
+  whiteFlashFadeOutDuration: 0.55
   whiteFlashColor: {r: 1, g: 1, b: 1, a: 1}
   nextSceneName: Assets/Scenes/region 1/Success_ga_correct.unity
   bookCraftRoot: {fileID: 0}
@@ -222,12 +222,12 @@ MonoBehaviour:
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
-  craftResultFadeDuration: 0.25
+  craftResultFadeDuration: 0.32
   craftResultStartScale: 0.96
-  actionIconFadeDelay: 0
-  actionIconFadeDuration: 0.2
+  actionIconFadeDelay: 0.08
+  actionIconFadeDuration: 0.28
   crowSceneName: cut_scene3
-  crowCraftHoldDuration: 0.2
+  crowCraftHoldDuration: 0.35
   useWhiteFlashToCrowScene: 0
   crowFlashDelay: 0.04
   actionAudioSource: {fileID: 0}
@@ -262,7 +262,9 @@ MonoBehaviour:
   - gameplay_to
   - gameplay_aa
   - gameplay_taa
-  ttsEchoGapSeconds: 0.2
+  ttsEchoGapSeconds: 0.45
+  ttsEchoFinalWordGapSeconds: 0.7
+  placementVoicePostGapSeconds: 0.25
   ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
@@ -270,8 +272,8 @@ MonoBehaviour:
   recordingSuccessSfx: {fileID: 0}
   recordingSuccessSize: {x: 640, y: 430}
   recordingSuccessPosition: {x: 0, y: 0}
-  recordingSuccessPopDuration: 0.3
-  recordingSuccessHoldDuration: 0.25
+  recordingSuccessPopDuration: 0.34
+  recordingSuccessHoldDuration: 0.35
   recordingSuccessStartScale: 0.35
   recordingSuccessEndScale: 1
   playSuccessShakeAndFlash: 1
@@ -1003,11 +1005,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4032450297608147024, guid: 62bf44f2164cbc845ae014083ce8ad70, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 100
+      value: 102.8644
       objectReference: {fileID: 0}
     - target: {fileID: 4032450297608147024, guid: 62bf44f2164cbc845ae014083ce8ad70, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 100
+      value: 106.31
       objectReference: {fileID: 0}
     - target: {fileID: 4032450297608147024, guid: 62bf44f2164cbc845ae014083ce8ad70, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1039,11 +1041,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4032450297608147024, guid: 62bf44f2164cbc845ae014083ce8ad70, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 25.315
       objectReference: {fileID: 0}
     - target: {fileID: 4032450297608147024, guid: 62bf44f2164cbc845ae014083ce8ad70, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -77.79
       objectReference: {fileID: 0}
     - target: {fileID: 4032450297608147024, guid: 62bf44f2164cbc845ae014083ce8ad70, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1056,6 +1058,14 @@ PrefabInstance:
     - target: {fileID: 4032450297608147024, guid: 62bf44f2164cbc845ae014083ce8ad70, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7213225325170879022, guid: 62bf44f2164cbc845ae014083ce8ad70, type: 3}
+      propertyPath: popDuration
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7213225325170879022, guid: 62bf44f2164cbc845ae014083ce8ad70, type: 3}
+      propertyPath: totalSeconds
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 8063713809918271722, guid: 62bf44f2164cbc845ae014083ce8ad70, type: 3}
       propertyPath: m_Name
@@ -1398,15 +1408,15 @@ MonoBehaviour:
   - "\u0E01"
   - "\u0E15"
   - "\u0E32"
-  revealDelayBetweenStones: 0.08
-  revealDuration: 0.3
+  revealDelayBetweenStones: 0.12
+  revealDuration: 0.38
   revealYOffset: -120
   revealStartScale: 0.2
   snapDuration: 0.25
   returnDuration: 0.22
   playRitualWhenBothSlotsFilled: 1
   ritualShakeRoot: {fileID: 971624839}
-  ritualShakeDuration: 0.8
+  ritualShakeDuration: 1.2
   ritualShakeStrength: 60
   ritualShakeFrequency: 26
   ritualShakeStartIntensity: 0.02
@@ -1417,9 +1427,9 @@ MonoBehaviour:
   ritualChargeFlashMaxAlpha: 0.45
   ritualFinalPulseStart: 0.72
   ritualFinalPulseAlpha: 1
-  whiteFlashFadeInDuration: 0.18
-  whiteFlashHoldDuration: 0.1
-  whiteFlashFadeOutDuration: 0.45
+  whiteFlashFadeInDuration: 0.22
+  whiteFlashHoldDuration: 0.14
+  whiteFlashFadeOutDuration: 0.55
   whiteFlashColor: {r: 1, g: 1, b: 1, a: 1}
   nextSceneName: Assets/Scenes/region 1/Success_ga_correct.unity
   bookCraftRoot: {fileID: 0}
@@ -1432,12 +1442,12 @@ MonoBehaviour:
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
-  craftResultFadeDuration: 0.25
+  craftResultFadeDuration: 0.32
   craftResultStartScale: 0.96
-  actionIconFadeDelay: 0
-  actionIconFadeDuration: 0.2
+  actionIconFadeDelay: 0.08
+  actionIconFadeDuration: 0.28
   crowSceneName: cut_scene3
-  crowCraftHoldDuration: 0.2
+  crowCraftHoldDuration: 0.35
   useWhiteFlashToCrowScene: 0
   crowFlashDelay: 0.04
   actionAudioSource: {fileID: 0}
@@ -1472,7 +1482,9 @@ MonoBehaviour:
   - gameplay_to
   - gameplay_aa
   - gameplay_taa
-  ttsEchoGapSeconds: 0.2
+  ttsEchoGapSeconds: 0.45
+  ttsEchoFinalWordGapSeconds: 0.7
+  placementVoicePostGapSeconds: 0.25
   ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
@@ -1480,8 +1492,8 @@ MonoBehaviour:
   recordingSuccessSfx: {fileID: 0}
   recordingSuccessSize: {x: 640, y: 430}
   recordingSuccessPosition: {x: 0, y: 0}
-  recordingSuccessPopDuration: 0.3
-  recordingSuccessHoldDuration: 0.25
+  recordingSuccessPopDuration: 0.34
+  recordingSuccessHoldDuration: 0.35
   recordingSuccessStartScale: 0.35
   recordingSuccessEndScale: 1
   playSuccessShakeAndFlash: 1
@@ -1999,15 +2011,15 @@ MonoBehaviour:
   - "\u0E01"
   - "\u0E15"
   - "\u0E32"
-  revealDelayBetweenStones: 0.08
-  revealDuration: 0.3
+  revealDelayBetweenStones: 0.12
+  revealDuration: 0.38
   revealYOffset: -120
   revealStartScale: 0.2
   snapDuration: 0.25
   returnDuration: 0.22
   playRitualWhenBothSlotsFilled: 1
   ritualShakeRoot: {fileID: 971624839}
-  ritualShakeDuration: 0.8
+  ritualShakeDuration: 1.2
   ritualShakeStrength: 60
   ritualShakeFrequency: 26
   ritualShakeStartIntensity: 0.02
@@ -2018,9 +2030,9 @@ MonoBehaviour:
   ritualChargeFlashMaxAlpha: 0.45
   ritualFinalPulseStart: 0.72
   ritualFinalPulseAlpha: 1
-  whiteFlashFadeInDuration: 0.18
-  whiteFlashHoldDuration: 0.1
-  whiteFlashFadeOutDuration: 0.45
+  whiteFlashFadeInDuration: 0.22
+  whiteFlashHoldDuration: 0.14
+  whiteFlashFadeOutDuration: 0.55
   whiteFlashColor: {r: 1, g: 1, b: 1, a: 1}
   nextSceneName: Assets/Scenes/region 1/Success_ga_correct.unity
   bookCraftRoot: {fileID: 0}
@@ -2033,12 +2045,12 @@ MonoBehaviour:
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
-  craftResultFadeDuration: 0.25
+  craftResultFadeDuration: 0.32
   craftResultStartScale: 0.96
-  actionIconFadeDelay: 0
-  actionIconFadeDuration: 0.2
+  actionIconFadeDelay: 0.08
+  actionIconFadeDuration: 0.28
   crowSceneName: cut_scene3
-  crowCraftHoldDuration: 0.2
+  crowCraftHoldDuration: 0.35
   useWhiteFlashToCrowScene: 0
   crowFlashDelay: 0.04
   actionAudioSource: {fileID: 0}
@@ -2073,7 +2085,9 @@ MonoBehaviour:
   - gameplay_to
   - gameplay_aa
   - gameplay_taa
-  ttsEchoGapSeconds: 0.2
+  ttsEchoGapSeconds: 0.45
+  ttsEchoFinalWordGapSeconds: 0.7
+  placementVoicePostGapSeconds: 0.25
   ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
@@ -2081,8 +2095,8 @@ MonoBehaviour:
   recordingSuccessSfx: {fileID: 8300000, guid: b1a9c4d9638d4f2f8c6e0d55276bbab1, type: 3}
   recordingSuccessSize: {x: 640, y: 430}
   recordingSuccessPosition: {x: 0, y: 0}
-  recordingSuccessPopDuration: 0.3
-  recordingSuccessHoldDuration: 0.25
+  recordingSuccessPopDuration: 0.34
+  recordingSuccessHoldDuration: 0.35
   recordingSuccessStartScale: 0.35
   recordingSuccessEndScale: 1
   playSuccessShakeAndFlash: 1
@@ -2182,13 +2196,13 @@ MonoBehaviour:
   - {fileID: 21300000, guid: f418f6b7e766f914f8223c83eea195a4, type: 3}
   - {fileID: 21300000, guid: e0a827885783575458a816d3c1ac359e, type: 3}
   - {fileID: 21300000, guid: bc5ac8cdab45c4545ba6867a85f97456, type: 3}
-  fps: 10
+  fps: 18
   playbackSpeed: 1
   hideOnComplete: 1
-  holdAfterPlay: 0.1
+  holdAfterPlay: 0.06
   zoomTarget: {fileID: 1732396934}
-  zoomInDuration: 0.15
-  zoomOutDuration: 0.15
+  zoomInDuration: 0.16
+  zoomOutDuration: 0.16
   zoomScale: 1
 --- !u!114 &1732396936
 MonoBehaviour:
@@ -2299,15 +2313,15 @@ MonoBehaviour:
   - "\u0E01"
   - "\u0E15"
   - "\u0E32"
-  revealDelayBetweenStones: 0.08
-  revealDuration: 0.3
+  revealDelayBetweenStones: 0.12
+  revealDuration: 0.38
   revealYOffset: -120
   revealStartScale: 0.2
   snapDuration: 0.25
   returnDuration: 0.22
   playRitualWhenBothSlotsFilled: 1
   ritualShakeRoot: {fileID: 971624839}
-  ritualShakeDuration: 0.8
+  ritualShakeDuration: 1.2
   ritualShakeStrength: 60
   ritualShakeFrequency: 26
   ritualShakeStartIntensity: 0.02
@@ -2318,9 +2332,9 @@ MonoBehaviour:
   ritualChargeFlashMaxAlpha: 0.45
   ritualFinalPulseStart: 0.72
   ritualFinalPulseAlpha: 1
-  whiteFlashFadeInDuration: 0.18
-  whiteFlashHoldDuration: 0.1
-  whiteFlashFadeOutDuration: 0.45
+  whiteFlashFadeInDuration: 0.22
+  whiteFlashHoldDuration: 0.14
+  whiteFlashFadeOutDuration: 0.55
   whiteFlashColor: {r: 1, g: 1, b: 1, a: 1}
   nextSceneName: Assets/Scenes/region 1/Success_ga_correct.unity
   bookCraftRoot: {fileID: 0}
@@ -2333,12 +2347,12 @@ MonoBehaviour:
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
-  craftResultFadeDuration: 0.25
+  craftResultFadeDuration: 0.32
   craftResultStartScale: 0.96
-  actionIconFadeDelay: 0
-  actionIconFadeDuration: 0.2
+  actionIconFadeDelay: 0.08
+  actionIconFadeDuration: 0.28
   crowSceneName: cut_scene3
-  crowCraftHoldDuration: 0.2
+  crowCraftHoldDuration: 0.35
   useWhiteFlashToCrowScene: 0
   crowFlashDelay: 0.04
   actionAudioSource: {fileID: 0}
@@ -2373,7 +2387,9 @@ MonoBehaviour:
   - gameplay_to
   - gameplay_aa
   - gameplay_taa
-  ttsEchoGapSeconds: 0.2
+  ttsEchoGapSeconds: 0.45
+  ttsEchoFinalWordGapSeconds: 0.7
+  placementVoicePostGapSeconds: 0.25
   ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
@@ -2381,8 +2397,8 @@ MonoBehaviour:
   recordingSuccessSfx: {fileID: 0}
   recordingSuccessSize: {x: 640, y: 430}
   recordingSuccessPosition: {x: 0, y: 0}
-  recordingSuccessPopDuration: 0.3
-  recordingSuccessHoldDuration: 0.25
+  recordingSuccessPopDuration: 0.34
+  recordingSuccessHoldDuration: 0.35
   recordingSuccessStartScale: 0.35
   recordingSuccessEndScale: 1
   playSuccessShakeAndFlash: 1
@@ -2409,15 +2425,15 @@ PrefabInstance:
       objectReference: {fileID: 1906421808}
     - target: {fileID: 6585398415250432755, guid: 51401148f28780f45ad3b893dca67370, type: 3}
       propertyPath: leg1Duration
-      value: 2
+      value: 2.4
       objectReference: {fileID: 0}
     - target: {fileID: 6585398415250432755, guid: 51401148f28780f45ad3b893dca67370, type: 3}
       propertyPath: leg2Duration
-      value: 1.6
+      value: 1.9
       objectReference: {fileID: 0}
     - target: {fileID: 6585398415250432755, guid: 51401148f28780f45ad3b893dca67370, type: 3}
       propertyPath: fadeInDuration
-      value: 0.25
+      value: 0.35
       objectReference: {fileID: 0}
     - target: {fileID: 8767410274627185777, guid: 51401148f28780f45ad3b893dca67370, type: 3}
       propertyPath: m_Pivot.x
@@ -2585,7 +2601,7 @@ MonoBehaviour:
   frameNamePrefix: owl
   useSingleVisibleFrame: 0
   preservePlacedFrameTransforms: 1
-  startDelay: 0.05
+  startDelay: 0.1
   loopCount: 2
   greetingDuration: 4
   frameDuration: 0.35
@@ -2597,24 +2613,24 @@ MonoBehaviour:
   bounceHeight: 0
   bounceScale: 1
   zoomBeforeGreeting: 0
-  zoomDuration: 0.4
+  zoomDuration: 0.55
   zoomScale: 1.5
   zoomFocusPosition: {x: 320, y: -120}
-  holdAfterZoom: 0
+  holdAfterZoom: 0.08
   restoreZoomAfterGreeting: 1
-  restoreZoomDuration: 0.35
+  restoreZoomDuration: 0.45
   zoomRoot: {fileID: 0}
   backgroundBounds: {fileID: 925051139}
   clampZoomToBackground: 1
   zoomViewportPadding: {x: 24, y: 24}
   dimBackgroundBeforeZoom: 1
   dimColor: {r: 0, g: 0, b: 0, a: 0.55}
-  dimFadeInDuration: 0.2
-  dimFadeOutDuration: 0.25
+  dimFadeInDuration: 0.3
+  dimFadeOutDuration: 0.35
   playBearFocusAfterGreeting: 1
   bearRoot: {fileID: 1870248665}
-  bearFocusDelay: 0
-  bearGrowDuration: 0.3
+  bearFocusDelay: 0.1
+  bearGrowDuration: 0.4
   bearFocusScaleMultiplier: 1.18
   bearFocusGreetingDuration: 6
   bearFocusUseHierarchyOrder: 1
@@ -2636,8 +2652,8 @@ MonoBehaviour:
   greetingLineId: 
   bearFocusLookLineId: kaa_intro_owl_2
   ttsWaitTimeoutSeconds: 8
-  voiceStartDelay: 0
-  bearFocusVoiceGap: 0.05
+  voiceStartDelay: 0.08
+  bearFocusVoiceGap: 0.35
   useVoiceClipLengthForTalkDuration: 1
   owlHello: {fileID: 1732396935}
   talkingAnimator: {fileID: 0}
@@ -2653,17 +2669,17 @@ MonoBehaviour:
   bearFocusMissionAnimationSpeed: 1
   bearFocusMissionSecondsPerLoop: 0
   hideTalkingPrefabWhenSilent: 1
-  talkingFadeDuration: 0.2
-  holdFrozenAfterRound: 0.15
+  talkingFadeDuration: 0.28
+  holdFrozenAfterRound: 0.25
   playBookRevealAfterBearFocus: 1
   bookCraftRoot: {fileID: 0}
   bookCraftImage: {fileID: 0}
-  bookRevealDelay: 0.1
+  bookRevealDelay: 0.25
   bookRevealStartPosition: {x: 0, y: 0}
   bookRevealStartScale: 0.08
-  bookRevealDuration: 0.7
+  bookRevealDuration: 0.9
   fadeOwlBeforeBookReveal: 1
-  owlFadeOutBeforeBookDuration: 0.35
+  owlFadeOutBeforeBookDuration: 0.5
   moveOwlToBookRevealPosition: 0
   owlBookRevealMoveDuration: 0.75
   usePlacedOwlPositionAsBookRevealTarget: 1
@@ -3121,15 +3137,15 @@ MonoBehaviour:
   - "\u0E01"
   - "\u0E15"
   - "\u0E32"
-  revealDelayBetweenStones: 0.08
-  revealDuration: 0.3
+  revealDelayBetweenStones: 0.12
+  revealDuration: 0.38
   revealYOffset: -120
   revealStartScale: 0.2
   snapDuration: 0.25
   returnDuration: 0.22
   playRitualWhenBothSlotsFilled: 1
   ritualShakeRoot: {fileID: 971624839}
-  ritualShakeDuration: 0.8
+  ritualShakeDuration: 1.2
   ritualShakeStrength: 60
   ritualShakeFrequency: 26
   ritualShakeStartIntensity: 0.02
@@ -3140,9 +3156,9 @@ MonoBehaviour:
   ritualChargeFlashMaxAlpha: 0.45
   ritualFinalPulseStart: 0.72
   ritualFinalPulseAlpha: 1
-  whiteFlashFadeInDuration: 0.18
-  whiteFlashHoldDuration: 0.1
-  whiteFlashFadeOutDuration: 0.45
+  whiteFlashFadeInDuration: 0.22
+  whiteFlashHoldDuration: 0.14
+  whiteFlashFadeOutDuration: 0.55
   whiteFlashColor: {r: 1, g: 1, b: 1, a: 1}
   nextSceneName: Assets/Scenes/region 1/Success_ga_correct.unity
   bookCraftRoot: {fileID: 0}
@@ -3155,12 +3171,12 @@ MonoBehaviour:
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
-  craftResultFadeDuration: 0.25
+  craftResultFadeDuration: 0.32
   craftResultStartScale: 0.96
-  actionIconFadeDelay: 0
-  actionIconFadeDuration: 0.2
+  actionIconFadeDelay: 0.08
+  actionIconFadeDuration: 0.28
   crowSceneName: cut_scene3
-  crowCraftHoldDuration: 0.2
+  crowCraftHoldDuration: 0.35
   useWhiteFlashToCrowScene: 0
   crowFlashDelay: 0.04
   actionAudioSource: {fileID: 0}
@@ -3195,7 +3211,9 @@ MonoBehaviour:
   - gameplay_to
   - gameplay_aa
   - gameplay_taa
-  ttsEchoGapSeconds: 0.2
+  ttsEchoGapSeconds: 0.45
+  ttsEchoFinalWordGapSeconds: 0.7
+  placementVoicePostGapSeconds: 0.25
   ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
@@ -3203,8 +3221,8 @@ MonoBehaviour:
   recordingSuccessSfx: {fileID: 0}
   recordingSuccessSize: {x: 640, y: 430}
   recordingSuccessPosition: {x: 0, y: 0}
-  recordingSuccessPopDuration: 0.3
-  recordingSuccessHoldDuration: 0.25
+  recordingSuccessPopDuration: 0.34
+  recordingSuccessHoldDuration: 0.35
   recordingSuccessStartScale: 0.35
   recordingSuccessEndScale: 1
   playSuccessShakeAndFlash: 1

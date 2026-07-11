@@ -564,9 +564,9 @@ MonoBehaviour:
   stoneRoot: {fileID: 1997587686}
   playOnStart: 1
   playWhiteFadeOutOnStart: 1
-  whiteFadeOutDuration: 0.6
+  whiteFadeOutDuration: 0.75
   whiteFadeColor: {r: 1, g: 1, b: 1, a: 1}
-  startDelayAfterFade: 0.1
+  startDelayAfterFade: 0.16
   hideStoneBeforeLaunch: 1
   stoneRevealDuration: 0.2
   stoneImpactPosition: {x: -90, y: -170}
@@ -577,8 +577,8 @@ MonoBehaviour:
   bearExitPosition: {x: -2100, y: -115}
   stoneExitPosition: {x: -2050, y: -287}
   bearRunDelay: 0.12
-  bearRunDuration: 1
-  stoneChaseDuration: 0.9
+  bearRunDuration: 1.15
+  stoneChaseDuration: 1.05
   runBobHeight: 42
   runBobFrequency: 7
   scaredShakeDuration: 0.28
@@ -586,8 +586,8 @@ MonoBehaviour:
   loadSceneOnComplete: 1
   nextSceneName: success
   playBlackFadeInBeforeLoad: 1
-  completeHoldDuration: 0.15
-  blackFadeInDuration: 0.5
+  completeHoldDuration: 0.22
+  blackFadeInDuration: 0.6
   blackFadeColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!1 &1283217637
 GameObject:

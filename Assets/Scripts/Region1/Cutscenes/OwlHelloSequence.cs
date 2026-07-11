@@ -14,29 +14,29 @@ public sealed class OwlHelloSequence : MonoBehaviour
 
     [Header("Playback")]
     [SerializeField] private Sprite[] frames;
-    [Tooltip("Frames per second — 10 is smooth enough without heavy memory reads.")]
-    [SerializeField, Min(1f)] private float fps = 10f;
+    [Tooltip("Frames per second. 18 keeps the 42-frame wave around 2.4s, which feels like a natural greeting instead of slow motion.")]
+    [SerializeField, Min(1f)] private float fps = 18f;
     [Tooltip("Overall owl_hello animation speed. 1 = normal, 2 = twice as fast, 0.5 = half speed.")]
     [SerializeField, Min(0.01f)] private float playbackSpeed = 1f;
     [Tooltip("When false, Play() leaves the last frame on screen so the caller can crossfade it out.")]
     [SerializeField] private bool hideOnComplete = true;
     public void SetHideOnComplete(bool value) => hideOnComplete = value;
     [Tooltip("After the wave finishes, freeze on the last frame for this long before handing off. 0 = no hold.")]
-    [SerializeField, Min(0f)] private float holdAfterPlay = 0.5f;
+    [SerializeField, Min(0f)] private float holdAfterPlay = 0.06f;
 
     [Header("Optional Zoom")]
     [Tooltip("RectTransform to scale for the zoom effect. Defaults to helloImage.rectTransform.")]
     [SerializeField] private RectTransform zoomTarget;
-    [SerializeField] private float zoomInDuration = 0.25f;
-    [SerializeField] private float zoomOutDuration = 0.3f;
+    [SerializeField] private float zoomInDuration = 0.16f;
+    [SerializeField] private float zoomOutDuration = 0.16f;
     [Tooltip("Peak scale multiplier (1.15 = 15% larger).")]
-    [SerializeField, Min(1f)] private float zoomScale = 1.15f;
+    [SerializeField, Min(1f)] private float zoomScale = 1f;
 
     private bool _played;
     public bool AlreadyPlayed => _played;
 
-    // When >0, drive the wave at this exact display fps instead of fps*playbackSpeed. The cutscene
-    // sets it to the talking owl's frame rate so the seam owl_hello->owl has no cadence jump.
+    // Optional override for special cases. Normal cutscenes leave this at 0 so the wave plays at
+    // its authored fps; forcing it to match slow talking loops makes the entrance feel choppy.
     private float _fpsOverride;
     public void SetPlaybackFps(float effectiveFps) => _fpsOverride = Mathf.Max(0f, effectiveFps);
 
@@ -66,8 +66,7 @@ public sealed class OwlHelloSequence : MonoBehaviour
         if (useZoom)
             yield return Zoom(rt, baseScale, bigScale, zoomInDuration / speed);
 
-        // playbackSpeed still scales the matched fps, so the Inspector can speed up / slow down the
-        // wave (1 = match talking, 2 = twice as fast) without breaking the seam cadence at default.
+        // playbackSpeed scales either the authored fps or an explicit override.
         float interval = _fpsOverride > 0f
             ? 1f / (_fpsOverride * speed)
             : 1f / (Mathf.Max(1f, fps) * speed);

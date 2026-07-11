@@ -757,7 +757,7 @@ MonoBehaviour:
   frameNamePrefix: owl
   useSingleVisibleFrame: 0
   preservePlacedFrameTransforms: 1
-  startDelay: 0.05
+  startDelay: 0.1
   loopCount: 2
   greetingDuration: 4
   frameDuration: 0.35
@@ -769,24 +769,24 @@ MonoBehaviour:
   bounceHeight: 0
   bounceScale: 1
   zoomBeforeGreeting: 1
-  zoomDuration: 0.4
+  zoomDuration: 0.55
   zoomScale: 1.5
   zoomFocusPosition: {x: 320, y: -120}
-  holdAfterZoom: 0
+  holdAfterZoom: 0.08
   restoreZoomAfterGreeting: 1
-  restoreZoomDuration: 0.35
+  restoreZoomDuration: 0.45
   zoomRoot: {fileID: 0}
   backgroundBounds: {fileID: 245150036}
   clampZoomToBackground: 1
   zoomViewportPadding: {x: 24, y: 24}
   dimBackgroundBeforeZoom: 1
   dimColor: {r: 0, g: 0, b: 0, a: 0.55}
-  dimFadeInDuration: 0.2
-  dimFadeOutDuration: 0.25
+  dimFadeInDuration: 0.3
+  dimFadeOutDuration: 0.35
   playBearFocusAfterGreeting: 1
   bearRoot: {fileID: 1985542864}
-  bearFocusDelay: 0
-  bearGrowDuration: 0.3
+  bearFocusDelay: 0.1
+  bearGrowDuration: 0.4
   bearFocusScaleMultiplier: 1.18
   bearFocusGreetingDuration: 6
   bearFocusUseHierarchyOrder: 1
@@ -808,8 +808,8 @@ MonoBehaviour:
   greetingLineId: 
   bearFocusLookLineId: 
   ttsWaitTimeoutSeconds: 8
-  voiceStartDelay: 0
-  bearFocusVoiceGap: 0.05
+  voiceStartDelay: 0.08
+  bearFocusVoiceGap: 0.35
   useVoiceClipLengthForTalkDuration: 1
   owlHello: {fileID: 0}
   talkingAnimator: {fileID: 0}
@@ -825,17 +825,17 @@ MonoBehaviour:
   bearFocusMissionAnimationSpeed: 1
   bearFocusMissionSecondsPerLoop: 0
   hideTalkingPrefabWhenSilent: 1
-  talkingFadeDuration: 0.2
-  holdFrozenAfterRound: 0.15
+  talkingFadeDuration: 0.28
+  holdFrozenAfterRound: 0.25
   playBookRevealAfterBearFocus: 1
   bookCraftRoot: {fileID: 0}
   bookCraftImage: {fileID: 0}
-  bookRevealDelay: 0.1
+  bookRevealDelay: 0.25
   bookRevealStartPosition: {x: 0, y: 0}
   bookRevealStartScale: 0.08
-  bookRevealDuration: 0.7
+  bookRevealDuration: 0.9
   fadeOwlBeforeBookReveal: 1
-  owlFadeOutBeforeBookDuration: 0.35
+  owlFadeOutBeforeBookDuration: 0.5
   moveOwlToBookRevealPosition: 0
   owlBookRevealMoveDuration: 0.75
   usePlacedOwlPositionAsBookRevealTarget: 1
@@ -1413,8 +1413,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 284b07e4e320fce4d86c585a3d95f64c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SuccessGaReturn
-  playSeconds: 4
-  fadeDuration: 1
+  playSeconds: 4.1
+  fadeDuration: 0.8
   fadeColor: {r: 0, g: 0, b: 0, a: 1}
   returnSceneName: CutScene_bear
 --- !u!1001 &1543528328

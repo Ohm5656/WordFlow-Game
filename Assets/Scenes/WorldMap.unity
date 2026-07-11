@@ -1994,7 +1994,7 @@ MonoBehaviour:
   firstUnlockRegionNumber: 1
   replayFirstUnlockUntilNextRegion: 1
   loadDelayAfterClick: 0.12
-  sceneExitCoverDuration: 0.5
+  sceneExitCoverDuration: 0.65
   lockNamePrefix: lock
   unlockNamePrefix: unlock
   animateLocks: 1
@@ -2005,15 +2005,15 @@ MonoBehaviour:
   hideLockedIslandStars: 1
   waitForSceneFadeBeforeUnlock: 1
   sceneFadeObjectName: WorldMap Fade Canvas
-  sceneFadeFallbackWait: 3.4
-  unlockAnimationDelay: 0.2
-  unlockAnimationDuration: 1
+  sceneFadeFallbackWait: 1.8
+  unlockAnimationDelay: 0.3
+  unlockAnimationDuration: 1.25
   unlockShakeDegrees: 2.5
   unlockPopScale: 1.04
-  unlockHoldDuration: 0.5
-  unlockFadeOutDuration: 0.5
+  unlockHoldDuration: 0.75
+  unlockFadeOutDuration: 0.6
   animatePlayableIslandPrompt: 1
-  playableIslandPromptDuration: 1.2
+  playableIslandPromptDuration: 1.5
   playableIslandBreathScale: 1.018
   createPlayableIslandGlow: 0
   playableGlowColor: {r: 1, g: 0.78, b: 0.18, a: 0.32}
