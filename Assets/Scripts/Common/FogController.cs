@@ -22,6 +22,12 @@ public class FogController : MonoBehaviour
             1f
         );
 
+    [Header("Urgency")]
+    [Tooltip("How much faster the smoke churns as the clock runs out. 0 = constant speed, " +
+             "2 = 3x the drift/boil rate at zero seconds left.")]
+    [SerializeField, Range(0f, 4f)]
+    private float urgency = 2f;
+
     // Set by the puzzle clock (WordAssemblyTimer, in another assembly) so this Common-side view can
     // sync without Common depending on Region1. Returns whether the clock has started + its 0..1
     // progress. When null (no clock in scene) the fog falls back to its own timer.
@@ -31,6 +37,10 @@ public class FogController : MonoBehaviour
     private Material fogMaterial;
 
     private float elapsedTime;
+
+    // Own time base instead of Time.unscaledTime: it speeds up with the countdown so the smoke
+    // visibly churns harder in the last seconds. Monotonic, so the noise never jumps backwards.
+    private float fogTime;
 
 
     private static readonly int ProgressID =
@@ -94,9 +104,11 @@ public class FogController : MonoBehaviour
 
         SetProgress(progress);
 
+        fogTime += Time.unscaledDeltaTime * (1f + progress * urgency);
+
         fogMaterial.SetFloat(
             FogTimeID,
-            Time.unscaledTime
+            fogTime
         );
     }
 
@@ -113,6 +125,7 @@ public class FogController : MonoBehaviour
     public void ResetFog()
     {
         elapsedTime = 0f;
+        fogTime = 0f;
 
         SetProgress(0f);
     }
