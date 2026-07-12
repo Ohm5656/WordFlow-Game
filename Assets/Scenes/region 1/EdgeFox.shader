@@ -8,6 +8,7 @@ Shader "WordFlow/EdgeFog"
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
 
         _FogColor ("Fog Color", Color) = (0.78, 0.80, 0.84, 1)
+        _PanicColor ("Panic Color (last 30%)", Color) = (0.52, 0.55, 0.63, 1)
         _Progress ("Fog Progress", Range(0, 1)) = 0
 
         _MaxReach ("Max Reach", Range(0, 0.5)) = 0.34
@@ -24,6 +25,9 @@ Shader "WordFlow/EdgeFog"
         _FogTime ("Fog Time", Float) = 0
         _Speed ("Inward Drift Speed", Float) = 0.05
         _BoilSpeed ("Boil Speed", Float) = 0.12
+
+        _Pulse ("Beat Pulse (driven)", Range(0, 1)) = 0
+        _PulseReach ("Beat Pulse Reach", Range(0, 0.1)) = 0.03
     }
 
     SubShader
@@ -61,6 +65,7 @@ Shader "WordFlow/EdgeFog"
             };
 
             float4 _FogColor;
+            float4 _PanicColor;
 
             float _Progress;
             float _MaxReach;
@@ -76,6 +81,9 @@ Shader "WordFlow/EdgeFog"
             float _FogTime;
             float _Speed;
             float _BoilSpeed;
+
+            float _Pulse;
+            float _PulseReach;
 
 
             v2f vert(appdata v)
@@ -174,7 +182,10 @@ Shader "WordFlow/EdgeFog"
                     min(uv.y, 1.0 - uv.y)
                 );
 
-                float reach = _Progress * _MaxReach;
+                // Each countdown beep drives _Pulse to 1, so the whole smoke front lurches inward
+                // and settles back. Audio and visual landing on the same beat is what sells the
+                // countdown — without it the fog is just a filter that happens to be growing.
+                float reach = _Progress * _MaxReach + _Pulse * _PulseReach;
                 float core = reach * _CoreFrac;
 
                 // Wobble the front, but fade the wobble out to nothing at the screen edge so the
@@ -209,8 +220,16 @@ Shader "WordFlow/EdgeFog"
                 // No smoke at all before the clock starts.
                 fog *= smoothstep(0.0, 0.02, _Progress);
 
-                return float4(
+                // Act 3: the smoke turns darker and heavier as the clock runs out. Deliberately a
+                // storm-gray, not a red — this is a children's game, the goal is pressure not dread.
+                float3 col = lerp(
                     _FogColor.rgb,
+                    _PanicColor.rgb,
+                    smoothstep(0.7, 1.0, _Progress)
+                );
+
+                return float4(
+                    col,
                     fog * _FogColor.a
                 );
             }
