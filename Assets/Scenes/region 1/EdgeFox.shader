@@ -7,8 +7,7 @@ Shader "WordFlow/EdgeFog"
         // also trips Error Pause). The fragment ignores it — the fog is procedural.
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
 
-        _FogColor ("Fog Color", Color) = (0.78, 0.80, 0.84, 1)
-        _PanicColor ("Panic Color (last 30%)", Color) = (0.52, 0.55, 0.63, 1)
+        _FogColor ("Fog Color", Color) = (0.52, 0.55, 0.63, 1)
         _Progress ("Fog Progress", Range(0, 1)) = 0
 
         _MaxReach ("Max Reach", Range(0, 0.5)) = 0.34
@@ -67,7 +66,6 @@ Shader "WordFlow/EdgeFog"
             };
 
             float4 _FogColor;
-            float4 _PanicColor;
 
             float _Progress;
             float _MaxReach;
@@ -228,16 +226,13 @@ Shader "WordFlow/EdgeFog"
                 // haze that thickens, which is what a threat creeping in actually looks like.
                 fog *= smoothstep(0.0, _FadeIn, _Progress);
 
-                // Act 3: the smoke turns darker and heavier as the clock runs out. Deliberately a
-                // storm-gray, not a red — this is a children's game, the goal is pressure not dread.
-                float3 col = lerp(
-                    _FogColor.rgb,
-                    _PanicColor.rgb,
-                    smoothstep(0.7, 1.0, _Progress)
-                );
-
+                // One colour for the whole countdown — the heavy storm-gray that used to only appear
+                // in the last few seconds. A progress-driven tint was tried and cut: the shift had
+                // to be crammed into the final ~3s to read as "panic", which made the last frames
+                // look like a different smoke rather than the same smoke, thicker. Pressure comes
+                // from reach, density and the beat pulse — not from a hue change.
                 return float4(
-                    col,
+                    _FogColor.rgb,
                     fog * _FogColor.a
                 );
             }

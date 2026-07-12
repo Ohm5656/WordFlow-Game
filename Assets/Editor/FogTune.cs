@@ -23,20 +23,25 @@ public static class FogTune
         var mat = AssetDatabase.LoadAssetAtPath<Material>(MatPath);
         if (mat == null) { Debug.LogError($"[FogTune] material not found: {MatPath}"); return; }
 
-        // Pale cool gray, not pure white: the puzzle's book page / canvas backdrop is itself
-        // near-white, so white-on-white fog is invisible.
-        mat.SetColor("_FogColor", new Color(0.78f, 0.80f, 0.84f, 1f));
+        // ONE colour for the whole countdown — the heavy storm-gray the smoke used to only reach in
+        // the final seconds. The background under the fog frame is a mid-tone village, not bright
+        // sky, so this dark gray is the LOW-contrast choice: it reads as weather rather than paint.
+        // (The old pale gray was ~2.3x the contrast against that background, which is why the
+        // mid-game smoke used to shout louder than the finale.) The smoke thickens over time; it
+        // never changes hue.
+        mat.SetColor("_FogColor", new Color(0.52f, 0.55f, 0.63f, 1f));
 
-        // Act 3 darkens toward a heavy storm-gray. Not red — this is a children's game.
-        mat.SetColor("_PanicColor", new Color(0.52f, 0.55f, 0.63f, 1f));
-
-        // Reach + softness are the readability guarantee: influence ends at 0.26 + 0.15 = 0.41,
-        // which is < 0.5, so the four fronts can never meet and the centre alpha is exactly 0 even
-        // at full progress. The smoke is a frame, never a blindfold.
-        mat.SetFloat("_MaxReach", 0.26f);
+        // Reach + softness are the readability guarantee: influence ends at 0.23 + 0.15 = 0.38,
+        // comfortably < 0.5, so the four fronts can never meet and the screen centre stays clear.
+        // NEVER let _MaxReach + _Softness reach 0.5.
+        mat.SetFloat("_MaxReach", 0.23f);
         mat.SetFloat("_Softness", 0.15f);
-        mat.SetFloat("_CoreFrac", 0.45f);
-        mat.SetFloat("_Density", 0.9f);
+
+        // 0.75 (was 0.90) leaves a quarter of the village showing through even at the core, which is
+        // what makes it read as smoke instead of a painted border. 0.40 (was 0.45) shrinks the fully
+        // solid part of the band.
+        mat.SetFloat("_Density", 0.75f);
+        mat.SetFloat("_CoreFrac", 0.40f);
 
         mat.SetFloat("_NoiseScale", 2.0f);
         mat.SetFloat("_NoiseStrength", 0.18f);
@@ -49,14 +54,14 @@ public static class FogTune
         mat.SetFloat("_Pulse", 0f);
         mat.SetFloat("_PulseReach", 0.03f);
 
-        // _Softness is a constant added to reach, so without this the very first non-zero progress
-        // would already paint a full-density edge. Ramping opacity over the first 45% of progress
-        // lets the smoke bleed in as a faint haze that thickens, rather than switching on.
-        mat.SetFloat("_FadeIn", 0.45f);
+        // _Softness is a constant added to reach, so without this ramp the first non-zero progress
+        // would already paint a full-density edge. 0.50 spreads the opacity climb across the whole
+        // creep so the smoke materialises out of nothing instead of switching on.
+        mat.SetFloat("_FadeIn", 0.50f);
 
         EditorUtility.SetDirty(mat);
         AssetDatabase.SaveAssets();
-        Debug.Log("[FogTune] material: smoke clock v3 values applied");
+        Debug.Log("[FogTune] material: smoke clock v4 values applied");
     }
 
     static void ApplyScene()
