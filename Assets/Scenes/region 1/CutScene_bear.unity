@@ -3191,9 +3191,9 @@ MonoBehaviour:
   bearFocusLookLineId: paa_intro_owl_2
   ttsWaitTimeoutSeconds: 8
   voiceStartDelay: 0.08
-  bearFocusVoiceGap: 0.35
+  bearFocusVoiceGap: 0.22
   useVoiceClipLengthForTalkDuration: 1
-  owlHello: {fileID: 1732396935}
+  owlHello: {fileID: 0}
   talkingAnimator: {fileID: 0}
   talkingStateName: Owl
   talkingAnimationSpeed: 1.2
