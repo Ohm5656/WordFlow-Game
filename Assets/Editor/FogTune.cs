@@ -61,6 +61,17 @@ public static class FogTune
 
     static void ApplyScene()
     {
+        // OpenScene(Single) closes whatever scene is currently open. If that scene has unsaved work
+        // in it, running this menu item would throw it away — so refuse rather than destroy.
+        var open = EditorSceneManager.GetActiveScene();
+        if (open.isDirty)
+        {
+            Debug.LogError(
+                $"[FogTune] '{open.name}' has unsaved changes. Save or discard it first — this tool " +
+                "has to open CutScene_bear, which would close it and lose that work.");
+            return;
+        }
+
         var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
         var fog = Object.FindAnyObjectByType<FogController>();
