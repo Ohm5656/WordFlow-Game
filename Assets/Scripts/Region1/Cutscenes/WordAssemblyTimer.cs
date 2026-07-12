@@ -46,6 +46,10 @@ public sealed class WordAssemblyTimer : MonoBehaviour
     public float SmokeProgress01 =>
         started && totalSeconds > 0f ? Mathf.Clamp01(1f - remaining / totalSeconds) : 0f;
 
+    /// <summary>Seconds left on the clock (0 when not started). The smoke fog reads this to sync a
+    /// visual pulse to each countdown beep — the beep fires when the displayed second ticks over.</summary>
+    public float SmokeRemaining => started ? remaining : 0f;
+
     private bool started;
     private CanvasGroup group;
     private Vector3 baseScale = Vector3.one;
@@ -77,6 +81,7 @@ public sealed class WordAssemblyTimer : MonoBehaviour
         // cross-assembly reference back to this Region1 type.
         FogController.SmokeActiveProvider = () => Instance != null && Instance.SmokeActive;
         FogController.SmokeProgressProvider = () => Instance != null ? Instance.SmokeProgress01 : 0f;
+        FogController.SmokeRemainingProvider = () => Instance != null ? Instance.SmokeRemaining : 0f;
     }
 
     private void OnDestroy()
@@ -86,6 +91,7 @@ public sealed class WordAssemblyTimer : MonoBehaviour
             Instance = null;
             FogController.SmokeActiveProvider = null;
             FogController.SmokeProgressProvider = null;
+            FogController.SmokeRemainingProvider = null;
         }
     }
 
