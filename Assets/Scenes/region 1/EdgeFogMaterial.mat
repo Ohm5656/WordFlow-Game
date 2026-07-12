@@ -29,14 +29,18 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Density: 0.55
+    - _BoilSpeed: 0.12
+    - _CoreFrac: 0.35
+    - _Density: 1
     - _FogTime: 0
-    - _MaxReach: 0.38
-    - _NoiseScale: 5
-    - _NoiseStrength: 0.08
+    - _MaxReach: 0.34
+    - _NoiseScale: 2.5
+    - _NoiseStrength: 0.18
     - _Progress: 0
-    - _Softness: 0.08
-    - _Speed: 0.12
+    - _Softness: 0.22
+    - _Speed: 0.05
+    - _WarpAmount: 0.4
+    - _WispStrength: 0.6
     m_Colors:
     - _FogColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
