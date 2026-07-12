@@ -337,9 +337,9 @@ MonoBehaviour:
   - gameplay_ko
   - gameplay_aa
   - gameplay_kaa
-  ttsEchoGapSeconds: 0.45
-  ttsEchoFinalWordGapSeconds: 0.7
-  placementVoicePostGapSeconds: 0.25
+  ttsEchoGapSeconds: 0.4
+  ttsEchoFinalWordGapSeconds: 0.55
+  placementVoicePostGapSeconds: 0.15
   ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
@@ -1880,9 +1880,9 @@ MonoBehaviour:
   - gameplay_ko
   - gameplay_aa
   - gameplay_kaa
-  ttsEchoGapSeconds: 0.45
-  ttsEchoFinalWordGapSeconds: 0.7
-  placementVoicePostGapSeconds: 0.25
+  ttsEchoGapSeconds: 0.4
+  ttsEchoFinalWordGapSeconds: 0.55
+  placementVoicePostGapSeconds: 0.15
   ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
@@ -2670,9 +2670,9 @@ MonoBehaviour:
   - gameplay_ko
   - gameplay_aa
   - gameplay_kaa
-  ttsEchoGapSeconds: 0.45
-  ttsEchoFinalWordGapSeconds: 0.7
-  placementVoicePostGapSeconds: 0.25
+  ttsEchoGapSeconds: 0.4
+  ttsEchoFinalWordGapSeconds: 0.55
+  placementVoicePostGapSeconds: 0.15
   ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
@@ -2972,9 +2972,9 @@ MonoBehaviour:
   - gameplay_ko
   - gameplay_aa
   - gameplay_kaa
-  ttsEchoGapSeconds: 0.45
-  ttsEchoFinalWordGapSeconds: 0.7
-  placementVoicePostGapSeconds: 0.25
+  ttsEchoGapSeconds: 0.4
+  ttsEchoFinalWordGapSeconds: 0.55
+  placementVoicePostGapSeconds: 0.15
   ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}
@@ -4076,9 +4076,9 @@ MonoBehaviour:
   - gameplay_ko
   - gameplay_aa
   - gameplay_kaa
-  ttsEchoGapSeconds: 0.45
-  ttsEchoFinalWordGapSeconds: 0.7
-  placementVoicePostGapSeconds: 0.25
+  ttsEchoGapSeconds: 0.4
+  ttsEchoFinalWordGapSeconds: 0.55
+  placementVoicePostGapSeconds: 0.15
   ttsPrefetchTimeoutSeconds: 8
   gradeClient: {fileID: 0}
   telemetry: {fileID: 0}

@@ -125,12 +125,15 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [SerializeField] private string[] soundPlaybackLineIds;
     [Tooltip("TTS line ids voiced in order as the alt-word echo. Replaces altSoundPlaybackClip when every fetch succeeds.")]
     [SerializeField] private string[] altSoundPlaybackLineIds;
+    // The gameplay_* clips are trimmed of their baked-in TTS silence, so these gaps are now the
+    // pause the child actually hears. Before the trim the real gap was clip.tail + this + next.lead
+    // (~1.6s), which is why the read-aloud dragged and turning this knob down barely helped.
     [Tooltip("Silence between syllables when stitching the echo TTS lines into one clip.")]
-    [SerializeField] private float ttsEchoGapSeconds = 0.45f;
+    [SerializeField] private float ttsEchoGapSeconds = 0.40f;
     [Tooltip("Longer pause before the final whole-word clip in the echo sequence (e.g. ปอ ... อา ...... ปา).")]
-    [SerializeField] private float ttsEchoFinalWordGapSeconds = 0.7f;
+    [SerializeField] private float ttsEchoFinalWordGapSeconds = 0.55f;
     [Tooltip("Breathing room after each stone placement voice before the next placement is accepted.")]
-    [SerializeField] private float placementVoicePostGapSeconds = 0.25f;
+    [SerializeField] private float placementVoicePostGapSeconds = 0.15f;
     [Tooltip("Block stone input while gameplay TTS is being resolved, then continue without non-TTS fallback after this timeout.")]
     [SerializeField, Min(0.1f)] private float ttsPrefetchTimeoutSeconds = 8f;
 
