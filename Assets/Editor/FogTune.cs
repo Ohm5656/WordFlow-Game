@@ -15,7 +15,9 @@ public static class FogTune
         var mat = AssetDatabase.LoadAssetAtPath<Material>(MatPath);
         if (mat == null) { Debug.LogError($"[FogTune] material not found: {MatPath}"); return; }
 
-        mat.SetColor("_FogColor", Color.white);
+        // Pale cool gray, not pure white: the puzzle's book page / canvas backdrop is itself
+        // near-white, so white-on-white fog is invisible. Gray reads clearly against it.
+        mat.SetColor("_FogColor", new Color(0.78f, 0.80f, 0.84f, 1f));
         mat.SetFloat("_Density", 1f);
         mat.SetFloat("_MaxReach", 0.34f);
         mat.SetFloat("_CoreFrac", 0.35f);

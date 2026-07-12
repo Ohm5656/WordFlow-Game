@@ -7,7 +7,7 @@ Shader "WordFlow/EdgeFog"
         // also trips Error Pause). The fragment ignores it — the fog is procedural.
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
 
-        _FogColor ("Fog Color", Color) = (1, 1, 1, 1)
+        _FogColor ("Fog Color", Color) = (0.78, 0.80, 0.84, 1)
         _Progress ("Fog Progress", Range(0, 1)) = 0
 
         _MaxReach ("Max Reach", Range(0, 0.5)) = 0.34
