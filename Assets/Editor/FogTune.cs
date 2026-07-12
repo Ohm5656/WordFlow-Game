@@ -23,13 +23,9 @@ public static class FogTune
         var mat = AssetDatabase.LoadAssetAtPath<Material>(MatPath);
         if (mat == null) { Debug.LogError($"[FogTune] material not found: {MatPath}"); return; }
 
-        // ONE colour for the whole countdown — the heavy storm-gray the smoke used to only reach in
-        // the final seconds. The background under the fog frame is a mid-tone village, not bright
-        // sky, so this dark gray is the LOW-contrast choice: it reads as weather rather than paint.
-        // (The old pale gray was ~2.3x the contrast against that background, which is why the
-        // mid-game smoke used to shout louder than the finale.) The smoke thickens over time; it
-        // never changes hue.
-        mat.SetColor("_FogColor", new Color(0.52f, 0.55f, 0.63f, 1f));
+        // _FogColor is deliberately NOT written here. It is the one knob meant to be tuned by hand in
+        // the Inspector (EdgeFogMaterial -> Fog Color), and this tool would clobber that choice every
+        // time it ran. One colour for the whole countdown — the smoke thickens, it never changes hue.
 
         // Reach + softness are the readability guarantee: influence ends at 0.23 + 0.15 = 0.38,
         // comfortably < 0.5, so the four fronts can never meet and the screen centre stays clear.
@@ -82,16 +78,17 @@ public static class FogTune
         var fog = Object.FindAnyObjectByType<FogController>();
         if (fog == null) { Debug.LogError("[FogTune] FogController not found in CutScene_bear"); return; }
 
-        // Three acts over the 30s clock. Flat 0 for the first third so the player gets a clean
-        // screen to read the puzzle when the book pops in, then a creep, then a rush that lands
-        // exactly where WordAssemblyTimer.countdownAt (10s) starts the beep.
+        // The smoke starts at 25s and still hits full reach exactly at 0s. These keys are the old
+        // 20s curve remapped along its own ramp — the VALUE at every key is untouched (0, .12, .30,
+        // .62, 1), so the entrance is the identical shape, just stretched over 25s instead of 20s.
+        // Do not "tidy" these numbers: they are the remap, not round figures.
         var curve = new AnimationCurve(
-            new Keyframe(0.00f, 0.00f),   // 30s left — book pops in, screen clean
-            new Keyframe(0.33f, 0.00f),   // 20s left — still clean
-            new Keyframe(0.50f, 0.12f),   // 15s left — first wisps find the edges
-            new Keyframe(0.67f, 0.30f),   // 10s left — beep starts, smoke clearly present
-            new Keyframe(0.85f, 0.62f),   //  4.5s left
-            new Keyframe(1.00f, 1.00f)    //  0s left — full frame
+            new Keyframe(0.00000f, 0.00f),   // 30s left — book pops in, screen clean
+            new Keyframe(0.16667f, 0.00f),   // 25s left — smoke starts
+            new Keyframe(0.37811f, 0.12f),   // 18.7s left — first wisps find the edges
+            new Keyframe(0.58955f, 0.30f),   // 12.3s left — smoke clearly present
+            new Keyframe(0.81343f, 0.62f),   //  5.6s left
+            new Keyframe(1.00000f, 1.00f)    //  0s left — full frame
         );
 
         for (int i = 0; i < curve.length; i++)
