@@ -28,6 +28,8 @@ Shader "WordFlow/EdgeFog"
 
         _Pulse ("Beat Pulse (driven)", Range(0, 1)) = 0
         _PulseReach ("Beat Pulse Reach", Range(0, 0.1)) = 0.03
+
+        _FadeIn ("Opacity Fade-In (progress)", Range(0.02, 1)) = 0.45
     }
 
     SubShader
@@ -84,6 +86,8 @@ Shader "WordFlow/EdgeFog"
 
             float _Pulse;
             float _PulseReach;
+
+            float _FadeIn;
 
 
             v2f vert(appdata v)
@@ -217,8 +221,12 @@ Shader "WordFlow/EdgeFog"
 
                 fog = saturate(fog) * _Density;
 
-                // No smoke at all before the clock starts.
-                fog *= smoothstep(0.0, 0.02, _Progress);
+                // The band's soft tail (_Softness) is a constant that is always added to reach, so
+                // the instant _Progress leaves 0 the screen edge would already sit at full density
+                // — the smoke would "switch on" and then merely widen. Ramping opacity in over the
+                // first _FadeIn of progress makes it materialise out of nothing instead: a faint
+                // haze that thickens, which is what a threat creeping in actually looks like.
+                fog *= smoothstep(0.0, _FadeIn, _Progress);
 
                 // Act 3: the smoke turns darker and heavier as the clock runs out. Deliberately a
                 // storm-gray, not a red — this is a children's game, the goal is pressure not dread.

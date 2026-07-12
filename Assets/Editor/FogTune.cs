@@ -49,6 +49,11 @@ public static class FogTune
         mat.SetFloat("_Pulse", 0f);
         mat.SetFloat("_PulseReach", 0.03f);
 
+        // _Softness is a constant added to reach, so without this the very first non-zero progress
+        // would already paint a full-density edge. Ramping opacity over the first 45% of progress
+        // lets the smoke bleed in as a faint haze that thickens, rather than switching on.
+        mat.SetFloat("_FadeIn", 0.45f);
+
         EditorUtility.SetDirty(mat);
         AssetDatabase.SaveAssets();
         Debug.Log("[FogTune] material: smoke clock v3 values applied");
