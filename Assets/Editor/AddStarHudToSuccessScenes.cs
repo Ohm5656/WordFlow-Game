@@ -12,6 +12,8 @@ public static class AddStarHudToSuccessScenes
     const string BearScene = "Assets/Scenes/region 1/CutScene_bear.unity";
     const string PaScene = "Assets/Scenes/region 1/Success_pa.unity";
     const string GaScene = "Assets/Scenes/region 1/Success_ga.unity";
+    const string GaCorrectScene = "Assets/Scenes/region 1/Success_ga_correct.unity";
+    const string TaIncorrectScene = "Assets/Scenes/region 1/Success_ta_incorrect.unity";
     const string PrefabPath = "Assets/Prefabs/StarHud.prefab";
     const string HudName = "star_hud";
 
@@ -33,6 +35,27 @@ public static class AddStarHudToSuccessScenes
         Install(GaScene, recapOnStart: true, fadeOutAfterRecap: true, prefab);
 
         Debug.Log("[AddStarHud] DONE — Success_pa (recap) + Success_ga (recap + fade-out) saved");
+    }
+
+    [MenuItem("Tools/Quest/Add Star Hud To Ga Success Scenes")]
+    public static void RunGaFlow()
+    {
+        InstallGaFlow();
+    }
+
+    internal static void InstallGaFlow()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        if (prefab == null)
+        {
+            Debug.LogError($"[AddStarHud] {PrefabPath} not found");
+            return;
+        }
+
+        Install(GaCorrectScene, recapOnStart: true, fadeOutAfterRecap: false, prefab);
+        Install(TaIncorrectScene, recapOnStart: true, fadeOutAfterRecap: true, prefab);
+
+        Debug.Log("[AddStarHud] DONE - Success_ga_correct (recap) + Success_ta_incorrect (recap + fade-out) saved");
     }
 
     static void Install(string scenePath, bool recapOnStart, bool fadeOutAfterRecap, GameObject prefab)
