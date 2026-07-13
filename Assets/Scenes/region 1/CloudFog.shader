@@ -11,7 +11,11 @@ Shader "WordFlow/CloudFog"
         _Density ("Density", Range(0, 1)) = 0.55
 
         _CloudScale ("Cloud Scale (cells across)", Float) = 3.5
-        _Coverage ("Base Coverage", Range(0, 1)) = 0.35
+        _Coverage ("Coverage Inside Band", Range(0, 1)) = 0.55
+
+        _MaxReach ("Max Reach", Range(0, 0.5)) = 0.26
+        _CoreFrac ("Solid Core Fraction", Range(0, 1)) = 0.4
+        _EdgeSoftness ("Front Softness", Range(0.01, 0.5)) = 0.15
         _Fluff ("Edge Fluff", Range(0, 1)) = 0.35
         _Softness ("Edge Softness", Range(0.01, 0.5)) = 0.18
 
@@ -20,6 +24,7 @@ Shader "WordFlow/CloudFog"
 
         _FadeIn ("Opacity Fade-In (progress)", Range(0.02, 1)) = 0.45
         _PulseSwell ("Beat Pulse Swell", Range(0, 0.2)) = 0.04
+        _PulseReach ("Beat Pulse Reach", Range(0, 0.1)) = 0.03
 
         _Progress ("Progress (driven)", Range(0, 1)) = 0
         _FogTime ("Fog Time (driven)", Float) = 0
@@ -68,11 +73,16 @@ Shader "WordFlow/CloudFog"
             float _Fluff;
             float _Softness;
 
+            float _MaxReach;
+            float _CoreFrac;
+            float _EdgeSoftness;
+
             float _DriftSpeed;
             float _BoilSpeed;
 
             float _FadeIn;
             float _PulseSwell;
+            float _PulseReach;
 
             float _Progress;
             float _FogTime;
@@ -210,10 +220,31 @@ Shader "WordFlow/CloudFog"
                     _Pulse * _PulseSwell
                 );
 
-                // Progress opens the clouds up: the threshold drops, so more of the puff field
-                // crosses it and the clusters visibly grow and merge as the clock runs out.
-                float cover = _Coverage + _Progress * (1.0 - _Coverage);
-                float threshold = 1.0 - cover;
+                // Distance to the nearest screen edge, measured in unstretched uv — the same ruler
+                // EdgeFog uses, so the two layers advance in step instead of drifting apart.
+                float d = min(
+                    min(i.uv.x, 1.0 - i.uv.x),
+                    min(i.uv.y, 1.0 - i.uv.y)
+                );
+
+                // Same reach maths as the purple layer: the band grows in from all four edges as the
+                // clock runs out and lurches on each countdown beep. _MaxReach < 0.5, so the front
+                // never reaches the centre and the book stays readable.
+                float reach = _Progress * _MaxReach + _Pulse * _PulseReach;
+                float core = reach * _CoreFrac;
+
+                float front = 1.0 - smoothstep(
+                    core,
+                    reach + _EdgeSoftness,
+                    d
+                );
+
+                // The front feeds the puff coverage THRESHOLD rather than multiplying the final
+                // alpha. Deep in the band every puff clears the threshold; at the leading edge only
+                // the biggest ones do. That is what dissolves the advancing front into separate
+                // clumps and stragglers — multiplying the alpha instead would fade a full-screen
+                // cloud field behind a smooth rectangular window, which is the bug this fixes.
+                float threshold = lerp(1.0, 1.0 - _Coverage, front);
 
                 float clouds = smoothstep(
                     threshold,
