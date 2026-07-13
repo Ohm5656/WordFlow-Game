@@ -10,19 +10,139 @@ using WordFlow.Adventure.Net;
 using WordFlow.Adventure.UI;
 
 /// <summary>
-/// One-click builder for the WordFlow Login scene. Run via Tools > WordFlow > Build Login Scene.
-/// Creates a Canvas with the auth form, the AuthBootstrap object (AuthSession + FirebaseAuthClient),
-/// the AuthScreenController, wires every serialized reference, saves the scene and registers it at
-/// build index 0. Idempotent: re-running rebuilds the scene from scratch.
+/// One-click builders for the three WordFlow auth scenes (Login / Register / ForgotPassword).
+/// Each is idempotent: re-running rebuilds that scene from scratch and re-registers it in
+/// EditorBuildSettings. Login is always build index 0. Run via Tools > WordFlow > ...
 /// </summary>
 public static class WordFlowLoginSceneBuilder
 {
+    // ---- menu items ----
+
     [MenuItem("Tools/WordFlow/Build Login Scene")]
     public static void BuildLoginScene()
     {
-        var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+        var canvas = NewAuthScene(out _);
+        CreateText(canvas.transform, "Title", "WordFlow", 72, new Vector2(0, 800), new Vector2(900, 140),
+            new Color(0.96f, 0.96f, 0.92f));
 
-        // Canvas (scaled for portrait mobile) + EventSystem
+        var email = CreateInput(canvas.transform, "EmailField", "อีเมล / Email", new Vector2(0, 480));
+        var password = CreateInput(canvas.transform, "PasswordField", "รหัสผ่าน / Password", new Vector2(0, 360),
+            TMP_InputField.ContentType.Password);
+
+        var loginBtn = CreateButton(canvas.transform, "LoginButton", "เข้าสู่ระบบ / Login",
+            new Vector2(0, 200), new Color(0.22f, 0.6f, 0.4f));
+        var toRegister = CreateLinkButton(canvas.transform, "ToRegisterLink",
+            "ยังไม่มีบัญชี? สมัครสมาชิก / Register", new Vector2(0, 80));
+        var toForgot = CreateLinkButton(canvas.transform, "ToForgotPasswordLink",
+            "ลืมรหัสผ่าน? / Forgot Password", new Vector2(0, 0));
+
+        var status = CreateText(canvas.transform, "StatusText", "", 34, new Vector2(0, -160),
+            new Vector2(900, 150), new Color(0.9f, 0.4f, 0.4f));
+
+        CreateAuthBootstrap();
+        var controllerGO = new GameObject("LoginController");
+        var controller = controllerGO.AddComponent<LoginController>();
+        var so = new SerializedObject(controller);
+        SetRef(so, "emailField", email);
+        SetRef(so, "passwordField", password);
+        SetRef(so, "statusText", status);
+        SetRef(so, "loginButton", loginBtn);
+        SetRef(so, "toRegisterLink", toRegister);
+        SetRef(so, "toForgotPasswordLink", toForgot);
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        SaveAndRegister("Assets/Scenes/Login.unity", forceIndexZero: true);
+        Debug.Log("[WordFlow] Login scene built at build index 0.");
+    }
+
+    [MenuItem("Tools/WordFlow/Build Register Scene")]
+    public static void BuildRegisterScene()
+    {
+        var canvas = NewAuthScene(out _);
+        CreateText(canvas.transform, "Title", "สมัครสมาชิก / Register", 60, new Vector2(0, 820),
+            new Vector2(900, 140), new Color(0.96f, 0.96f, 0.92f));
+
+        var email = CreateInput(canvas.transform, "EmailField", "อีเมล / Email", new Vector2(0, 620));
+        var password = CreateInput(canvas.transform, "PasswordField", "รหัสผ่าน / Password", new Vector2(0, 500),
+            TMP_InputField.ContentType.Password);
+        var childName = CreateInput(canvas.transform, "ChildNameField", "ชื่อของเด็ก / Child name", new Vector2(0, 380));
+        var birth = CreateInput(canvas.transform, "BirthDateField", "วันเกิด YYYY-MM-DD", new Vector2(0, 260));
+        var code = CreateInput(canvas.transform, "DoctorCodeField", "รหัสแพทย์ WF-XXXX (ไม่บังคับ)", new Vector2(0, 140));
+
+        var registerBtn = CreateButton(canvas.transform, "RegisterButton", "สร้างบัญชี / Register",
+            new Vector2(0, -20), new Color(0.16f, 0.5f, 0.9f));
+        var toLogin = CreateLinkButton(canvas.transform, "ToLoginLink",
+            "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ / Login", new Vector2(0, -140));
+
+        var status = CreateText(canvas.transform, "StatusText", "", 34, new Vector2(0, -300),
+            new Vector2(900, 150), new Color(0.9f, 0.4f, 0.4f));
+
+        CreateAuthBootstrap();
+        var controllerGO = new GameObject("RegisterController");
+        var controller = controllerGO.AddComponent<RegisterController>();
+        var so = new SerializedObject(controller);
+        SetRef(so, "emailField", email);
+        SetRef(so, "passwordField", password);
+        SetRef(so, "childNameField", childName);
+        SetRef(so, "birthDateField", birth);
+        SetRef(so, "doctorCodeField", code);
+        SetRef(so, "statusText", status);
+        SetRef(so, "registerButton", registerBtn);
+        SetRef(so, "toLoginLink", toLogin);
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        SaveAndRegister("Assets/Scenes/Register.unity", forceIndexZero: false);
+        Debug.Log("[WordFlow] Register scene built.");
+    }
+
+    [MenuItem("Tools/WordFlow/Build Forgot Password Scene")]
+    public static void BuildForgotPasswordScene()
+    {
+        var canvas = NewAuthScene(out _);
+        CreateText(canvas.transform, "Title", "ลืมรหัสผ่าน / Forgot Password", 54, new Vector2(0, 760),
+            new Vector2(940, 140), new Color(0.96f, 0.96f, 0.92f));
+
+        var email = CreateInput(canvas.transform, "EmailField", "อีเมล / Email", new Vector2(0, 520));
+
+        var sendBtn = CreateButton(canvas.transform, "SendResetButton", "ส่งรีเซ็ตรหัสผ่าน / Send Reset",
+            new Vector2(0, 360), new Color(0.16f, 0.5f, 0.9f));
+        var toLogin = CreateLinkButton(canvas.transform, "ToLoginLink",
+            "กลับไปเข้าสู่ระบบ / Back to Login", new Vector2(0, 240));
+
+        var status = CreateText(canvas.transform, "StatusText", "", 34, new Vector2(0, 80),
+            new Vector2(900, 200), new Color(0.9f, 0.4f, 0.4f));
+
+        CreateAuthBootstrap();
+        var controllerGO = new GameObject("ForgotPasswordController");
+        var controller = controllerGO.AddComponent<ForgotPasswordController>();
+        var so = new SerializedObject(controller);
+        SetRef(so, "emailField", email);
+        SetRef(so, "statusText", status);
+        SetRef(so, "sendResetButton", sendBtn);
+        SetRef(so, "toLoginLink", toLogin);
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        SaveAndRegister("Assets/Scenes/ForgotPassword.unity", forceIndexZero: false);
+        Debug.Log("[WordFlow] ForgotPassword scene built.");
+    }
+
+    [MenuItem("Tools/WordFlow/Build All Auth Scenes")]
+    public static void BuildAllAuthScenes()
+    {
+        // Order matters: build the two secondary scenes first, then Login last so it lands at
+        // index 0 and the secondaries are appended after it.
+        BuildRegisterScene();
+        BuildForgotPasswordScene();
+        BuildLoginScene();
+        Debug.Log("[WordFlow] All three auth scenes built and registered.");
+    }
+
+    // ---- shared scene scaffolding ----
+
+    private static Canvas NewAuthScene(out UnityEngine.SceneManagement.Scene scene)
+    {
+        scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+
         var canvasGO = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         var canvas = canvasGO.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -32,71 +152,39 @@ public static class WordFlowLoginSceneBuilder
         if (Object.FindObjectOfType<EventSystem>() == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
-        // Background panel
         var bg = new GameObject("Background", typeof(RectTransform), typeof(Image));
         bg.transform.SetParent(canvas.transform, false);
         Stretch(bg.GetComponent<RectTransform>());
         bg.GetComponent<Image>().color = new Color(0.07f, 0.10f, 0.18f);
 
-        CreateText(canvas.transform, "Title", "WordFlow", 72, new Vector2(0, 800), new Vector2(900, 140),
-            new Color(0.96f, 0.96f, 0.92f));
+        return canvas;
+    }
 
-        var email = CreateInput(canvas.transform, "EmailField", "อีเมล / Email", new Vector2(0, 560));
-        var password = CreateInput(canvas.transform, "PasswordField", "รหัสผ่าน / Password", new Vector2(0, 440),
-            TMP_InputField.ContentType.Password);
-        var childName = CreateInput(canvas.transform, "ChildNameField", "ชื่อของเด็ก / Child name", new Vector2(0, 320));
-        var birth = CreateInput(canvas.transform, "BirthDateField", "วันเกิด YYYY-MM-DD", new Vector2(0, 200));
-        var code = CreateInput(canvas.transform, "DoctorCodeField", "รหัสแพทย์ WF-XXXX (ไม่บังคับ)", new Vector2(0, 80));
-
-        var registerBtn = CreateButton(canvas.transform, "RegisterButton", "สร้างบัญชี / Register",
-            new Vector2(0, -70), new Color(0.16f, 0.5f, 0.9f));
-        var loginBtn = CreateButton(canvas.transform, "LoginButton", "เข้าสู่ระบบ / Login",
-            new Vector2(0, -190), new Color(0.22f, 0.6f, 0.4f));
-        var forgotBtn = CreateButton(canvas.transform, "ForgotPasswordButton", "ลืมรหัสผ่าน / Forgot",
-            new Vector2(0, -300), new Color(0.3f, 0.3f, 0.36f));
-
-        var status = CreateText(canvas.transform, "StatusText", "", 34, new Vector2(0, -430), new Vector2(900, 150),
-            new Color(0.9f, 0.4f, 0.4f));
-
-        // Auth runtime objects
+    private static void CreateAuthBootstrap()
+    {
         var bootstrap = new GameObject("AuthBootstrap");
         var fac = bootstrap.AddComponent<FirebaseAuthClient>();
         var session = bootstrap.AddComponent<AuthSession>();
-
-        var controllerGO = new GameObject("LoginController");
-        var controller = controllerGO.AddComponent<AuthScreenController>();
-
-        // Wire AuthSession.auth -> FirebaseAuthClient
         var soSession = new SerializedObject(session);
         SetRef(soSession, "auth", fac);
         soSession.ApplyModifiedPropertiesWithoutUndo();
-
-        // Wire the controller's serialized references
-        var so = new SerializedObject(controller);
-        SetRef(so, "emailField", email);
-        SetRef(so, "passwordField", password);
-        SetRef(so, "statusText", status);
-        SetRef(so, "childNameField", childName);
-        SetRef(so, "birthDateField", birth);
-        SetRef(so, "doctorCodeField", code);
-        SetRef(so, "registerButton", registerBtn);
-        SetRef(so, "loginButton", loginBtn);
-        SetRef(so, "forgotPasswordButton", forgotBtn);
-        so.ApplyModifiedPropertiesWithoutUndo();
-
-        // Save scene
-        System.IO.Directory.CreateDirectory(Application.dataPath + "/Scenes");
-        const string path = "Assets/Scenes/Login.unity";
-        EditorSceneManager.SaveScene(scene, path);
-
-        // Register at build index 0, keep existing scenes after it
-        var scenes = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(path, true) };
-        foreach (var s in EditorBuildSettings.scenes)
-            if (s.path != path) scenes.Add(s);
-        EditorBuildSettings.scenes = scenes.ToArray();
-
-        Debug.Log("[WordFlow] Login scene built and registered at build index 0: " + path);
     }
+
+    private static void SaveAndRegister(string path, bool forceIndexZero)
+    {
+        System.IO.Directory.CreateDirectory(Application.dataPath + "/Scenes");
+        EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), path);
+
+        var existing = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        existing.RemoveAll(s => s.path == path);
+        if (forceIndexZero)
+            existing.Insert(0, new EditorBuildSettingsScene(path, true));
+        else
+            existing.Add(new EditorBuildSettingsScene(path, true));
+        EditorBuildSettings.scenes = existing.ToArray();
+    }
+
+    // ---- element helpers (unchanged from the original builder) ----
 
     private static void SetRef(SerializedObject so, string prop, Object value)
     {
@@ -164,6 +252,23 @@ public static class WordFlowLoginSceneBuilder
         labelGO.transform.SetParent(go.transform, false);
         var t = labelGO.AddComponent<TextMeshProUGUI>();
         t.text = label; t.fontSize = 40; t.alignment = TextAlignmentOptions.Center; t.color = Color.white;
+        Stretch(labelGO.GetComponent<RectTransform>());
+        return go.GetComponent<Button>();
+    }
+
+    // A clickable text link: transparent background Image (so Button raycasts) + coloured label.
+    private static Button CreateLinkButton(Transform parent, string name, string label, Vector2 pos)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        go.transform.SetParent(parent, false);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchoredPosition = pos; rt.sizeDelta = new Vector2(820, 70);
+        go.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // transparent but still raycasts
+        var labelGO = new GameObject("Text", typeof(RectTransform));
+        labelGO.transform.SetParent(go.transform, false);
+        var t = labelGO.AddComponent<TextMeshProUGUI>();
+        t.text = label; t.fontSize = 32; t.alignment = TextAlignmentOptions.Center;
+        t.color = new Color(0.55f, 0.75f, 1f);
         Stretch(labelGO.GetComponent<RectTransform>());
         return go.GetComponent<Button>();
     }
