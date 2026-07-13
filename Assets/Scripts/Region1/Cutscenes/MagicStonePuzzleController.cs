@@ -1683,10 +1683,11 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             }
         }
 
-        yield return ShowRecordingSuccessMarkRoutine();
+        // No checkmark mark here — the stars themselves are the reward beat, and they need to pop
+        // the instant recording succeeds, not after a separate mark animation delays them.
 
         // Star 2 = the word was correct. Star 3 = it was also assembled before the smoke closed.
-        // Both fly up here, one after the other. A wrong word (กา) earns neither and stops at 1.
+        // Both fly up here together. A wrong word (กา) earns neither and stops at 1.
         if (StarHud.Instance != null)
         {
             bool correct = !string.IsNullOrEmpty(activeResultWord)
