@@ -188,6 +188,11 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     // assembly time because by the time the child finishes pronouncing, the clock has been paused.
     private bool builtInTime;
 
+    // Garbage word (ปก / กป / าก / าป): the board is frozen while the red alert plays. The clock is
+    // NOT paused — the seconds it costs are the punishment.
+    private bool misassemblyLocked;
+    private Coroutine misassemblyRoutine;
+
     private float recordingStartedAt;
     private bool isPlacementVoicePlaying;
     private Coroutine placementVoiceRoutine;
@@ -197,7 +202,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
     public RectTransform DragParent => rectTransform;
     public bool CanInteract => revealFinished && gameplayAudioReady
-        && !ritualPlaying && !ritualCompleted && !crowFeedbackPlaying;
+        && !ritualPlaying && !ritualCompleted && !crowFeedbackPlaying
+        && !misassemblyLocked;
     public float ReturnDuration => returnDuration;
 
     public static bool IsRetryAfterCrowRequested => PlayerPrefs.GetInt(RetryAfterCrowPlayerPrefsKey, 0) == 1;
@@ -807,14 +813,51 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         }
         else
         {
-            // Not a valid word: leave the stones in place so the player can tap them back out and
-            // retry. No backend send here — like word_build_paa_polished, the build-attempt (and
-            // /grade) fire together later at mic-stop. Just restart the build timer.
-            _latency.Start(Time.realtimeSinceStartupAsDouble);
+            // Garbage word (ปก / กป / าก / าป): red alert + a 3-second lockout, then the stones
+            // spring home. No backend send here — like word_build_paa_polished, the build-attempt
+            // (and /grade) fire together later at mic-stop.
+            if (misassemblyRoutine == null)
+            {
+                misassemblyRoutine = StartCoroutine(MisassemblyRoutine());
+            }
+
             return;
         }
 
         completionRoutine = StartCoroutine(WordResultRoutine());
+    }
+
+    /// Two stones, no word. Freeze the board, flash the red alert with its three beat-beeps (the smoke
+    /// lurches inward on each, exactly as it does on a countdown beep), then spit both stones back
+    /// home so the next attempt starts clean.
+    ///
+    /// The clock is deliberately NOT paused: the ~3 seconds this costs are seconds of smoke closing
+    /// in, which is what stops the child brute-forcing combinations for free.
+    private IEnumerator MisassemblyRoutine()
+    {
+        misassemblyLocked = true;
+
+        if (MisassemblyLock.Instance != null)
+        {
+            yield return MisassemblyLock.Instance.PlayRoutine();
+        }
+
+        // Spring the mis-placed stones home — the same three calls a manual tap-out makes.
+        for (int i = 0; i < slotOccupants.Length; i++)
+        {
+            MagicStonePuzzleStone occupant = slotOccupants[i];
+            if (occupant == null) continue;
+
+            slotOccupants[i] = null;
+            occupant.SetCurrentSlot(-1);
+            occupant.ReturnHome();
+        }
+
+        misassemblyLocked = false;
+        misassemblyRoutine = null;
+
+        // Restart the build timer for the next attempt (this is what the old else-branch did).
+        _latency.Start(Time.realtimeSinceStartupAsDouble);
     }
 
     // Pick the result page / backend wordId / success scene for the word that was just built.
