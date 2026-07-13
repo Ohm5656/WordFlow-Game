@@ -670,7 +670,9 @@ MonoBehaviour:
   beepCount: 3
   beepInterval: 1
   beepAudibleSeconds: 0.4
+  beepWindow: 10
   pulseDecay: 6
+  lockoutDuration: 3
   fadeInDuration: 0.12
   fadeOutDuration: 0.35
   iconPopDuration: 0.28
@@ -847,8 +849,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 14.4363, y: -95.97195}
-  m_SizeDelta: {x: 1601.3274, y: 1031.4438}
+  m_AnchoredPosition: {x: 16.6708, y: -106.79}
+  m_SizeDelta: {x: 1552.4268, y: 957.3}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &214939923
 MonoBehaviour:
@@ -3211,7 +3213,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1255792671
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6191,7 +6193,8 @@ MonoBehaviour:
   recapHoldBeforeFade: 1.2
   recapFadeDuration: 0.6
   audioSource: {fileID: 0}
-  starEarnedSfx: {fileID: 0}
+  starEarnedSfx: {fileID: 8300000, guid: 8cd704fce5f9d84488104ed4e53ad0c5, type: 3}
+  fadeOutSfx: {fileID: 0}
 --- !u!1 &2107077615
 GameObject:
   m_ObjectHideFlags: 0

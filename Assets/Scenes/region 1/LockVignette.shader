@@ -7,15 +7,21 @@ Shader "WordFlow/LockVignette"
         // The fragment ignores it — the vignette is procedural.
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
 
-        _Color ("Alert Color", Color) = (0.95, 0.15, 0.12, 1)
+        // Deep blood red, not a bright signal red. Multiply drives everything toward this colour, so
+        // a bright tint would wash the screen out instead of darkening it. The green and blue floors
+        // (0.12 / 0.15) stop the purple smoke from losing its blue entirely.
+        _Color ("Alert Tint", Color) = (0.55, 0.12, 0.15, 1)
 
         _Intensity ("Intensity (driven)", Range(0, 1)) = 0
-        _Pulse ("Pulse (driven)", Range(0, 1)) = 0
+        // Kept for material compatibility. The fixed red hold deliberately ignores beat pulses.
+        _Pulse ("Pulse (compatibility)", Range(0, 1)) = 0
 
-        _EdgeStart ("Vignette Inner Edge", Range(0, 1.5)) = 0.35
-        _EdgeEnd ("Vignette Outer Edge", Range(0, 1.5)) = 1.15
-        _CoreGlow ("Centre Glow", Range(0, 1)) = 0.08
-        _PulseGain ("Pulse Gain", Range(0, 2)) = 0.75
+        _EdgeStart ("Vignette Inner Edge", Range(0, 1.5)) = 0.15
+        _EdgeEnd ("Vignette Outer Edge", Range(0, 1.5)) = 1.1
+        _CoreGlow ("Centre Tint", Range(0, 1)) = 0.3
+
+        // Ceiling on the darkening, so the book and stones never fall into unreadable shadow.
+        _Strength ("Max Strength", Range(0, 1)) = 0.85
     }
 
     SubShader
@@ -26,11 +32,14 @@ Shader "WordFlow/LockVignette"
             "RenderType" = "Transparent"
         }
 
-        // ADDITIVE, not alpha-over. This is the whole point of the effect: additive can only ADD red
-        // light to what is already on screen, so it is mathematically incapable of hiding the smoke
-        // underneath. A normal alpha overlay at any useful strength would bury it — the same
-        // arithmetic that buried the purple smoke under the grey coat. Do not change this line.
-        Blend SrcAlpha One
+        // MULTIPLY, not additive. Additive brightens — and on this bright scene (cream book, pale
+        // sky) adding red gave candy pink, which reads as sweet, not dangerous. Multiply darkens and
+        // reddens instead: result = dst * tint.
+        //
+        // It keeps the guarantee additive gave us: multiply SCALES every pixel, it never covers one,
+        // so the smoke's contrast against the background survives proportionally and the smoke stays
+        // fully visible. It just reads as smoke in a blood-red room now. Do not change this line.
+        Blend DstColor Zero
         ZWrite Off
         ZTest Always
         Cull Off
@@ -62,7 +71,7 @@ Shader "WordFlow/LockVignette"
             float _EdgeStart;
             float _EdgeEnd;
             float _CoreGlow;
-            float _PulseGain;
+            float _Strength;
 
             v2f vert(appdata v)
             {
@@ -74,17 +83,25 @@ Shader "WordFlow/LockVignette"
 
             fixed4 frag(v2f i) : SV_Target
             {
-                // 0 at the centre, 1 at the edge midpoints, ~1.41 in the corners — so the alert is
-                // hottest where a hit would sting and stays clear of the book in the middle.
+                // 0 at the centre, 1 at the edge midpoints, ~1.41 in the corners — the alert closes
+                // in hardest from the edges, while the book in the middle stays readable.
                 float d = length((i.uv - 0.5) * 2.0);
 
                 float vignette = smoothstep(_EdgeStart, _EdgeEnd, d);
 
-                // A little red even dead centre, so the whole screen reads "you took a hit" rather
-                // than "there is a red frame around the screen".
-                float a = (vignette + _CoreGlow) * _Intensity * (1.0 + _Pulse * _PulseGain);
+                // _CoreGlow keeps a wash of red even dead centre, so the whole screen reads "you took
+                // a hit" rather than "there is a red frame around the screen".
+                float shape = saturate(vignette + _CoreGlow);
 
-                return float4(_Color.rgb, saturate(a) * _Color.a);
+                // Fixed red hold: beep pulses still drive the smoke, but never change this overlay.
+                // Only the lock routine's fade envelope changes _Intensity.
+                float level = _Intensity;
+
+                // lerp from white (multiply by 1 = untouched) toward the tint. _Strength caps how far
+                // it can ever go, so nothing is ever crushed to black.
+                float3 tint = lerp(float3(1, 1, 1), _Color.rgb, saturate(shape * level) * _Strength);
+
+                return float4(tint, 1.0);
             }
 
             ENDCG

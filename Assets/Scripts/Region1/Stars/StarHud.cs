@@ -86,6 +86,7 @@ public sealed class StarHud : MonoBehaviour
     [Header("Audio (optional)")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip starEarnedSfx;
+    [SerializeField] private AudioClip fadeOutSfx;
 
     public static StarHud Instance { get; private set; }
 
@@ -212,7 +213,7 @@ public sealed class StarHud : MonoBehaviour
         Slot slot = slots[slotIndex];
         if (slot == null || slot.end == null || starStart == null) yield break;
 
-        PlaySfx();
+        PlaySfx(starEarnedSfx);
 
         // --- 1. pop in at centre + centre burst -------------------------------------------------
         starStart.anchoredPosition = startPos;
@@ -289,7 +290,7 @@ public sealed class StarHud : MonoBehaviour
     {
         if (starStart == null) yield break;
 
-        PlaySfx();
+        PlaySfx(starEarnedSfx);
 
         // --- 1. pop in at centre (shared) + centre burst ------------------------------------------
         starStart.anchoredPosition = startPos;
@@ -546,7 +547,7 @@ public sealed class StarHud : MonoBehaviour
             Slot slot = slots[i];
             if (slot == null || slot.end == null) continue;
 
-            PlaySfx();
+            PlaySfx(starEarnedSfx);
 
             Vector3 endScale = slot.end.localScale;
             SetActive(slot.end, true);
@@ -570,6 +571,8 @@ public sealed class StarHud : MonoBehaviour
         // Success_ga: the single star fades away — the "your stars reset, try again" beat.
         if (recapHoldBeforeFade > 0f) yield return new WaitForSeconds(recapHoldBeforeFade);
 
+        PlaySfx(fadeOutSfx);
+
         for (float t = 0f; t < recapFadeDuration; t += Time.deltaTime)
         {
             float a = 1f - Mathf.Clamp01(t / recapFadeDuration);
@@ -586,11 +589,19 @@ public sealed class StarHud : MonoBehaviour
         }
     }
 
-    private void PlaySfx()
+    private void PlaySfx(AudioClip clip)
     {
-        if (starEarnedSfx == null) return;
+        if (clip == null) return;
         if (audioSource == null) audioSource = GetComponent<AudioSource>();
-        if (audioSource != null) audioSource.PlayOneShot(starEarnedSfx);
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.loop = false;
+            audioSource.spatialBlend = 0f;
+        }
+
+        audioSource.PlayOneShot(clip);
     }
 
     // --- small helpers -------------------------------------------------------------------------

@@ -1852,7 +1852,8 @@ MonoBehaviour:
   recapHoldBeforeFade: 1.2
   recapFadeDuration: 0.6
   audioSource: {fileID: 0}
-  starEarnedSfx: {fileID: 0}
+  starEarnedSfx: {fileID: 8300000, guid: 8cd704fce5f9d84488104ed4e53ad0c5, type: 3}
+  fadeOutSfx: {fileID: 8300000, guid: 45c72c74451a88f418a50a6db07dd6a8, type: 3}
 --- !u!1 &8937664012962204747
 GameObject:
   m_ObjectHideFlags: 0

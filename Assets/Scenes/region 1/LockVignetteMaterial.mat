@@ -29,13 +29,13 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _CoreGlow: 0.08
-    - _EdgeEnd: 1.15
-    - _EdgeStart: 0.35
+    - _CoreGlow: 0.3
+    - _EdgeEnd: 1.1
+    - _EdgeStart: 0.15
     - _Intensity: 0
     - _Pulse: 0
-    - _PulseGain: 0.75
+    - _Strength: 0.85
     m_Colors:
-    - _Color: {r: 0.95, g: 0.14999998, b: 0.11999995, a: 1}
+    - _Color: {r: 0.55, g: 0.12, b: 0.15, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

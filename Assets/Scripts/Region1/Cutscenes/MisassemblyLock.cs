@@ -2,33 +2,29 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// The garbage-word punishment: a cartoon red damage-screen, a padlock, and three beat-beeps that
-/// each yank the smoke toward the book — for three seconds, during which the stones are dead. Then
-/// the padlock springs open and bursts apart, and the board is playable again.
+/// The garbage-word punishment: a fixed dark-red screen for three seconds, during which the stones
+/// are dead. Outside the countdown window it sounds three local beat-beeps that yank the smoke;
+/// inside the last 10 seconds it rides the clock's existing beep and smoke rhythm instead.
 ///
 /// The clock is NOT paused while this plays. That is the whole point: being frozen out costs real
 /// seconds of smoke, so brute-forcing combinations has a price.
 ///
-/// The alert is ADDITIVE (WordFlow/LockVignette, Blend SrcAlpha One). It can only add red light, so
-/// it cannot hide the smoke underneath — the smoke just reads as red-hot while the alert is up.
-///
-/// The padlock art lives in Canvas/key_root and is authored by hand: `lock`, `unlock`, and
-/// `effect_star1..4`, whose authored positions ARE the burst's scatter destinations — the same
-/// convention StarHud uses. Everything there is hidden in Awake and only shows on its cue.
+/// The alert uses a multiply vignette. Its short fades are included in the three-second duration;
+/// beep pulses affect the smoke only, never the red intensity. The legacy key_root art stays wired
+/// for scene compatibility but remains hidden throughout, and no unlock sound is played.
 public sealed class MisassemblyLock : MonoBehaviour
 {
     [Header("Visuals")]
     [Tooltip("Full-screen RawImage running the WordFlow/LockVignette material.")]
     [SerializeField] private RawImage vignette;
 
-    [Tooltip("key_root/lock — the closed padlock, up for the whole lockout.")]
+    [Tooltip("Legacy key_root/lock reference. Kept serialized but never shown.")]
     [SerializeField] private Image lockIcon;
 
-    [Tooltip("key_root/unlock — the opened padlock, swapped in when the lock lifts.")]
+    [Tooltip("Legacy key_root/unlock reference. Kept serialized but never shown.")]
     [SerializeField] private Image unlockIcon;
 
-    [Tooltip("key_root/effect_star1..4 — the unlock burst. Their authored positions are the scatter " +
-             "destinations; the burst flies them out from the padlock to where they already sit.")]
+    [Tooltip("Legacy key_root/effect_star1..4 references. Kept serialized but never shown.")]
     [SerializeField] private Image[] burst;
 
     [Header("Audio")]
@@ -39,7 +35,7 @@ public sealed class MisassemblyLock : MonoBehaviour
              "beepAudibleSeconds to get exactly one beep.")]
     [SerializeField] private AudioClip beepClip;
 
-    [Tooltip("unlock.wav — plays as the padlock springs open.")]
+    [Tooltip("Legacy unlock.wav reference. Kept serialized but deliberately not played.")]
     [SerializeField] private AudioClip unlockSfx;
 
     [Header("Beats")]
@@ -47,9 +43,19 @@ public sealed class MisassemblyLock : MonoBehaviour
     [SerializeField, Min(0.1f)] private float beepInterval = 1f;
     [SerializeField, Min(0.05f)] private float beepAudibleSeconds = 0.4f;
 
+    [Tooltip("Seconds left at which WordAssemblyTimer's own countdown track starts beeping — must " +
+             "match its countdownAt (10). Inside this window the clock is already sounding a beep " +
+             "every second, so the lock rides on it instead of playing a second, out-of-phase copy " +
+             "of the same clip on top.")]
+    [SerializeField, Min(0f)] private float beepWindow = 10f;
+
     [Tooltip("How fast each smoke lurch settles back. 6 matches FogController's countdown beat, so " +
              "the lurch feels identical to a countdown beep's.")]
     [SerializeField, Range(1f, 12f)] private float pulseDecay = 6f;
+
+    [Header("Lockout")]
+    [Tooltip("Total input lock duration, including the fade-in and fade-out.")]
+    [SerializeField, Min(0.1f)] private float lockoutDuration = 3f;
 
     [Header("Fades")]
     [SerializeField, Min(0.01f)] private float fadeInDuration = 0.12f;
@@ -72,7 +78,6 @@ public sealed class MisassemblyLock : MonoBehaviour
     public bool IsLocked { get; private set; }
 
     private static readonly int IntensityID = Shader.PropertyToID("_Intensity");
-    private static readonly int PulseID = Shader.PropertyToID("_Pulse");
 
     private Material vignetteMaterial;
     private Vector3 lockBaseScale = Vector3.one;
@@ -134,51 +139,58 @@ public sealed class MisassemblyLock : MonoBehaviour
         // the CanInteract gate in MagicStonePuzzleController.
         if (vignette != null) vignette.raycastTarget = true;
 
-        // --- flash in -----------------------------------------------------------------------------
-        for (float t = 0f; t < fadeInDuration; t += Time.deltaTime)
+        HideKeyArt();
+
+        float duration = Mathf.Max(0.1f, lockoutDuration);
+        float fadeIn = Mathf.Min(fadeInDuration, duration);
+        float fadeOut = Mathf.Min(fadeOutDuration, Mathf.Max(0f, duration - fadeIn));
+
+        // Preserve the original 0/1/2-second local beats when the countdown is not involved. Only
+        // align to clock boundaries when the 10-second rhythm is active or will begin during this
+        // lockout; this prevents a near-boundary local beep from colliding with the countdown track.
+        bool useClockRhythm = ClockRunning && ClockRemaining <= beepWindow + duration;
+        float nextBeatAt = 0f;
+        float beatSpacing = beepInterval;
+        if (useClockRhythm)
         {
-            SetIntensity(Mathf.Clamp01(t / fadeInDuration));
-            yield return null;
+            nextBeatAt = ClockRemaining % 1f;
+            if (nextBeatAt <= 0.03f) nextBeatAt = 0f;
+            beatSpacing = 1f;
         }
-        SetIntensity(1f);
 
-        // --- the closed padlock pops in -------------------------------------------------------------
-        yield return PopIconRoutine(lockIcon, lockBaseScale, iconPopDuration);
+        int beatsHandled = 0;
+        float localPulseStartedAt = float.NegativeInfinity;
+        bool countdownOwnsRhythm = ClockIsBeeping;
 
-        // --- three beats: beep + smoke lurch ---------------------------------------------------------
-        for (int i = 0; i < beepCount; i++)
+        for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
         {
-            PlayClip(beepClip, cutAfter: beepAudibleSeconds);
-
-            // pulse01 drives BOTH the smoke's inward lurch (via FogController.ExtraPulseProvider) and
-            // the vignette's throb, so the sound, the red and the smoke all land on the same beat.
-            for (float t = 0f; t < beepInterval; t += Time.deltaTime)
+            // Latch once the countdown starts. This remains true if the timer reaches zero during
+            // the lock, so a local beep never starts after the countdown track has taken ownership.
+            if (ClockIsBeeping)
             {
-                pulse01 = Mathf.Exp(-t * pulseDecay);
-                SetPulse(pulse01);
-                yield return null;
+                countdownOwnsRhythm = true;
+                localPulseStartedAt = float.NegativeInfinity;
+                pulse01 = 0f;
             }
-        }
 
-        pulse01 = 0f;
-        SetPulse(0f);
+            while (beatsHandled < beepCount && elapsed + 0.001f >= nextBeatAt)
+            {
+                if (!countdownOwnsRhythm)
+                {
+                    PlayClip(beepClip, cutAfter: beepAudibleSeconds);
+                    localPulseStartedAt = elapsed;
+                }
 
-        // --- the unlock beat: swap to the open padlock and burst it apart -----------------------------
-        SetActive(lockIcon, false);
+                beatsHandled++;
+                nextBeatAt += beatSpacing;
+            }
 
-        PlayClip(unlockSfx, cutAfter: 0f);
+            if (!countdownOwnsRhythm && !float.IsNegativeInfinity(localPulseStartedAt))
+            {
+                pulse01 = Mathf.Exp(-(elapsed - localPulseStartedAt) * pulseDecay);
+            }
 
-        StartCoroutine(BurstRoutine());
-        yield return PopIconRoutine(unlockIcon, unlockBaseScale, unlockPopDuration);
-
-        if (unlockHold > 0f) yield return new WaitForSeconds(unlockHold);
-
-        // --- fade out ---------------------------------------------------------------------------------
-        for (float t = 0f; t < fadeOutDuration; t += Time.deltaTime)
-        {
-            float k = 1f - Mathf.Clamp01(t / fadeOutDuration);
-            SetIntensity(k);
-            SetAlpha(unlockIcon, k);
+            SetIntensity(EvaluateIntensity(elapsed, duration, fadeIn, fadeOut));
             yield return null;
         }
 
@@ -258,7 +270,7 @@ public sealed class MisassemblyLock : MonoBehaviour
     }
 
     /// countdown_beep.wav is a long track of once-a-second beeps, so `cutAfter` stops it after one
-    /// beep's worth. Pass 0 to let a clip (unlock.wav) play out in full.
+    /// beep's worth.
     private void PlayClip(AudioClip clip, float cutAfter)
     {
         if (audioSource == null || clip == null) return;
@@ -281,16 +293,20 @@ public sealed class MisassemblyLock : MonoBehaviour
         }
     }
 
-    /// Everything from key_root is hidden until its cue — forced here rather than trusted from the
-    /// scene, which the designer leaves visible while authoring.
+    /// The authored key_root can stay visible while editing, but it is never part of runtime lock
+    /// feedback. Force every child off both at startup and when a lock ends.
     private void Hide()
     {
         pulse01 = 0f;
         SetIntensity(0f);
-        SetPulse(0f);
 
         if (vignette != null) vignette.raycastTarget = false;
 
+        HideKeyArt();
+    }
+
+    private void HideKeyArt()
+    {
         SetActive(lockIcon, false);
         SetActive(unlockIcon, false);
 
@@ -303,10 +319,32 @@ public sealed class MisassemblyLock : MonoBehaviour
         if (vignetteMaterial != null) vignetteMaterial.SetFloat(IntensityID, Mathf.Clamp01(v));
     }
 
-    private void SetPulse(float v)
+    private static float EvaluateIntensity(float elapsed, float duration, float fadeIn, float fadeOut)
     {
-        if (vignetteMaterial != null) vignetteMaterial.SetFloat(PulseID, Mathf.Clamp01(v));
+        if (fadeIn > 0f && elapsed < fadeIn)
+        {
+            return Mathf.Clamp01(elapsed / fadeIn);
+        }
+
+        float fadeOutStart = duration - fadeOut;
+        if (fadeOut > 0f && elapsed > fadeOutStart)
+        {
+            return Mathf.Clamp01((duration - elapsed) / fadeOut);
+        }
+
+        return 1f;
     }
+
+    /// Seconds left on the puzzle clock, or 0 when there is no clock (the other cutscene scenes).
+    private float ClockRemaining =>
+        WordAssemblyTimer.Instance != null ? WordAssemblyTimer.Instance.SmokeRemaining : 0f;
+
+    private bool ClockRunning => ClockRemaining > 0.01f;
+
+    /// A small frame allowance prevents a local beep from starting just before the timer crosses
+    /// 10.000 seconds and launches its continuous countdown track on the same rendered frame.
+    private bool ClockIsBeeping =>
+        ClockRunning && ClockRemaining <= beepWindow + Mathf.Max(0.03f, Time.deltaTime * 2f);
 
     private static RectTransform Rect(Component c) => c != null ? c.transform as RectTransform : null;
 
