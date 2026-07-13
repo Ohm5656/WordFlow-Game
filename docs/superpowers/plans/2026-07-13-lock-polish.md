@@ -5,7 +5,8 @@
 **Goal:** Two fixes to the garbage-word lock, both found by playing it:
 
 1. **The alert reads as candy pink, not danger.** It is additive, which *brightens* — and this scene is bright (cream book, pale sky), so adding red gives sweet pink. Danger reads as **darker + red**, not brighter. Switch the blend from additive to **multiply**.
-2. **In the last 10 seconds the beeps collide.** `WordAssemblyTimer` is already playing the ~10s `countdown_beep.wav` track continuously (it seeks into it once and lets it run), and the lock plays *the same clip* from `t = 0` in three short bursts at an arbitrary phase. Two copies of one beep, out of phase. Fix by **phase-locking the lock's beats to the clock's second boundary** and **not re-playing a beep the clock is already sounding**.
+2. **The alert sits still.** It should **throb on the beat** — the red should surge on each beep and sink back between them, so the alarm pulses instead of holding a flat tint. Today `_Pulse` only *adds* to an already-saturated base, so nothing visibly moves. Rework it so the pulse drives the alert's **amplitude from a floor up to full**.
+3. **In the last 10 seconds the beeps collide.** `WordAssemblyTimer` is already playing the ~10s `countdown_beep.wav` track continuously (it seeks into it once and lets it run), and the lock plays *the same clip* from `t = 0` in three short bursts at an arbitrary phase. Two copies of one beep, out of phase. Fix by **phase-locking the lock's beats to the clock's second boundary** and **not re-playing a beep the clock is already sounding**.
 
 **Nothing else about the lock changes.** The padlock, the burst, the 3-second lockout, the stones springing home, the smoke lurch — all stay exactly as they are and were signed off.
 
@@ -67,7 +68,12 @@ Shader "WordFlow/LockVignette"
         _EdgeStart ("Vignette Inner Edge", Range(0, 1.5)) = 0.15
         _EdgeEnd ("Vignette Outer Edge", Range(0, 1.5)) = 1.1
         _CoreGlow ("Centre Tint", Range(0, 1)) = 0.3
-        _PulseGain ("Pulse Gain", Range(0, 2)) = 0.5
+
+        // How much red is left BETWEEN beats. The alert throbs from this floor up to full on every
+        // beep and sinks back — an alarm that pulses, not a flat sheet of red.
+        //  0.35 = the danger state persists between beats (recommended)
+        //  0    = a hard strobe: full red on the beat, completely clear between them
+        _BaseLevel ("Between-Beat Level", Range(0, 1)) = 0.35
 
         // Ceiling on the darkening, so the book and stones never fall into unreadable shadow.
         _Strength ("Max Strength", Range(0, 1)) = 0.85
@@ -120,7 +126,7 @@ Shader "WordFlow/LockVignette"
             float _EdgeStart;
             float _EdgeEnd;
             float _CoreGlow;
-            float _PulseGain;
+            float _BaseLevel;
             float _Strength;
 
             v2f vert(appdata v)
@@ -141,11 +147,18 @@ Shader "WordFlow/LockVignette"
 
                 // _CoreGlow keeps a wash of red even dead centre, so the whole screen reads "you took
                 // a hit" rather than "there is a red frame around the screen".
-                float mask = saturate((vignette + _CoreGlow) * _Intensity * (1.0 + _Pulse * _PulseGain));
+                float shape = saturate(vignette + _CoreGlow);
+
+                // THE THROB. _Pulse spikes to 1 on each beep and decays back before the next, so the
+                // alert surges to full and sinks to _BaseLevel between beats — an alarm that pulses.
+                // The old formula had _Pulse merely ADD to an already-saturated base, so nothing
+                // visibly moved; here it drives the amplitude, which is what makes it read as alive.
+                // _BaseLevel = 0 turns this into a hard strobe (full red on the beat, clear between).
+                float level = lerp(_BaseLevel, 1.0, saturate(_Pulse)) * _Intensity;
 
                 // lerp from white (multiply by 1 = untouched) toward the tint. _Strength caps how far
                 // it can ever go, so nothing is ever crushed to black.
-                float3 tint = lerp(float3(1, 1, 1), _Color.rgb, mask * _Strength);
+                float3 tint = lerp(float3(1, 1, 1), _Color.rgb, saturate(shape * level) * _Strength);
 
                 return float4(tint, 1.0);
             }
@@ -162,26 +175,37 @@ Two things changed and both matter: `Blend SrcAlpha One` → **`Blend DstColor Z
 
 The material already has the *old* shader's defaults baked in. New properties (`_Strength`) will pick up the shader default automatically, but the keys that already exist will not — they are stale and must be edited by hand.
 
-In `Assets/Scenes/region 1/LockVignetteMaterial.mat`, change these four saved values:
+In `Assets/Scenes/region 1/LockVignetteMaterial.mat`, replace the whole `m_Floats` / `m_Colors` block:
 
 ```yaml
-    - _CoreGlow: 0.08      →      - _CoreGlow: 0.3
-    - _EdgeEnd: 1.15       →      - _EdgeEnd: 1.1
-    - _EdgeStart: 0.35     →      - _EdgeStart: 0.15
-    - _PulseGain: 0.75     →      - _PulseGain: 0.5
-```
-
-and the colour:
-
-```yaml
+    m_Floats:
+    - _CoreGlow: 0.08
+    - _EdgeEnd: 1.15
+    - _EdgeStart: 0.35
+    - _Intensity: 0
+    - _Pulse: 0
+    - _PulseGain: 0.75
+    m_Colors:
     - _Color: {r: 0.95, g: 0.14999998, b: 0.11999995, a: 1}
 ```
-→
+
+with:
+
 ```yaml
+    m_Floats:
+    - _BaseLevel: 0.35
+    - _CoreGlow: 0.3
+    - _EdgeEnd: 1.1
+    - _EdgeStart: 0.15
+    - _Intensity: 0
+    - _Pulse: 0
+    - _Strength: 0.85
+    m_Colors:
     - _Color: {r: 0.55, g: 0.12, b: 0.15, a: 1}
 ```
 
-Leave `_Intensity` and `_Pulse` at `0` — they are driven at runtime.
+`_PulseGain` is gone — the pulse now drives the amplitude (`_BaseLevel` → 1) rather than adding gain
+on top. `_Intensity` and `_Pulse` stay at `0`; they are driven at runtime.
 
 - [ ] **Step 3: Compile and shoot the gate — is it dark, dangerous, and is the smoke still there?**
 
@@ -207,8 +231,11 @@ mcp__anklebreaker__unity_screenshot_game     path: "Assets/Screenshots/Lock_mult
 
 Poll for the file (~60-75s, multi-MB), then read it.
 
+Note the preview menu holds `_Pulse` at 0, so this screenshot shows the alert at its **between-beat
+floor** (`_BaseLevel` 0.35) — the quietest it ever gets during a lock. On the beat it surges to full.
+
 **Expected — the pass/fail criteria, both must hold:**
-1. the screen is **dark blood-red**, closing in from the edges — heavy and threatening, **not pink and not bright**;
+1. the screen is **darkened and red**, closing in from the edges — heavy and threatening, **not pink and not bright**;
 2. the smoke is **still clearly visible** through it, and the book / stones / padlock are still legible.
 
 Compare against `Assets/Screenshots/Lock_over_smoke.png` (the pink version) to be sure it actually changed.
@@ -227,12 +254,17 @@ mcp__anklebreaker__unity_execute_menu_item   menuPath: "Tools/Quest/Fog Preview 
 
 ```bash
 git add "Assets/Scenes/region 1/LockVignette.shader" "Assets/Scenes/region 1/LockVignetteMaterial.mat"
-git commit -m "fix(lock): darken the alert with a multiply instead of brightening it to pink
+git commit -m "fix(lock): darken the alert with a multiply, and make it throb on the beat
 
 Additive adds light, and this scene is bright, so a red alert came out candy
 pink - sweet, not dangerous. Multiply reddens by darkening instead. It keeps
 the guarantee additive gave us: it scales every pixel rather than covering
-one, so the smoke stays fully visible underneath."
+one, so the smoke stays fully visible underneath.
+
+_Pulse used to merely add gain on top of an already-saturated base, so the
+alert sat still. It now drives the amplitude from _BaseLevel up to full, so
+the red surges on every beep and sinks back - an alarm that pulses. Set
+_BaseLevel to 0 for a hard strobe."
 ```
 
 ---
@@ -379,9 +411,11 @@ Both need stones tapped and cannot be driven from here.
 **Case A — garbage word with lots of time left (clock silent):**
 Assemble **ปก** early in the round. Expect:
 1. the screen goes **dark blood-red**, closing in from the edges — heavy, dangerous, **not pink**;
-2. **the smoke is still clearly visible** through it;
-3. **three beeps** from the lock itself, one a second, each with a smoke lurch;
-4. the padlock, the unlock burst, the stones springing home — all exactly as before.
+2. **the red throbs on the beat** — it surges to full on each beep and sinks back between them, three
+   times. It should read as an alarm pulsing, not a flat sheet of red;
+3. **the smoke is still clearly visible** through it;
+4. **three beeps** from the lock itself, one a second, each landing with a smoke lurch **and** a red surge;
+5. the padlock, the unlock burst, the stones springing home — all exactly as before.
 
 **Case B — garbage word inside the last 10 seconds (clock already beeping):**
 Let the clock run down to ~8 seconds, *then* assemble **ปก**. Expect:
@@ -405,7 +439,10 @@ All on `LockVignetteMaterial` — no code edit:
 | More red, less black | raise `_Color`'s R, or lift the G/B floors |
 | Red band too thick | raise `_EdgeStart` (0.15 → 0.4) |
 | Whole screen too evenly red | lower `_CoreGlow` (0.3 → 0.12) — the edges keep their weight |
-| Throb per beep too subtle | raise `_PulseGain` (0.5 → 1.0) |
+| **Throb too subtle** — want a bigger swing per beep | **lower `_BaseLevel` (0.35 → 0.2)** — the red sinks further between beats, so the surge reads bigger |
+| **Want a hard strobe** (full red on the beat, screen completely clear between) | **`_BaseLevel` = 0** |
+| Throb too flickery / want the danger to sit heavier | raise `_BaseLevel` (0.35 → 0.55) |
+| Throb snaps back too fast / too slow | `pulseDecay` on the `MisassemblyLock` component (6 = the countdown beat's own decay) |
 
 - [ ] **Step 4: Commit any tuning**
 
@@ -421,6 +458,7 @@ git commit -m "feat(lock): tune the alert red"
 ## Done when
 
 - The garbage-word alert is **dark and blood-red**, not bright pink — and the smoke is still plainly visible through it.
+- The alert **throbs on the beat**: it surges to full on each beep and sinks back to `_BaseLevel` between them. `_BaseLevel = 0` gives a hard strobe if that is preferred.
 - A garbage word in the last 10 seconds produces **one clean beep per second**, not two overlapping ones, with the smoke lurches landing on the beat.
 - A garbage word outside that window still sounds its own three beeps, as before.
 - Everything else about the lock — the padlock, the unlock burst, the 3-second lockout, the stones springing home, the smoke lurch — is unchanged.
