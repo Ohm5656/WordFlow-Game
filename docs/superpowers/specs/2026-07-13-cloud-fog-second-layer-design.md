@@ -38,7 +38,9 @@ The depth comes from colour and offset, not from shape.
    layer 2's material. Changing the look must never require a code edit.
 6. **Timing: locked to layer 1.** Same countdown, same `_Progress`. Both arrive together (smoke
    starts at 25s remaining), advance together, peak together at 0s. Frozen while the timer is paused.
-7. **Draw order: above the purple smoke, below the gameplay UI.** `book_craft`, `book_craft_pa`,
+7. **Draw order: BELOW the purple smoke, above the background.** *(Revised — the first grey build put
+   the grey coat on top and the purple was swallowed. See "Why the grey goes underneath" below.)*
+   `book_craft`, `book_craft_pa`,
    `book_craft_ga`, `time_root` and the stones render on top of both layers.
 
 ## Design
@@ -52,18 +54,47 @@ layer 2 different values for those and it produces a *different body of smoke* f
 same visual language, different billows. `FogController` already instances its own material copy per
 overlay (`new Material(fogImage.material)` in `Awake`), so the two never share state.
 
+### Why the grey goes underneath
+
+The Canvas blends with `Blend SrcAlpha OneMinusSrcAlpha` — plain alpha-over. Whatever is drawn last
+covers what is under it in proportion to its own alpha.
+
+The first grey build put the grey coat **on top**. At the screen edge, where both fronts are at full
+core, that gives:
+
+- grey alpha = its `_Density` = `0.65`
+- what survives from below = `1 - 0.65` = `0.35`
+- purple actually reaching the eye = `0.35 × 0.75` ≈ `0.26`
+
+**grey `0.65` : purple `0.26` ≈ 2.5 : 1** — the purple is swallowed. This is forced by the blend
+equation, not by anything tunable: no value of `_MaxReach`, `_FogColor` or `_NoiseScale` can undo it
+while the grey sits on top at a workable density. The only two escapes are dropping the grey to
+`_Density` ≈ `0.25` (so faint it stops earning its place) or **flipping the order**.
+
+Flipped — `background` → `CloudOverlay` (grey) → `FogOverlay` (purple) — both problems go away:
+
+- **Outer band** (past the purple's `_MaxReach`, still inside the grey's): grey with nothing over it.
+  It is fully visible and it is the *only* thing there, so the grey earns its keep.
+- **Inner band**: the purple draws last at `_Density` 0.75 and stays the dominant read, with the grey
+  bleeding through its soft wisps and thin tails — the purple front with grey mixed into it, which is
+  what the layer was for.
+
+This reverses the draw order chosen when layer 2 was still a cloud field. That choice was sound then:
+clouds had their own silhouette, so painting them over the purple added a shape. Once layer 2 became
+the *same* smoke, drawing it on top stopped adding a shape and started being a coat of paint.
+
 ### Layer 2's material: `Assets/Scenes/region 1/CloudFogMaterial.mat`
 
 Re-pointed from `WordFlow/CloudFog` to `WordFlow/EdgeFog`. Starting values, all Inspector-tunable:
 
 | Property | Layer 1 (purple) | **Layer 2 (grey)** | Why |
 |---|---|---|---|
-| `_FogColor` | `(0.48, 0.28, 0.56)` | **`(0.62, 0.64, 0.68)`** | smoke grey |
-| `_Density` | `0.75` | **`0.35`** | thin — tints the purple, never buries it (requirement 4) |
-| `_MaxReach` | `0.23` | **`0.28`** | grey runs slightly ahead of the purple, so the front reads as a grey outer haze wrapping a denser purple core — that offset *is* the depth |
+| `_FogColor` | `(0.48, 0.28, 0.56)` | **`(0.72, 0.73, 0.77)`** | smoke grey |
+| `_Density` | `0.75` | **`0.55`** | now that it is underneath it can carry real weight without burying the purple |
+| `_MaxReach` | `0.23` | **`0.30`** | the gap over layer 1's `0.23` *is* the grey-only outer band — widen it to show more grey, narrow it to show less. Keep `_MaxReach + _Softness < 0.5` or the front stops clearing the screen centre |
 | `_CoreFrac` | `0.4` | **`0.35`** | slightly softer core |
-| `_Softness` | `0.15` | **`0.2`** | wider tail on the outer coat |
-| `_NoiseScale` | `2.0` | **`3.4`** | finer billows → a different body of smoke from the same shader |
+| `_Softness` | `0.15` | **`0.14`** | (with `_MaxReach` 0.30 → sum 0.44, safely under 0.5) |
+| `_NoiseScale` | `2.0` | **`4.2`** | finer billows → a different body of smoke from the same shader |
 | `_NoiseStrength` | `0.18` | **`0.22`** | |
 | `_WarpAmount` | `0.55` | **`0.45`** | |
 | `_WispStrength` | `0.7` | **`0.75`** | |
@@ -72,17 +103,25 @@ Re-pointed from `WordFlow/CloudFog` to `WordFlow/EdgeFog`. Starting values, all 
 | `_FadeIn` | `0.5` | **`0.5`** | arrives with layer 1 |
 | `_PulseReach` | `0.03` | **`0.03`** | lurches on the same beep |
 
+### The draw-order change, in code
+
+Two editor scripts pin the sibling index and both must flip. `CloudOverlay` moves from
+`FogOverlay + 1` to `FogOverlay`'s own index — which pushes `FogOverlay` up one, giving
+`background` → `CloudOverlay` → `FogOverlay` → gameplay UI.
+
+- `Assets/Editor/AddCloudLayer.cs` — `SetSiblingIndex(fogT.GetSiblingIndex() + 1)` → `SetSiblingIndex(fogT.GetSiblingIndex())`
+- `Assets/Editor/FixFogLayer.cs` — same, for the re-anchor it does on every run
+
 ### Everything else stays
 
-- `CloudOverlay` GameObject (RawImage + `FogController`, sibling index directly above `FogOverlay`) —
-  unchanged. It never cared which shader its material used.
+- `CloudOverlay` GameObject itself (RawImage + `FogController`) — unchanged apart from its sibling
+  index. It never cared which shader its material used.
 - `FogController.cs` — unchanged, and still zero new runtime C#. It drives `_Progress` / `_FogTime` /
   `_Pulse` by name and reads the clock through static `Func`s, so the second instance stays in sync
   for free.
-- `Tools/Quest/Fix Fog Layer` (keeps `CloudOverlay` anchored above `FogOverlay`) and
-  `Tools/Quest/Fog Preview *` (drives `_Progress` on both materials) — unchanged.
-- `Assets/Editor/AddCloudLayer.cs` — one constant changes: `ShaderName` becomes `"WordFlow/EdgeFog"`,
-  so re-running the tool cannot recreate a material on a shader that no longer exists.
+- `Tools/Quest/Fog Preview *` (drives `_Progress` on both materials) — unchanged.
+- `Assets/Editor/AddCloudLayer.cs` — `ShaderName` is `"WordFlow/EdgeFog"`, so re-running the tool
+  cannot recreate a material on a shader that no longer exists.
 
 ### Deleted
 
@@ -91,16 +130,18 @@ Re-pointed from `WordFlow/CloudFog` to `WordFlow/EdgeFog`. Starting values, all 
 
 ## Verification
 
-1. `Tools/Quest/Fog Preview 60%` → the smoke front is visibly **two-tone**: a grey outer haze with a
-   denser purple core behind it. Not a flat grey wash, not a purple front with a grey tint that could
-   pass for one layer. Capture with `unity_screenshot_game` (framebuffer) — `unity_graphics_game_capture`
+1. Scene hierarchy under the Canvas reads `background`, `CloudOverlay`, `FogOverlay`, then the
+   gameplay UI — grey *below* purple.
+2. `Tools/Quest/Fog Preview 60%` → the smoke front is visibly **two-tone**, and **the purple is the
+   dominant read**: a grey outer fringe past the purple's front, with the purple core clearly purple,
+   not washed out. Capture with `unity_screenshot_game` (framebuffer) — `unity_graphics_game_capture`
    skips ScreenSpaceOverlay UI. **The Game view must be open** or the capture is a blank ~100KB image.
-2. `Tools/Quest/Fog Preview 100%` → both fronts at max reach, centre still clear, book/stones/timer
-   readable.
-3. `Tools/Quest/Fog Preview Off` → both clear.
-4. Play through to the word build: both layers arrive together from the edges at 25s remaining,
+3. `Tools/Quest/Fog Preview 100%` → both fronts at max reach, centre still clear, book/stones/timer
+   readable, purple still purple.
+4. `Tools/Quest/Fog Preview Off` → both clear.
+5. Play through to the word build: both layers arrive together from the edges at 25s remaining,
    advance together, peak together at 0s. No console errors, no Error Pause.
-5. `git diff` touches only `CloudFogMaterial.mat`, `AddCloudLayer.cs`, and the deleted
+6. `git diff` touches only `CloudFogMaterial.mat`, `AddCloudLayer.cs`, `FixFogLayer.cs`, and the deleted
    `CloudFog.shader`. `EdgeFox.shader` / `EdgeFogMaterial.mat` / `FogController.cs` /
    `WordAssemblyTimer.cs` / `CutScene_bear.unity` untouched.
 
