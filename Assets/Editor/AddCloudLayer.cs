@@ -4,15 +4,16 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// Tools/Quest/Add Cloud Layer
-/// Adds the second smoke layer to CutScene_bear: a full-screen grey cloud-cluster overlay
-/// (WordFlow/CloudFog) sitting directly above the purple FogOverlay and below the gameplay UI.
+/// Adds the second smoke layer to CutScene_bear: a grey EdgeFog overlay (a second material on
+/// layer 1's own shader, tuned thinner/greyer/on a different noise field) sitting directly above
+/// the purple FogOverlay and below the gameplay UI.
 /// Reuses FogController as-is — it drives _Progress/_FogTime/_Pulse by name and reads the puzzle
 /// clock through static providers, so the second instance syncs to the first for free.
 /// Idempotent: re-running it updates the existing CloudOverlay instead of adding another.
 public static class AddCloudLayer
 {
     const string ScenePath = "Assets/Scenes/region 1/CutScene_bear.unity";
-    const string ShaderName = "WordFlow/CloudFog";
+    const string ShaderName = "WordFlow/EdgeFog";
     const string MatPath = "Assets/Scenes/region 1/CloudFogMaterial.mat";
     const string OverlayName = "CloudOverlay";
 

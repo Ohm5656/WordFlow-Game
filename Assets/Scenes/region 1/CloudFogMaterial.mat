@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: CloudFogMaterial
-  m_Shader: {fileID: 4800000, guid: d0f1cebc5e24e2b42a934760c42c6e0a, type: 3}
+  m_Shader: {fileID: 4800000, guid: a7a84712c5d6f60419f9b2587de7d749, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -19,7 +19,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties: 
+  m_LockedProperties:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -29,19 +29,22 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _BoilSpeed: 0.08
-    - _CloudScale: 3.5
-    - _Coverage: 0.55
-    - _Density: 0.55
-    - _DriftSpeed: 0.02
-    - _FadeIn: 0.45
-    - _Fluff: 0.35
+    - _BoilSpeed: 0.1
+    - _CoreFrac: 0.35
+    - _Density: 0.35
+    - _FadeIn: 0.5
     - _FogTime: 0
+    - _MaxReach: 0.28
+    - _NoiseScale: 3.4
+    - _NoiseStrength: 0.22
     - _Progress: 0
     - _Pulse: 0
-    - _PulseSwell: 0.04
-    - _Softness: 0.18
+    - _PulseReach: 0.03
+    - _Softness: 0.2
+    - _Speed: 0.035
+    - _WarpAmount: 0.45
+    - _WispStrength: 0.75
     m_Colors:
-    - _CloudColor: {r: 0.62, g: 0.6399999, b: 0.68, a: 1}
+    - _FogColor: {r: 0.62, g: 0.64, b: 0.68, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
