@@ -4,9 +4,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// Tools/Quest/Fix Fog Layer
-/// Puts the CutScene_bear smoke FogOverlay just above the background so the gameplay UI —
-/// book_craft / book_craft_pa / book_craft_ga and the time_root clock — always render on top of
-/// the creeping fog. Also makes sure FogController.fogImage points at its own RawImage. Idempotent.
+/// Puts the CutScene_bear smoke FogOverlay (and the CloudOverlay layer riding above it) just above
+/// the background so the gameplay UI — book_craft / book_craft_pa / book_craft_ga and the time_root
+/// clock — always render on top of both smoke layers. Also makes sure FogController.fogImage points
+/// at its own RawImage. Idempotent.
 public static class FixFogLayer
 {
     const string ScenePath = "Assets/Scenes/region 1/CutScene_bear.unity";
@@ -37,6 +38,14 @@ public static class FixFogLayer
         Transform background = parent.Find("background");
         int target = background != null ? background.GetSiblingIndex() + 1 : 1;
         fogT.SetSiblingIndex(target);
+
+        // The grey cloud layer (Tools/Quest/Add Cloud Layer) rides directly above the purple smoke.
+        // Re-anchor it here or every run of this tool would leave it stranded at its old index.
+        Transform cloud = parent.Find("CloudOverlay");
+        if (cloud != null)
+        {
+            cloud.SetSiblingIndex(fogT.GetSiblingIndex() + 1);
+        }
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);

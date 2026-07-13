@@ -10,8 +10,6 @@ using UnityEngine;
 /// preview value never affects an actual play session.)
 public static class FogPreview
 {
-    const string MatPath = "Assets/Scenes/region 1/EdgeFogMaterial.mat";
-
     [MenuItem("Tools/Quest/Fog Preview 15%")]
     public static void P15() => Set(0.15f);
 
@@ -29,11 +27,17 @@ public static class FogPreview
 
     static void Set(float progress)
     {
-        var mat = AssetDatabase.LoadAssetAtPath<Material>(MatPath);
-        if (mat == null) { Debug.LogError($"[FogPreview] material not found: {MatPath}"); return; }
-        mat.SetFloat("_Progress", progress);
-        EditorUtility.SetDirty(mat);
+        SetOn("Assets/Scenes/region 1/EdgeFogMaterial.mat", progress);
+        SetOn("Assets/Scenes/region 1/CloudFogMaterial.mat", progress);
         AssetDatabase.SaveAssets();
         Debug.Log($"[FogPreview] _Progress = {progress}");
+    }
+
+    static void SetOn(string path, float progress)
+    {
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat == null) { Debug.LogError($"[FogPreview] material not found: {path}"); return; }
+        mat.SetFloat("_Progress", progress);
+        EditorUtility.SetDirty(mat);
     }
 }
