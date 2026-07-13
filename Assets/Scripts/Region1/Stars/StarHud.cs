@@ -77,10 +77,6 @@ public sealed class StarHud : MonoBehaviour
     [SerializeField, Min(0.01f)] private float landPopDuration = 0.25f;
     [SerializeField] private float landOvershoot = 1.9f;
 
-    [Header("Sequencing")]
-    [Tooltip("Gap between two stars awarded in the same breath (the correct + in-time case).")]
-    [SerializeField, Min(0f)] private float gapBetweenStars = 0.25f;
-
     [Header("Recap (Success scenes)")]
     [SerializeField, Min(0f)] private float recapStartDelay = 0.6f;
     [SerializeField, Min(0f)] private float recapGap = 0.15f;
@@ -194,24 +190,21 @@ public sealed class StarHud : MonoBehaviour
         }
     }
 
-    /// Play `count` award animations back to back and persist the new total. Yield on this.
+    /// Play the award animation for `count` stars and persist the new total. Yield on this.
+    /// A single star (star 1) flies alone. Two at once (star 2 + the star-3 speed bonus) pop
+    /// together at centre, then split and fly to their slots side by side, landing together.
     public IEnumerator AwardRoutine(int count)
     {
-        for (int k = 0; k < count; k++)
-        {
-            if (shown >= MaxStars || shown >= slots.Length) yield break;
+        int start = shown;
+        int end = Mathf.Min(start + count, MaxStars, slots.Length);
+        if (end <= start) yield break;
 
-            yield return AwardOneRoutine(shown);
+        int n = end - start;
+        yield return n == 1 ? AwardOneRoutine(start) : AwardBatchRoutine(start, n);
 
-            shown++;
-            PlayerPrefs.SetInt(EarnedKey, shown);
-            PlayerPrefs.Save();
-
-            if (k < count - 1 && gapBetweenStars > 0f)
-            {
-                yield return new WaitForSeconds(gapBetweenStars);
-            }
-        }
+        shown = end;
+        PlayerPrefs.SetInt(EarnedKey, shown);
+        PlayerPrefs.Save();
     }
 
     private IEnumerator AwardOneRoutine(int slotIndex)
@@ -285,6 +278,125 @@ public sealed class StarHud : MonoBehaviour
             yield return null;
         }
         slot.end.localScale = endScale;
+    }
+
+    /// n stars awarded in the same breath (the correct + in-time case): one shared pop + burst at
+    /// centre — they are born at the same point at the same instant, so a single pop reads correctly
+    /// for all of them — then the star splits into `n` clones that arc out to their own slots and
+    /// land in parallel. starStart itself can't play two flights at once (it's one object in the
+    /// scene), so each flight gets a throwaway clone, destroyed on landing.
+    private IEnumerator AwardBatchRoutine(int firstSlotIndex, int n)
+    {
+        if (starStart == null) yield break;
+
+        PlaySfx();
+
+        // --- 1. pop in at centre (shared) + centre burst ------------------------------------------
+        starStart.anchoredPosition = startPos;
+        starStart.sizeDelta = startSize;
+        starStart.localRotation = Quaternion.identity;
+        SetActive(starStart, true);
+        SetAlpha(starStart, 0f);
+
+        StartCoroutine(CentreBurstRoutine());
+
+        for (float t = 0f; t < popDuration; t += Time.deltaTime)
+        {
+            float k = Mathf.Clamp01(t / popDuration);
+            starStart.localScale = Vector3.LerpUnclamped(Vector3.zero, startScale, EaseOutBack(k, popOvershoot));
+            SetAlpha(starStart, Mathf.Clamp01(k * 2f));
+            yield return null;
+        }
+        starStart.localScale = startScale;
+        SetAlpha(starStart, 1f);
+
+        if (holdAfterPop > 0f) yield return new WaitForSeconds(holdAfterPop);
+
+        // --- 2. split: the shared star hands off to n clones, one per slot ------------------------
+        SetActive(starStart, false);
+
+        int pending = n;
+        for (int i = 0; i < n; i++)
+        {
+            int slotIndex = firstSlotIndex + i;
+            RectTransform clone = CloneStar();
+            StartCoroutine(FlyCloneToSlotRoutine(clone, slotIndex, () => pending--));
+        }
+
+        while (pending > 0) yield return null;
+    }
+
+    /// A throwaway copy of starStart, popped in and ready to fly — used when several stars launch
+    /// from the same point at once and each needs its own transform to animate independently.
+    private RectTransform CloneStar()
+    {
+        GameObject go = Instantiate(starStart.gameObject, starStart.parent);
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = starStart.anchorMin;
+        rt.anchorMax = starStart.anchorMax;
+        rt.pivot = starStart.pivot;
+        rt.anchoredPosition = starStart.anchoredPosition;
+        rt.sizeDelta = starStart.sizeDelta;
+        rt.localScale = starStart.localScale;
+        rt.localRotation = starStart.localRotation;
+        SetActive(rt, true);
+        SetAlpha(rt, 1f);
+        return rt;
+    }
+
+    /// Anticipation dip + arc flight + landing stamp for one cloned star. Mirrors steps 2-4 of
+    /// AwardOneRoutine, operating on a clone instead of the shared starStart so several of these can
+    /// run at once. The clone is destroyed once it reaches the slot — the slot's own star_end takes
+    /// over from there, exactly as it does for a solo award.
+    private IEnumerator FlyCloneToSlotRoutine(RectTransform star, int slotIndex, System.Action onDone)
+    {
+        Slot slot = slots[slotIndex];
+        if (slot == null || slot.end == null)
+        {
+            Destroy(star.gameObject);
+            onDone();
+            yield break;
+        }
+
+        for (float t = 0f; t < anticipationDuration; t += Time.deltaTime)
+        {
+            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, anticipationDuration));
+            star.localScale = Vector3.LerpUnclamped(startScale, startScale * anticipationScale, k);
+            yield return null;
+        }
+
+        Vector2 endPos = slot.end.anchoredPosition;
+        Vector2 endSize = slot.end.sizeDelta;
+        Vector3 endScale = slot.end.localScale;
+
+        Vector2 control = (startPos + endPos) * 0.5f + Vector2.up * flyArcHeight;
+
+        for (float t = 0f; t < flyDuration; t += Time.deltaTime)
+        {
+            float k = SmoothStep(Mathf.Clamp01(t / flyDuration));
+            star.anchoredPosition = Bezier(startPos, control, endPos, k);
+            star.sizeDelta = Vector2.LerpUnclamped(startSize, endSize, k);
+            star.localScale = Vector3.LerpUnclamped(startScale * anticipationScale, endScale, k);
+            star.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpUnclamped(0f, flySpinDegrees, k));
+            yield return null;
+        }
+
+        Destroy(star.gameObject);
+
+        SetActive(slot.end, true);
+        SetAlpha(slot.end, 1f);
+
+        StartCoroutine(StampRoutine(slot, slotIndex));
+
+        for (float t = 0f; t < landPopDuration; t += Time.deltaTime)
+        {
+            float k = Mathf.Clamp01(t / landPopDuration);
+            slot.end.localScale = Vector3.LerpUnclamped(endScale * 1.25f, endScale, EaseOutBack(k, landOvershoot));
+            yield return null;
+        }
+        slot.end.localScale = endScale;
+
+        onDone();
     }
 
     private IEnumerator CentreBurstRoutine()
