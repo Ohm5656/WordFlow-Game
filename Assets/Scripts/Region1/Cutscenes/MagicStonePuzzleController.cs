@@ -183,6 +183,11 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private string activeWordId;
     private string activeSceneName;
     private string activeResultWord;
+
+    // Star 3 is the speed bonus: was the clock still running when the word landed? Captured at
+    // assembly time because by the time the child finishes pronouncing, the clock has been paused.
+    private bool builtInTime;
+
     private float recordingStartedAt;
     private bool isPlacementVoicePlaying;
     private Coroutine placementVoiceRoutine;
@@ -856,6 +861,10 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private IEnumerator WordResultRoutine()
     {
         ritualPlaying = true;
+
+        // Read the clock BEFORE pausing it: star 3 is "assembled before the smoke closed".
+        builtInTime = WordAssemblyTimer.Instance != null && WordAssemblyTimer.Instance.SmokeRemaining > 0f;
+
         WordAssemblyTimer.Instance?.Pause(); // word built -> craft/sound/mic: stop timing (resumes only if they come back to fix a wrong word)
         // Freeze buildLatencyMs now; the build-attempt + /grade fire together later at mic-stop
         // (CompleteRecordingAndUpload), exactly like word_build_paa_polished — so the webapp pairs
@@ -886,6 +895,12 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         yield return ShowCrowCraftRoutine();
 
         HideSlotFrames();
+
+        // Star 1: any valid word — right or wrong — earns it. No time condition.
+        if (StarHud.Instance != null)
+        {
+            yield return StarHud.Instance.AwardRoutine(1);
+        }
 
         if (actionIconFadeDelay > 0f)
         {
@@ -1669,6 +1684,20 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         }
 
         yield return ShowRecordingSuccessMarkRoutine();
+
+        // Star 2 = the word was correct. Star 3 = it was also assembled before the smoke closed.
+        // Both fly up here, one after the other. A wrong word (กา) earns neither and stops at 1.
+        if (StarHud.Instance != null)
+        {
+            bool correct = !string.IsNullOrEmpty(activeResultWord)
+                           && activeResultWord == (string.IsNullOrEmpty(targetWord) ? "ปา" : targetWord);
+
+            int award = correct ? (builtInTime ? 2 : 1) : 0;
+            if (award > 0)
+            {
+                yield return StarHud.Instance.AwardRoutine(award);
+            }
+        }
 
         Image flashImage = null;
         if (playSuccessShakeAndFlash)
