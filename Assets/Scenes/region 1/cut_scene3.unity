@@ -485,18 +485,18 @@ MonoBehaviour:
   crowRoot: {fileID: 1246240448}
   crowCallClip: {fileID: 8300000, guid: edd7219e328c45c8ba568d7eae3942c1, type: 3}
   playBlackFadeOutOnStart: 1
-  blackFadeOutDuration: 0.55
+  blackFadeOutDuration: 0.45
   fadeColor: {r: 0, g: 0, b: 0, a: 1}
   startDelayAfterFade: 0.1
   flyEndOffset: {x: 760, y: 120}
-  flyDuration: 2.25
+  flyDuration: 1.8
   bobHeight: 34
   bobFrequency: 4.5
   tiltDegrees: 6
   exitHoldDuration: 0.25
   returnSceneName: CutScene_bear
   playBlackFadeInBeforeReturn: 1
-  blackFadeInDuration: 0.5
+  blackFadeInDuration: 0.45
 --- !u!1 &1246240447
 GameObject:
   m_ObjectHideFlags: 0

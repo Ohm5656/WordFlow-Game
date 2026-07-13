@@ -71,7 +71,7 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [SerializeField] private AudioClip bearFocusLookVoiceClip;
     [SerializeField] private AudioClip bearFocusMissionVoiceClip;
 
-    [Header("Voice (TTS) — id wins over the baked clip; falls back to the clip on any failure")]
+    [Header("Voice (TTS) - line id wins; baked clips live in Resources/TTS")]
     [SerializeField] private TtsApiClient ttsClient;
     [Tooltip("/tts line for greeting วรรค1 (ระวังนะ!).")]
     [SerializeField] private string greetingPhrase1LineId;
@@ -82,10 +82,11 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [HideInInspector] [SerializeField] private string greetingLineId; // legacy fallback TTS for วรรค1
     [Tooltip("/tts line for the second intro line (bear-focus 'look/mission' clip; e.g. paa_intro_owl_2).")]
     [SerializeField] private string bearFocusLookLineId;
-    [Tooltip("Maximum time to wait for the prefetched TTS lines before using the offline clips.")]
+    [Tooltip("Maximum time to wait for TTS line resolution before continuing without non-TTS fallback.")]
     [SerializeField, Min(0.1f)] private float ttsWaitTimeoutSeconds = 8f;
     [SerializeField] private float voiceStartDelay = 0f;
-    [SerializeField] private float bearFocusVoiceGap = 0.05f;
+    [Tooltip("Pause between spoken owl phrases. Keep this audible for young players; the baked TTS clips were trimmed, so this is the main breathing room.")]
+    [SerializeField] private float bearFocusVoiceGap = 0.35f;
     [SerializeField] private bool useVoiceClipLengthForTalkDuration = true;
 
     [Header("Hello Animation — plays once before the first greeting phrase")]
@@ -226,24 +227,58 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         }
     }
 
-    // TTS wins over the baked clip when a line id is set: fetched async + cached on the client, so it
-    // is ready by the time the greeting plays (after the intro zoom). Any failure -> keep the clip.
+    // TTS line ids win over old AudioClip fields. Clips without a line id are cleared so the
+    // cutscene cannot silently use non-TTS voice files.
     private void ResolveTtsLines()
     {
         if (ttsResolutionStarted) return;
         ttsResolutionStarted = true;
+        ClearNonTtsVoiceFallbacks();
         if (ttsClient == null) ttsClient = FindObjectOfType<TtsApiClient>();
         if (ttsClient == null) return;
         if (!string.IsNullOrWhiteSpace(greetingPhrase1LineId))
+        {
+            greetingPhrase1Clip = null;
             RequestTtsLine(greetingPhrase1LineId, c => greetingPhrase1Clip = c);
+        }
         else if (!string.IsNullOrWhiteSpace(greetingLineId))
+        {
+            greetingPhrase1Clip = null;
+            greetingVoiceClip = null;
             RequestTtsLine(greetingLineId, c => { greetingPhrase1Clip = c; greetingVoiceClip = c; });
+        }
         if (!string.IsNullOrWhiteSpace(greetingPhrase2LineId))
+        {
+            greetingPhrase2Clip = null;
             RequestTtsLine(greetingPhrase2LineId, c => greetingPhrase2Clip = c);
+        }
         if (!string.IsNullOrWhiteSpace(greetingPhrase3LineId))
+        {
+            greetingPhrase3Clip = null;
             RequestTtsLine(greetingPhrase3LineId, c => greetingPhrase3Clip = c);
+        }
         if (!string.IsNullOrWhiteSpace(bearFocusLookLineId))
+        {
+            bearFocusLookVoiceClip = null;
             RequestTtsLine(bearFocusLookLineId, c => bearFocusLookVoiceClip = c);
+        }
+    }
+
+    private void ClearNonTtsVoiceFallbacks()
+    {
+        if (string.IsNullOrWhiteSpace(greetingPhrase1LineId) && string.IsNullOrWhiteSpace(greetingLineId))
+        {
+            greetingPhrase1Clip = null;
+        }
+
+        greetingVoiceClip = null;
+
+        if (string.IsNullOrWhiteSpace(greetingPhrase2LineId)) greetingPhrase2Clip = null;
+        if (string.IsNullOrWhiteSpace(greetingPhrase3LineId)) greetingPhrase3Clip = null;
+        if (string.IsNullOrWhiteSpace(bearFocusLookLineId)) bearFocusLookVoiceClip = null;
+
+        // This field has no tts_lines id pair, so do not allow it as a voice fallback.
+        bearFocusMissionVoiceClip = null;
     }
 
     private void RequestTtsLine(string lineId, Action<AudioClip> assign)
@@ -335,6 +370,8 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             }
         }
 
+        WordAssemblyTimer.Instance?.Resume(); // fixing a wrong word: continue the clock from where it stopped
+
         MagicStonePuzzleController puzzle = GetMagicStonePuzzle();
         if (puzzle != null)
         {
@@ -373,19 +410,26 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             yield return new WaitForSeconds(startDelay);
         }
 
+        // Pacing: dim, legacy owl fade-in and zoom all run together (they used to run serially).
+        Coroutine dimIn = null;
         if (dimBackgroundBeforeZoom)
         {
-            yield return FadeDimOverlay(true, GetOwlOnlyDimSiblingIndex());
+            dimIn = StartCoroutine(FadeDimOverlay(true, GetOwlOnlyDimSiblingIndex()));
         }
 
         if (!UsesTalkingPrefabAnimator)
         {
-            yield return FadeOwlInRoutine();
+            StartCoroutine(FadeOwlInRoutine());
         }
 
         if (zoomBeforeGreeting && zoomDuration > 0f)
         {
             yield return ZoomInRoutine();
+        }
+
+        if (dimIn != null)
+        {
+            yield return dimIn; // zoom is usually the longer of the two; this is a no-op then
         }
 
         if (holdAfterZoom > 0f)
@@ -395,21 +439,18 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
         if (owlHello != null)
         {
-            // Match the wave's frame rate to the talking owl's so the seam owl_hello->owl is continuous.
-            float talkFps = GetTalkingDisplayFps(talkingAnimationSpeed, talkingSecondsPerLoop);
-            if (talkFps > 0f) owlHello.SetPlaybackFps(talkFps);
+            // Let the wave play at its authored fps so the entrance feels smooth and unhurried.
             owlHello.SetHideOnComplete(false); // keep the last frame so we can crossfade it out
             yield return owlHello.Play();
             // Crossfade: owl_hello fades out while the talking owl (below it) fades in — smooth dissolve.
             StartCoroutine(owlHello.FadeOut(talkingFadeDuration));
         }
 
-        // Do not start the mouth animation or fall back to an old baked clip while the
-        // requested backend voice is still in flight.
+        // Do not start the mouth animation until the approved TTS line has resolved.
         yield return WaitForTtsLines();
 
-        // ใช้ greetingPhrase1Clip ก่อน ถ้าไม่ได้ assign ให้ fallback ไปที่ greetingVoiceClip (legacy)
-        AudioClip phrase1 = greetingPhrase1Clip != null ? greetingPhrase1Clip : greetingVoiceClip;
+        // Use only the clip resolved from the approved TTS line id.
+        AudioClip phrase1 = greetingPhrase1Clip;
         yield return PlayTalkingSequence(greetingDuration, null,
             new TalkLine(phrase1, talkingAnimationSpeed, talkingSecondsPerLoop),
             new TalkLine(greetingPhrase2Clip, greetingPhrase2AnimationSpeed, greetingPhrase2SecondsPerLoop),
@@ -420,14 +461,20 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             ShowFrame(holdLastFrame ? frames.Count - 1 : 0);
         }
 
+        Coroutine dimOut = null;
+        if (dimBackgroundBeforeZoom)
+        {
+            dimOut = StartCoroutine(FadeDimOverlay(false, -1));
+        }
+
         if (restoreZoomAfterGreeting && hasZoomState)
         {
             yield return RestoreZoomRoutine();
         }
 
-        if (dimBackgroundBeforeZoom)
+        if (dimOut != null)
         {
-            yield return FadeDimOverlay(false, -1);
+            yield return dimOut;
         }
 
         if (playBearFocusAfterGreeting)
@@ -437,7 +484,9 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
         if (playBookRevealAfterBearFocus)
         {
-            yield return FadeOwlOutBeforeBookRevealRoutine();
+            // Pacing: the owl fades while the book flies in — no dead frame between them.
+            StartCoroutine(FadeOwlOutBeforeBookRevealRoutine());
+            WordAssemblyTimer.Instance?.BeginFresh(); // start the 30s clock as the craft book pops
             yield return PlayBookRevealRoutine();
         }
 
@@ -465,7 +514,7 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
         if (dimBackgroundBeforeZoom)
         {
-            yield return FadeDimOverlay(true, GetBearAndOwlDimSiblingIndex(targetBearRoot));
+            StartCoroutine(FadeDimOverlay(true, GetBearAndOwlDimSiblingIndex(targetBearRoot)));
         }
 
         Vector3 bearStartScale = targetBearRoot.localScale;
@@ -492,14 +541,14 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             ShowFrame(holdLastFrame ? GetLastSequenceFrameIndex(bearFocusSequence) : 0);
         }
 
+        if (restoreBackgroundAfterBearFocus && dimBackgroundBeforeZoom)
+        {
+            StartCoroutine(FadeDimOverlay(false, -1));
+        }
+
         if (restoreBearScaleAfterFocus)
         {
             yield return ScaleRectTransform(targetBearRoot, bearTargetScale, bearStartScale, bearGrowDuration);
-        }
-
-        if (restoreBackgroundAfterBearFocus && dimBackgroundBeforeZoom)
-        {
-            yield return FadeDimOverlay(false, -1);
         }
     }
 

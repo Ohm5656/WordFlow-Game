@@ -87,14 +87,26 @@ namespace WordFlow.Adventure.View
                 ApplyExtraCharacters(frame);
                 ApplyFocus(frame);
 
-                // Resolve audio: an explicit clip wins, else fetch from /tts (cached/async).
-                AudioClip clip = frame.voiceClip;
-                if (clip == null && ttsClient != null && !string.IsNullOrWhiteSpace(frame.voiceLineId))
+                // Resolve audio: voiceLineId wins so cutscenes use the approved TTS registry.
+                // A legacy voiceClip is used only for frames that do not have a line id.
+                AudioClip clip = null;
+                if (!string.IsNullOrWhiteSpace(frame.voiceLineId))
                 {
-                    bool gotit = false;
-                    ttsClient.GetLine(frame.voiceLineId, c => { clip = c; gotit = true; });
-                    float waitUntil = Time.realtimeSinceStartup + ttsTimeout;
-                    while (!gotit && Time.realtimeSinceStartup < waitUntil) yield return null;
+                    if (ttsClient != null)
+                    {
+                        bool gotit = false;
+                        ttsClient.GetLine(frame.voiceLineId, c => { clip = c; gotit = true; });
+                        float waitUntil = Time.realtimeSinceStartup + ttsTimeout;
+                        while (!gotit && Time.realtimeSinceStartup < waitUntil) yield return null;
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[CutscenePlayer] No TtsApiClient for voiceLineId '{frame.voiceLineId}'");
+                    }
+                }
+                else
+                {
+                    clip = frame.voiceClip;
                 }
 
                 float clipLen = 0f;

@@ -499,49 +499,6 @@ MonoBehaviour:
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
   m_PresetInfoIsWorld: 0
---- !u!114 &971624840
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 971624835}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e9d2782c5974b1ab3cf9b2f28df7ad2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  bearRoot: {fileID: 2127471734}
-  calmBearFrame: {fileID: 1283217638}
-  scaredBearFrame: {fileID: 1415217364}
-  stoneRoot: {fileID: 1997587686}
-  playOnStart: 1
-  playWhiteFadeOutOnStart: 1
-  whiteFadeOutDuration: 1.05
-  whiteFadeColor: {r: 1, g: 1, b: 1, a: 1}
-  startDelayAfterFade: 0.35
-  hideStoneBeforeLaunch: 1
-  stoneRevealDuration: 0.2
-  stoneImpactPosition: {x: -90, y: -170}
-  stoneLaunchDuration: 0.82
-  scareAtLaunchProgress: 0.62
-  stoneImpactScaleMultiplier: 1.06
-  stoneTiltDegrees: 8
-  bearExitPosition: {x: -2100, y: -115}
-  stoneExitPosition: {x: -2050, y: -287}
-  bearRunDelay: 0.12
-  bearRunDuration: 1.35
-  stoneChaseDuration: 1.25
-  runBobHeight: 42
-  runBobFrequency: 7
-  scaredShakeDuration: 0.28
-  scaredShakeStrength: 26
-  loadSceneOnComplete: 1
-  nextSceneName: success
-  playBlackFadeInBeforeLoad: 1
-  completeHoldDuration: 0.3
-  blackFadeInDuration: 0.85
-  blackFadeColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!223 &971624838
 Canvas:
   m_ObjectHideFlags: 0
@@ -589,6 +546,49 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &971624840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 971624835}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e9d2782c5974b1ab3cf9b2f28df7ad2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bearRoot: {fileID: 2127471734}
+  calmBearFrame: {fileID: 1283217638}
+  scaredBearFrame: {fileID: 1415217364}
+  stoneRoot: {fileID: 1997587686}
+  playOnStart: 1
+  playWhiteFadeOutOnStart: 1
+  whiteFadeOutDuration: 0.75
+  whiteFadeColor: {r: 1, g: 1, b: 1, a: 1}
+  startDelayAfterFade: 0.16
+  hideStoneBeforeLaunch: 1
+  stoneRevealDuration: 0.2
+  stoneImpactPosition: {x: -90, y: -170}
+  stoneLaunchDuration: 0.82
+  scareAtLaunchProgress: 0.62
+  stoneImpactScaleMultiplier: 1.06
+  stoneTiltDegrees: 8
+  bearExitPosition: {x: -2100, y: -115}
+  stoneExitPosition: {x: -2050, y: -287}
+  bearRunDelay: 0.12
+  bearRunDuration: 1.15
+  stoneChaseDuration: 1.05
+  runBobHeight: 42
+  runBobFrequency: 7
+  scaredShakeDuration: 0.28
+  scaredShakeStrength: 26
+  loadSceneOnComplete: 1
+  nextSceneName: success
+  playBlackFadeInBeforeLoad: 1
+  completeHoldDuration: 0.22
+  blackFadeInDuration: 0.6
+  blackFadeColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!1 &1283217637
 GameObject:
   m_ObjectHideFlags: 0

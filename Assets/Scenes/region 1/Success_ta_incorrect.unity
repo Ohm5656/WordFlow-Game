@@ -462,6 +462,18 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6585398415250432755, guid: 51401148f28780f45ad3b893dca67370, type: 3}
+      propertyPath: leg1Duration
+      value: 2.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585398415250432755, guid: 51401148f28780f45ad3b893dca67370, type: 3}
+      propertyPath: leg2Duration
+      value: 1.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585398415250432755, guid: 51401148f28780f45ad3b893dca67370, type: 3}
+      propertyPath: fadeInDuration
+      value: 0.35
+      objectReference: {fileID: 0}
     - target: {fileID: 8656368896377874231, guid: 51401148f28780f45ad3b893dca67370, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -999,24 +1011,24 @@ MonoBehaviour:
   bounceHeight: 0
   bounceScale: 1
   zoomBeforeGreeting: 1
-  zoomDuration: 0.75
+  zoomDuration: 0.55
   zoomScale: 1.5
   zoomFocusPosition: {x: 320, y: -120}
-  holdAfterZoom: 0.15
+  holdAfterZoom: 0.08
   restoreZoomAfterGreeting: 1
-  restoreZoomDuration: 0.55
+  restoreZoomDuration: 0.45
   zoomRoot: {fileID: 0}
   backgroundBounds: {fileID: 245150036}
   clampZoomToBackground: 1
   zoomViewportPadding: {x: 24, y: 24}
   dimBackgroundBeforeZoom: 1
   dimColor: {r: 0, g: 0, b: 0, a: 0.55}
-  dimFadeInDuration: 0.35
-  dimFadeOutDuration: 0.45
+  dimFadeInDuration: 0.3
+  dimFadeOutDuration: 0.35
   playBearFocusAfterGreeting: 1
   bearRoot: {fileID: 1985542864}
-  bearFocusDelay: 0.15
-  bearGrowDuration: 0.45
+  bearFocusDelay: 0.1
+  bearGrowDuration: 0.4
   bearFocusScaleMultiplier: 1.18
   bearFocusGreetingDuration: 6
   bearFocusUseHierarchyOrder: 1
@@ -1027,9 +1039,9 @@ MonoBehaviour:
   greetingPhrase1Clip: {fileID: 0}
   greetingPhrase2Clip: {fileID: 0}
   greetingPhrase3Clip: {fileID: 0}
-  greetingVoiceClip: {fileID: 8300000, guid: a7f0e9c1d2b34f9e8a6c5b4d3e2f1098, type: 3}
+  greetingVoiceClip: {fileID: 0}
   voiceAudioSource: {fileID: 0}
-  bearFocusLookVoiceClip: {fileID: 8300000, guid: b8d4a62e1f934d6bb2c75a4f9013de8c, type: 3}
+  bearFocusLookVoiceClip: {fileID: 0}
   bearFocusMissionVoiceClip: {fileID: 0}
   ttsClient: {fileID: 0}
   greetingPhrase1LineId: 
@@ -1037,8 +1049,9 @@ MonoBehaviour:
   greetingPhrase3LineId: 
   greetingLineId: 
   bearFocusLookLineId: 
-  voiceStartDelay: 0
-  bearFocusVoiceGap: 0.05
+  ttsWaitTimeoutSeconds: 8
+  voiceStartDelay: 0.08
+  bearFocusVoiceGap: 0.35
   useVoiceClipLengthForTalkDuration: 1
   owlHello: {fileID: 0}
   talkingAnimator: {fileID: 0}
@@ -1054,17 +1067,17 @@ MonoBehaviour:
   bearFocusMissionAnimationSpeed: 1
   bearFocusMissionSecondsPerLoop: 0
   hideTalkingPrefabWhenSilent: 1
-  talkingFadeDuration: 0.35
-  holdFrozenAfterRound: 0.5
+  talkingFadeDuration: 0.28
+  holdFrozenAfterRound: 0.25
   playBookRevealAfterBearFocus: 1
   bookCraftRoot: {fileID: 0}
   bookCraftImage: {fileID: 0}
-  bookRevealDelay: 0.5
+  bookRevealDelay: 0.25
   bookRevealStartPosition: {x: 0, y: 0}
   bookRevealStartScale: 0.08
-  bookRevealDuration: 1.15
+  bookRevealDuration: 0.9
   fadeOwlBeforeBookReveal: 1
-  owlFadeOutBeforeBookDuration: 0.6
+  owlFadeOutBeforeBookDuration: 0.5
   moveOwlToBookRevealPosition: 0
   owlBookRevealMoveDuration: 0.75
   usePlacedOwlPositionAsBookRevealTarget: 1
@@ -1653,6 +1666,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WordFlow.Adventure::WordFlow.Adventure.Net.TtsApiClient
   authorization: Bearer demo-token
+  requestTimeoutSeconds: 8
+  useBakedResources: 1
+  bakedResourcesFolder: TTS
+  allowBackendFallback: 0
 --- !u!114 &1627838469
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1668,11 +1685,12 @@ MonoBehaviour:
   owlAnimator: {fileID: 36429481}
   talkingStateName: Owl
   owlPosition: {x: 0, y: -89}
-  fadeInDuration: 0.35
-  fadeOutDuration: 0.35
-  holdFrozenAfterRound: 0.5
-  phraseGap: 0.05
-  fallbackHoldSeconds: 6
+  fadeInDuration: 0.32
+  fadeOutDuration: 0.32
+  holdFrozenAfterRound: 0.3
+  phraseGap: 0.35
+  ttsWaitTimeoutSeconds: 8
+  fallbackHoldSeconds: 2.4
   phrase1Clip: {fileID: 0}
   phrase1LineId: kaa_try_again
   phrase1AnimSpeed: 1

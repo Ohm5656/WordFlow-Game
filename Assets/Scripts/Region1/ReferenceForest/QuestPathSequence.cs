@@ -72,10 +72,14 @@ public sealed class QuestPathSequence : MonoBehaviour
     [SerializeField] private float questAutoHold = 1.5f;
     [Tooltip("Animator 'speed' forced while walking so the walk clip plays even at low moveSpeed (state needs >0.01).")]
     [SerializeField] private float walkAnimSpeedParam = 1f;
-    [Tooltip("At wp_1, face wp_2 and hold straight ahead this long before the quest fades in.")]
-    [SerializeField] private float faceHoldBeforeQuest = 2f;
+    [Tooltip("Walk this fraction of the way from wp_1 toward the bear in one continuous run before the quest reveals (0 = stop at wp_1).")]
+    [SerializeField] private float questApproachFraction = 0.6f;
     [Tooltip("Buzz the device (tablet) like a notification when a quest appears.")]
     [SerializeField] private bool enableVibration = true;
+
+    [Header("Bear intro (owl / zoom / spotlight)")]
+    [Tooltip("Plays once when the hero first reaches the bear: zoom in, darken, owl speaks. Skipped on return.")]
+    [SerializeField] private BearIntroSequence bearIntro;
 
     [Header("Bear encounter scene link")]
     [Tooltip("Scene loaded when the hero reaches the first quest (the bear word-build encounter).")]
@@ -332,22 +336,44 @@ public sealed class QuestPathSequence : MonoBehaviour
         }
         else
         {
-            // ---- Beat 1: walk to wp_1, then ALWAYS face wp_2 before the quest triggers ----
+            // ---- Beat 1: walk to wp_1 — the bear quest pops the moment the hero arrives
+            //      there, and fades in WHILE the hero keeps running toward it (no stop).
             if (wp1 != null)
             {
                 yield return MoveTo(wp1.position);
             }
 
-            if (wp1 != null && wp2 != null)
+            // Quest appears now (at wp_1); the reveal runs in the background during the walk.
+            Vibrate();
+            Coroutine questReveal = StartCoroutine(
+                Reveal(villagerMarkerRoot, villagerMarkerSprite, villager != null ? villager.gameObject : null, villager));
+
+            if (villager != null && body != null && questApproachFraction > 0f)
+            {
+                // No facingLock and no pause here — CharacterRunDirection steers the turn
+                // while the hero keeps moving, so the direction change reads as one motion.
+                facingLock = -1;
+                Vector3 bearPos = villager.transform.position;
+                Vector3 approach = Vector3.Lerp(body.position, bearPos, Mathf.Clamp01(questApproachFraction));
+                approach.z = body.position.z;
+                yield return MoveTo(approach);
+                facingLock = OrientationFor(bearPos - body.position);   // face the bear on arrival
+            }
+            else if (wp1 != null && wp2 != null)
             {
                 facingLock = OrientationFor(wp2.position - wp1.position);
-                // Hold facing straight ahead for a beat before the quest appears.
-                yield return new WaitForSeconds(Mathf.Max(0f, faceHoldBeforeQuest));
             }
 
-            Vibrate();
-            yield return Reveal(villagerMarkerRoot, villagerMarkerSprite, villager != null ? villager.gameObject : null, villager);
+            yield return questReveal;   // make sure the "!" is fully in before the beat
             yield return new WaitForSeconds(questAutoHold);   // brief beat looking at the bear + "!"
+
+            // First arrival only: zoom in, darken to a spotlight on the bear + "!", and let the
+            // owl explain the village needs help (owl_wow "แย่แล้ว" then owl_talk). On return
+            // (resuming2) this whole branch is skipped, so the intro never replays.
+            if (bearIntro != null)
+            {
+                yield return bearIntro.PlayIntro();
+            }
 
             // The bear stays visible. Fade to black and enter the word-build (bear) encounter;
             // on a successful build it loads us back and we resume at Beat 2 (bear now gone).
@@ -420,7 +446,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         if (wp3 != null && wp4 != null)
         {
             facingLock = OrientationFor(wp4.position - wp3.position);
-            yield return new WaitForSeconds(0.4f);   // brief turn before moving
+            yield return new WaitForSeconds(0.15f);   // brief turn before moving
             facingLock = -1;
             yield return MoveTo(wp4.position);
             facingLock = OrientationFor(wp4.position - wp3.position);   // hold facing the stable
@@ -449,7 +475,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         if (wp5 != null && wp6 != null)
         {
             facingLock = OrientationFor(wp6.position - wp5.position);
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.15f);
         }
 
         // Crows + "!" fade in as the walk to wp_6 begins; the crows circle the crop field on the frame loop.
@@ -491,7 +517,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         if (wp6 != null && wp7 != null)
         {
             facingLock = OrientationFor(wp7.position - wp6.position);   // turn to face wp_7 (up)
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.15f);
         }
 
         facingLock = -1;
@@ -520,7 +546,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         if (wp7 != null && wp8 != null)
         {
             facingLock = OrientationFor(wp8.position - wp7.position);
-            yield return new WaitForSeconds(0.4f);   // brief turn before moving
+            yield return new WaitForSeconds(0.15f);   // brief turn before moving
             facingLock = -1;
             yield return MoveTo(wp8.position);
             facingLock = OrientationFor(wp8.position - wp7.position);   // hold facing wp_8
@@ -542,7 +568,7 @@ public sealed class QuestPathSequence : MonoBehaviour
             if (wp8 != null && wp9 != null)
             {
                 facingLock = OrientationFor(wp9.position - wp8.position);
-                yield return new WaitForSeconds(0.4f);
+                yield return new WaitForSeconds(0.15f);
             }
 
             facingLock = -1;
@@ -588,7 +614,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         if (reference != null)
         {
             facingLock = OrientationFor(to.position - reference.position);
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.15f);
         }
 
         facingLock = -1;

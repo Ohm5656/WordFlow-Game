@@ -16,8 +16,9 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
     [SerializeField] private float fadeOutDuration = 0.35f;
     [Tooltip("After the owl finishes all phrases, freeze on its current frame for this long before fading out. 0 = no hold.")]
     [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.5f;
-    [SerializeField] private float phraseGap = 0.05f;
-    [Tooltip("Maximum time to wait for TTS before continuing with an offline fallback.")]
+    [Tooltip("Pause between owl praise phrases. The TTS files are trimmed, so this gap keeps the line understandable for children.")]
+    [SerializeField] private float phraseGap = 0.35f;
+    [Tooltip("Maximum time to wait for TTS before continuing without non-TTS fallback.")]
     [SerializeField, Min(0.1f)] private float ttsWaitTimeoutSeconds = 8f;
     [Tooltip("If TTS fails / no clip assigned, hold this long before fading out (so owl isn't invisible).")]
     [SerializeField] private float fallbackHoldSeconds = 6f;
@@ -66,18 +67,35 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
     {
         if (ttsResolutionStarted) return;
         ttsResolutionStarted = true;
+        ClearNonTtsVoiceFallbacks();
         if (ttsClient == null) ttsClient = FindObjectOfType<TtsApiClient>();
         if (ttsClient == null) { Debug.LogWarning("[OwlEpilogue] No TtsApiClient found"); return; }
         Debug.Log($"[OwlEpilogue] ResolveTts — ttsClient={ttsClient.gameObject.name}");
         if (!string.IsNullOrWhiteSpace(phrase1LineId))
+        {
+            phrase1Clip = null;
             RequestTtsLine(phrase1LineId, c => {
                 Debug.Log($"[OwlEpilogue] phrase1 '{phrase1LineId}' → {(c != null ? c.name + " len=" + c.length : "NULL")}");
                 phrase1Clip = c;
             });
+        }
         if (!string.IsNullOrWhiteSpace(phrase2LineId))
+        {
+            phrase2Clip = null;
             RequestTtsLine(phrase2LineId, c => phrase2Clip = c);
+        }
         if (!string.IsNullOrWhiteSpace(phrase3LineId))
+        {
+            phrase3Clip = null;
             RequestTtsLine(phrase3LineId, c => phrase3Clip = c);
+        }
+    }
+
+    private void ClearNonTtsVoiceFallbacks()
+    {
+        if (string.IsNullOrWhiteSpace(phrase1LineId)) phrase1Clip = null;
+        if (string.IsNullOrWhiteSpace(phrase2LineId)) phrase2Clip = null;
+        if (string.IsNullOrWhiteSpace(phrase3LineId)) phrase3Clip = null;
     }
 
     private void RequestTtsLine(string lineId, System.Action<AudioClip> assign)
@@ -113,9 +131,7 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
 
         if (owlHello != null)
         {
-            // Match the wave's frame rate to the talking owl's so the seam owl_hello->owl is continuous.
-            float talkFps = GetTalkingDisplayFps(phrase1AnimSpeed, phrase1SecondsPerLoop);
-            if (talkFps > 0f) owlHello.SetPlaybackFps(talkFps);
+            // Let the wave play at its authored fps so the success beat feels smooth and celebratory.
             owlHello.SetHideOnComplete(false); // keep the last frame so we can crossfade it out
             yield return owlHello.Play();
         }

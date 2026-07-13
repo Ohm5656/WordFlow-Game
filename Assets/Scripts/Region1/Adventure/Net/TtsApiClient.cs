@@ -7,15 +7,19 @@ using UnityEngine.Networking;
 namespace WordFlow.Adventure.Net
 {
     /// <summary>
-    /// Fetches a voiced line from the backend /tts endpoint and decodes it to an
-    /// AudioClip. Mirrors GradeApiClient (same host + bearer auth). In-memory cached
-    /// by lineId so repeat plays are instant. Null-safe: any failure -> callback(null),
-    /// and the caller shows the frame silently.
+    /// Resolves a voiced line by lineId. Baked TTS clips under Resources/TTS are used
+    /// first so gameplay does not depend on the backend or spend TTS quota at runtime.
+    /// A backend fallback can be enabled in the Inspector for development only.
+    /// In-memory cached by lineId so repeat plays are instant. Null-safe: any failure
+    /// -> callback(null), and the caller shows the frame silently.
     /// </summary>
     public sealed class TtsApiClient : MonoBehaviour
     {
         [SerializeField] private string authorization = "Bearer demo-token";
         [SerializeField, Min(1f)] private float requestTimeoutSeconds = 8f;
+        [SerializeField] private bool useBakedResources = true;
+        [SerializeField] private string bakedResourcesFolder = "TTS";
+        [SerializeField] private bool allowBackendFallback = false;
 
         private readonly Dictionary<string, AudioClip> _cache = new Dictionary<string, AudioClip>();
         private readonly Dictionary<string, List<Action<AudioClip>>> _pending =
@@ -25,7 +29,21 @@ namespace WordFlow.Adventure.Net
         public void GetLine(string lineId, Action<AudioClip> onResult)
         {
             if (string.IsNullOrWhiteSpace(lineId)) { onResult?.Invoke(null); return; }
+            lineId = lineId.Trim();
             if (_cache.TryGetValue(lineId, out var cached)) { onResult?.Invoke(cached); return; }
+            if (TryLoadBakedClip(lineId, out var baked))
+            {
+                _cache[lineId] = baked;
+                onResult?.Invoke(baked);
+                return;
+            }
+
+            if (!allowBackendFallback)
+            {
+                Debug.LogWarning($"[TtsApiClient] Baked TTS '{lineId}' not found under Resources/{GetBakedFolder()}; backend fallback is disabled.");
+                onResult?.Invoke(null);
+                return;
+            }
 
             // Several scene components prefetch the same line during Awake. Share one request so
             // they cannot exhaust Unity's HTTP connections or hammer the gateway with duplicates.
@@ -64,6 +82,29 @@ namespace WordFlow.Adventure.Net
                 if (clip != null) { clip.name = lineId; _cache[lineId] = clip; }
                 Complete(lineId, clip);
             }
+        }
+
+        private bool TryLoadBakedClip(string lineId, out AudioClip clip)
+        {
+            clip = null;
+            if (!useBakedResources) return false;
+
+            string path = $"{GetBakedFolder()}/{lineId}";
+            clip = Resources.Load<AudioClip>(path);
+            if (clip == null) return false;
+
+            clip.name = lineId;
+            if (clip.loadState == AudioDataLoadState.Unloaded)
+                clip.LoadAudioData();
+            return true;
+        }
+
+        private string GetBakedFolder()
+        {
+            string folder = string.IsNullOrWhiteSpace(bakedResourcesFolder)
+                ? "TTS"
+                : bakedResourcesFolder.Trim().Trim('/');
+            return string.IsNullOrWhiteSpace(folder) ? "TTS" : folder;
         }
 
         private void Complete(string lineId, AudioClip clip)
