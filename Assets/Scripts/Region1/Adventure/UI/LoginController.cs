@@ -73,6 +73,8 @@ namespace WordFlow.Adventure.UI
         {
             base.SetBusy(busy);
             if (loginButton != null) loginButton.interactable = !busy;
+            if (toRegisterLink != null) toRegisterLink.interactable = !busy;
+            if (toForgotPasswordLink != null) toForgotPasswordLink.interactable = !busy;
         }
     }
 }
