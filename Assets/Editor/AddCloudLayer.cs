@@ -79,9 +79,13 @@ public static class AddCloudLayer
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        // Directly above the purple smoke, still below book_craft* / time_root / stones — one
-        // ScreenSpaceOverlay Canvas, so sibling index is the draw order.
-        go.transform.SetSiblingIndex(fogT.GetSiblingIndex() + 1);
+        // Directly BELOW the purple smoke (taking its index pushes it up one), still above the
+        // background — one ScreenSpaceOverlay Canvas, so sibling index is the draw order.
+        // Underneath, not on top: the Canvas blends SrcAlpha/OneMinusSrcAlpha, so a grey coat drawn
+        // last at any workable density mathematically buries the purple (0.65 grey leaves the purple
+        // 0.35 x 0.75 = 0.26 — a 2.5:1 loss). Below, the grey gets an outer band that is only grey,
+        // and the purple draws last and stays the dominant read.
+        go.transform.SetSiblingIndex(fogT.GetSiblingIndex());
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
