@@ -2,7 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A garbage word (ปก / กป / าก / าป) triggers a cartoon red damage-screen, a lock symbol, three beat-beeps that each make the smoke lurch at the book, and a 3-second lockout — after which the stones spring home. The clock keeps running through it.
+**Goal:** A garbage word (ปก / กป / าก / าป) triggers a cartoon red damage-screen, a padlock, three beat-beeps that each make the smoke lurch at the book, and a 3-second lockout. The lock then **bursts open** (the star board's scatter-and-fade) and the stones spring home. The clock keeps running through it.
+
+**The lock art already exists in the scene** under `Canvas/key_root`:
+
+| Object | Role |
+|---|---|
+| `lock` | closed padlock — shown for the 3 seconds of the lockout |
+| `unlock` | opened padlock — swapped in at the moment the lock lifts |
+| `effect_star1`..`effect_star4` | the burst. **Their authored positions are the scatter destinations** — the same convention `StarHud` already uses. The animation flies them out from the padlock to where they already sit, then fades them. |
+
+All five are **hidden in `Awake`** (forced by code, not trusted from scene state) and only appear on their cue.
 
 **Architecture:** A full-screen **additive** red vignette (a new procedural shader) drawn above everything, driven by one new component (`MisassemblyLock`). Additive blending is the load-bearing choice: it can only *add* red light, so it is mathematically incapable of hiding the smoke underneath. The smoke lurch reuses `EdgeFog`'s existing `_Pulse` (a temporary reach offset that never touches `_Progress`), reached through one **additive** `Mathf.Max` hook on `FogController`. The lockout itself is a single `&& !misassemblyLocked` term on `MagicStonePuzzleController.CanInteract`.
 
@@ -17,7 +27,8 @@ Spec: `docs/superpowers/specs/2026-07-13-misassembly-lock-design.md`
 - **The clock is never paused** in the mis-assembly path. Being locked out while the smoke closes in *is* the punishment. Do not add a `WordAssemblyTimer.Instance?.Pause()` anywhere in this work.
 - The alert must be **additive** (`Blend SrcAlpha One`). Do not "simplify" it to a normal alpha overlay — that would hide the smoke, which is the one thing the user explicitly asked us to avoid.
 - Every new shader **must** declare `[PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}`. Without it, UGUI logs a missing-`_MainTex` error every frame and trips Error Pause. This has bitten every shader in this scene.
-- `lock_overlay`'s root GameObject **stays active** in the scene. Its `Awake` must run to register the fog hook; the component hides *itself* (intensity 0, icon off, `raycastTarget` off). Do not ship it with `SetActive(false)`.
+- `lock_overlay`'s root GameObject **stays active** in the scene. Its `Awake` must run to register the fog hook; the component hides *itself* (intensity 0, `key_root` art off, `raycastTarget` off). Do not ship it with `SetActive(false)`. Same for `key_root` — the root stays active, its *children* get hidden by code.
+- **Do not create a new lock icon.** The art is already authored in `Canvas/key_root` (`lock`, `unlock`, `effect_star1..4`). Wire those; do not add sprites of your own.
 - Every scene edit happens atomically inside **one** editor script ending in `EditorSceneManager.SaveScene`.
 - `mcp__anklebreaker__unity_execute_code` does not work here. Drive Unity with `MenuItem` scripts + `unity_execute_menu_item`.
 - **Run `Assets/Refresh`, then poll `unity_get_compilation_errors` until `isCompiling: false`, before invoking a menu item you just wrote.** Otherwise Unity runs the *old* compiled code and the menu silently does the wrong thing.
@@ -246,11 +257,11 @@ so an external lurch scares without advancing the clock."
 - Create: `Assets/Scripts/Region1/Cutscenes/MisassemblyLock.cs`
 
 **Interfaces:**
-- Consumes: `FogController.ExtraPulseProvider` (Task 2); `WordFlow/LockVignette` (Task 1).
+- Consumes: `FogController.ExtraPulseProvider` (Task 2); `WordFlow/LockVignette` (Task 1); the authored `key_root` art (`lock`, `unlock`, `effect_star1..4`).
 - Produces:
   - `static MisassemblyLock Instance { get; }`
-  - `IEnumerator PlayRoutine()` — the whole alert: fade in, icon, three beeps + three smoke lurches, fade out. Yield on it; it returns when the lock should lift.
-  - Serialized: `vignette` (RawImage), `lockIcon` (Image — **its Sprite is left empty for the user to drop their lock PNG in**), `audioSource`, `beepClip`, and the timing knobs.
+  - `IEnumerator PlayRoutine()` — the whole alert: fade in, padlock, three beeps + three smoke lurches, the unlock burst, fade out. Yield on it; it returns when the lock should lift.
+  - Serialized: `vignette` (RawImage), `lockIcon` / `unlockIcon` (Image — the `lock` and `unlock` objects in `key_root`), `burst` (Image[4] — `effect_star1..4`), `audioSource`, `beepClip`, `unlockSfx`, and the timing knobs.
 
 - [ ] **Step 1: Write the component**
 
@@ -261,23 +272,34 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// The garbage-word punishment: a cartoon red damage-screen, a lock symbol, and three beat-beeps that
-/// each yank the smoke toward the book — for three seconds, during which the stones are dead.
+/// The garbage-word punishment: a cartoon red damage-screen, a padlock, and three beat-beeps that
+/// each yank the smoke toward the book — for three seconds, during which the stones are dead. Then
+/// the padlock springs open and bursts apart, and the board is playable again.
 ///
 /// The clock is NOT paused while this plays. That is the whole point: being frozen out costs real
 /// seconds of smoke, so brute-forcing combinations has a price.
 ///
 /// The alert is ADDITIVE (WordFlow/LockVignette, Blend SrcAlpha One). It can only add red light, so
 /// it cannot hide the smoke underneath — the smoke just reads as red-hot while the alert is up.
+///
+/// The padlock art lives in Canvas/key_root and is authored by hand: `lock`, `unlock`, and
+/// `effect_star1..4`, whose authored positions ARE the burst's scatter destinations — the same
+/// convention StarHud uses. Everything there is hidden in Awake and only shows on its cue.
 public sealed class MisassemblyLock : MonoBehaviour
 {
     [Header("Visuals")]
     [Tooltip("Full-screen RawImage running the WordFlow/LockVignette material.")]
     [SerializeField] private RawImage vignette;
 
-    [Tooltip("The lock symbol. Drop the lock PNG into its Sprite — the effect works without one, it " +
-             "just has no icon.")]
+    [Tooltip("key_root/lock — the closed padlock, up for the whole lockout.")]
     [SerializeField] private Image lockIcon;
+
+    [Tooltip("key_root/unlock — the opened padlock, swapped in when the lock lifts.")]
+    [SerializeField] private Image unlockIcon;
+
+    [Tooltip("key_root/effect_star1..4 — the unlock burst. Their authored positions are the scatter " +
+             "destinations; the burst flies them out from the padlock to where they already sit.")]
+    [SerializeField] private Image[] burst;
 
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
@@ -286,6 +308,9 @@ public sealed class MisassemblyLock : MonoBehaviour
              "clip is one long track of once-a-second beeps, so we play it from 0 and cut it after " +
              "beepAudibleSeconds to get exactly one beep.")]
     [SerializeField] private AudioClip beepClip;
+
+    [Tooltip("unlock.wav — plays as the padlock springs open.")]
+    [SerializeField] private AudioClip unlockSfx;
 
     [Header("Beats")]
     [SerializeField, Min(1)] private int beepCount = 3;
@@ -300,9 +325,17 @@ public sealed class MisassemblyLock : MonoBehaviour
     [SerializeField, Min(0.01f)] private float fadeInDuration = 0.12f;
     [SerializeField, Min(0.01f)] private float fadeOutDuration = 0.35f;
 
-    [Header("Lock icon pop")]
+    [Header("Padlock pop")]
     [SerializeField, Min(0.01f)] private float iconPopDuration = 0.28f;
     [SerializeField] private float iconOvershoot = 1.8f;
+
+    [Header("Unlock burst")]
+    [SerializeField, Min(0.01f)] private float unlockPopDuration = 0.22f;
+    [SerializeField, Min(0.01f)] private float burstOutDuration = 0.3f;
+    [SerializeField, Min(0.01f)] private float burstFadeDuration = 0.28f;
+    [SerializeField, Min(0.01f)] private float burstStartScale = 0.3f;
+    [SerializeField, Min(0.01f)] private float burstEndScale = 1.2f;
+    [SerializeField, Min(0f)] private float unlockHold = 0.25f;
 
     public static MisassemblyLock Instance { get; private set; }
 
@@ -312,7 +345,13 @@ public sealed class MisassemblyLock : MonoBehaviour
     private static readonly int PulseID = Shader.PropertyToID("_Pulse");
 
     private Material vignetteMaterial;
-    private Vector3 iconBaseScale = Vector3.one;
+    private Vector3 lockBaseScale = Vector3.one;
+    private Vector3 unlockBaseScale = Vector3.one;
+
+    // The scene layout IS the burst's target data — cache it before anything moves.
+    private Vector2[] burstPos;
+    private Vector3[] burstScale;
+
     private float pulse01;
 
     private void Awake()
@@ -326,9 +365,18 @@ public sealed class MisassemblyLock : MonoBehaviour
             vignette.material = vignetteMaterial;
         }
 
-        if (lockIcon != null)
+        if (lockIcon != null) lockBaseScale = lockIcon.rectTransform.localScale;
+        if (unlockIcon != null) unlockBaseScale = unlockIcon.rectTransform.localScale;
+
+        int n = burst != null ? burst.Length : 0;
+        burstPos = new Vector2[n];
+        burstScale = new Vector3[n];
+        for (int i = 0; i < n; i++)
         {
-            iconBaseScale = lockIcon.rectTransform.localScale;
+            RectTransform r = Rect(burst[i]);
+            if (r == null) continue;
+            burstPos[i] = r.anchoredPosition;
+            burstScale[i] = r.localScale;
         }
 
         if (audioSource == null) audioSource = GetComponent<AudioSource>();
@@ -356,14 +404,7 @@ public sealed class MisassemblyLock : MonoBehaviour
         // the CanInteract gate in MagicStonePuzzleController.
         if (vignette != null) vignette.raycastTarget = true;
 
-        if (lockIcon != null)
-        {
-            lockIcon.gameObject.SetActive(true);
-            SetIconAlpha(0f);
-            lockIcon.rectTransform.localScale = Vector3.zero;
-        }
-
-        // --- flash in ---------------------------------------------------------------------------
+        // --- flash in -----------------------------------------------------------------------------
         for (float t = 0f; t < fadeInDuration; t += Time.deltaTime)
         {
             SetIntensity(Mathf.Clamp01(t / fadeInDuration));
@@ -371,28 +412,13 @@ public sealed class MisassemblyLock : MonoBehaviour
         }
         SetIntensity(1f);
 
-        // --- lock icon pops in --------------------------------------------------------------------
-        for (float t = 0f; t < iconPopDuration; t += Time.deltaTime)
-        {
-            float k = Mathf.Clamp01(t / iconPopDuration);
-            if (lockIcon != null)
-            {
-                lockIcon.rectTransform.localScale =
-                    Vector3.LerpUnclamped(Vector3.zero, iconBaseScale, EaseOutBack(k, iconOvershoot));
-                SetIconAlpha(Mathf.Clamp01(k * 2f));
-            }
-            yield return null;
-        }
-        if (lockIcon != null)
-        {
-            lockIcon.rectTransform.localScale = iconBaseScale;
-            SetIconAlpha(1f);
-        }
+        // --- the closed padlock pops in -------------------------------------------------------------
+        yield return PopIconRoutine(lockIcon, lockBaseScale, iconPopDuration);
 
-        // --- three beats: beep + smoke lurch -------------------------------------------------------
+        // --- three beats: beep + smoke lurch ---------------------------------------------------------
         for (int i = 0; i < beepCount; i++)
         {
-            PlayBeep();
+            PlayClip(beepClip, cutAfter: beepAudibleSeconds);
 
             // pulse01 drives BOTH the smoke's inward lurch (via FogController.ExtraPulseProvider) and
             // the vignette's throb, so the sound, the red and the smoke all land on the same beat.
@@ -407,12 +433,22 @@ public sealed class MisassemblyLock : MonoBehaviour
         pulse01 = 0f;
         SetPulse(0f);
 
-        // --- fade out -----------------------------------------------------------------------------
+        // --- the unlock beat: swap to the open padlock and burst it apart -----------------------------
+        SetActive(lockIcon, false);
+
+        PlayClip(unlockSfx, cutAfter: 0f);
+
+        StartCoroutine(BurstRoutine());
+        yield return PopIconRoutine(unlockIcon, unlockBaseScale, unlockPopDuration);
+
+        if (unlockHold > 0f) yield return new WaitForSeconds(unlockHold);
+
+        // --- fade out ---------------------------------------------------------------------------------
         for (float t = 0f; t < fadeOutDuration; t += Time.deltaTime)
         {
             float k = 1f - Mathf.Clamp01(t / fadeOutDuration);
             SetIntensity(k);
-            if (lockIcon != null) SetIconAlpha(k);
+            SetAlpha(unlockIcon, k);
             yield return null;
         }
 
@@ -420,29 +456,103 @@ public sealed class MisassemblyLock : MonoBehaviour
         IsLocked = false;
     }
 
-    private void PlayBeep()
+    private IEnumerator PopIconRoutine(Image icon, Vector3 baseScale, float duration)
     {
-        if (audioSource == null || beepClip == null) return;
+        if (icon == null) yield break;
 
-        // countdown_beep.wav is a long track of once-a-second beeps. Play from the top and cut it
-        // after one beep's worth, so three calls = three beeps (not thirty).
+        SetActive(icon, true);
+        SetAlpha(icon, 0f);
+        icon.rectTransform.localScale = Vector3.zero;
+
+        for (float t = 0f; t < duration; t += Time.deltaTime)
+        {
+            float k = Mathf.Clamp01(t / duration);
+            icon.rectTransform.localScale =
+                Vector3.LerpUnclamped(Vector3.zero, baseScale, EaseOutBack(k, iconOvershoot));
+            SetAlpha(icon, Mathf.Clamp01(k * 2f));
+            yield return null;
+        }
+
+        icon.rectTransform.localScale = baseScale;
+        SetAlpha(icon, 1f);
+    }
+
+    /// effect_star1..4 fly out from the padlock to their authored positions and fade — the same
+    /// scatter the star award uses.
+    private IEnumerator BurstRoutine()
+    {
+        if (burst == null || burst.Length == 0) yield break;
+
+        Vector2 origin = unlockIcon != null
+            ? unlockIcon.rectTransform.anchoredPosition
+            : (lockIcon != null ? lockIcon.rectTransform.anchoredPosition : Vector2.zero);
+
+        for (int i = 0; i < burst.Length; i++)
+        {
+            RectTransform r = Rect(burst[i]);
+            if (r == null) continue;
+            r.anchoredPosition = origin;
+            r.localScale = burstScale[i] * burstStartScale;
+            SetActive(burst[i], true);
+            SetAlpha(burst[i], 1f);
+        }
+
+        for (float t = 0f; t < burstOutDuration; t += Time.deltaTime)
+        {
+            float k = EaseOutCubic(Mathf.Clamp01(t / burstOutDuration));
+            for (int i = 0; i < burst.Length; i++)
+            {
+                RectTransform r = Rect(burst[i]);
+                if (r == null) continue;
+                r.anchoredPosition = Vector2.LerpUnclamped(origin, burstPos[i], k);
+                r.localScale = Vector3.LerpUnclamped(burstScale[i] * burstStartScale,
+                                                     burstScale[i] * burstEndScale, k);
+            }
+            yield return null;
+        }
+
+        for (float t = 0f; t < burstFadeDuration; t += Time.deltaTime)
+        {
+            float a = 1f - Mathf.Clamp01(t / burstFadeDuration);
+            for (int i = 0; i < burst.Length; i++) SetAlpha(burst[i], a);
+            yield return null;
+        }
+
+        for (int i = 0; i < burst.Length; i++)
+        {
+            SetAlpha(burst[i], 1f);
+            SetActive(burst[i], false);
+            RectTransform r = Rect(burst[i]);
+            if (r != null) r.localScale = burstScale[i];
+        }
+    }
+
+    /// countdown_beep.wav is a long track of once-a-second beeps, so `cutAfter` stops it after one
+    /// beep's worth. Pass 0 to let a clip (unlock.wav) play out in full.
+    private void PlayClip(AudioClip clip, float cutAfter)
+    {
+        if (audioSource == null || clip == null) return;
+
         audioSource.Stop();
-        audioSource.clip = beepClip;
+        audioSource.clip = clip;
         audioSource.loop = false;
         audioSource.time = 0f;
         audioSource.Play();
-        StartCoroutine(StopBeepRoutine());
+
+        if (cutAfter > 0f) StartCoroutine(CutClipRoutine(clip, cutAfter));
     }
 
-    private IEnumerator StopBeepRoutine()
+    private IEnumerator CutClipRoutine(AudioClip clip, float after)
     {
-        yield return new WaitForSeconds(beepAudibleSeconds);
-        if (audioSource != null && audioSource.clip == beepClip && audioSource.isPlaying)
+        yield return new WaitForSeconds(after);
+        if (audioSource != null && audioSource.clip == clip && audioSource.isPlaying)
         {
             audioSource.Stop();
         }
     }
 
+    /// Everything from key_root is hidden until its cue — forced here rather than trusted from the
+    /// scene, which the designer leaves visible while authoring.
     private void Hide()
     {
         pulse01 = 0f;
@@ -450,7 +560,12 @@ public sealed class MisassemblyLock : MonoBehaviour
         SetPulse(0f);
 
         if (vignette != null) vignette.raycastTarget = false;
-        if (lockIcon != null) lockIcon.gameObject.SetActive(false);
+
+        SetActive(lockIcon, false);
+        SetActive(unlockIcon, false);
+
+        if (burst == null) return;
+        for (int i = 0; i < burst.Length; i++) SetActive(burst[i], false);
     }
 
     private void SetIntensity(float v)
@@ -463,13 +578,22 @@ public sealed class MisassemblyLock : MonoBehaviour
         if (vignetteMaterial != null) vignetteMaterial.SetFloat(PulseID, Mathf.Clamp01(v));
     }
 
-    private void SetIconAlpha(float a)
+    private static RectTransform Rect(Component c) => c != null ? c.transform as RectTransform : null;
+
+    private static void SetActive(Component c, bool on)
     {
-        if (lockIcon == null) return;
-        Color c = lockIcon.color;
-        c.a = Mathf.Clamp01(a);
-        lockIcon.color = c;
+        if (c != null && c.gameObject.activeSelf != on) c.gameObject.SetActive(on);
     }
+
+    private static void SetAlpha(Graphic g, float a)
+    {
+        if (g == null) return;
+        Color c = g.color;
+        c.a = Mathf.Clamp01(a);
+        g.color = c;
+    }
+
+    private static float EaseOutCubic(float t) { float u = 1f - t; return 1f - u * u * u; }
 
     private static float EaseOutBack(float t, float overshoot)
     {
@@ -492,12 +616,12 @@ Expected: zero errors.
 
 ```bash
 git add Assets/Scripts/Region1/Cutscenes/MisassemblyLock.cs Assets/Scripts/Region1/Cutscenes/MisassemblyLock.cs.meta
-git commit -m "feat(lock): add MisassemblyLock — red alert, lock icon, three beat-beeps + smoke lurches"
+git commit -m "feat(lock): add MisassemblyLock — red alert, padlock, three beat-beeps, unlock burst"
 ```
 
 ---
 
-### Task 4: Build `lock_overlay` into the scene, plus the preview menu
+### Task 4: Build `lock_overlay` into the scene and wire the `key_root` art
 
 **Files:**
 - Create: `Assets/Editor/BuildMisassemblyLock.cs`
@@ -505,7 +629,10 @@ git commit -m "feat(lock): add MisassemblyLock — red alert, lock icon, three b
 - Modifies (via the tool): `Assets/Scenes/region 1/CutScene_bear.unity`
 
 **Interfaces:**
-- Produces: menu items `Tools/Quest/Build Misassembly Lock` and `Tools/Quest/Lock Preview On` / `Tools/Quest/Lock Preview Off`; a wired `lock_overlay` (RawImage + AudioSource + `MisassemblyLock`, with a `lock_icon` child) as the **top sibling** of the `CutScene_bear` Canvas.
+- Consumes: `WordFlow/LockVignette` (Task 1), `MisassemblyLock` (Task 3), and the authored art under `Canvas/key_root` (`lock`, `unlock`, `effect_star1`..`effect_star4`).
+- Produces: menu items `Tools/Quest/Build Misassembly Lock` and `Tools/Quest/Lock Preview On` / `Tools/Quest/Lock Preview Off`; a wired `lock_overlay` (RawImage + AudioSource + `MisassemblyLock`) sitting just under `key_root` at the top of the Canvas.
+
+**Draw order matters here.** Final Canvas order: … `star_hud`, **`lock_overlay`** (the additive red), **`key_root`** (the padlock + burst) — so the padlock draws *over* the red and reads crisply instead of being washed by it.
 
 `Lock Preview On/Off` is what makes the main check automatable — a garbage word needs a human at the controls, but the preview lets us screenshot the red over the smoke without playing.
 
@@ -514,6 +641,8 @@ git commit -m "feat(lock): add MisassemblyLock — red alert, lock icon, three b
 Create `Assets/Editor/BuildMisassemblyLock.cs`:
 
 ```csharp
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -522,17 +651,21 @@ using UnityEngine.UI;
 /// Tools/Quest/Build Misassembly Lock  — builds the garbage-word red alert into CutScene_bear.
 /// Tools/Quest/Lock Preview On | Off   — eyeball the alert without playing to a garbage word.
 ///
-/// The lock_overlay sits at the TOP of the Canvas so the alert covers the smoke, the book and the
-/// star board. That is safe because the vignette is ADDITIVE — it can only add red light, never hide
-/// what is beneath it. Idempotent: re-running re-wires the existing overlay.
+/// The lock_overlay (additive red vignette) goes near the top of the Canvas so the alert covers the
+/// smoke, the book and the star board — safe, because additive can only add red light, never hide
+/// what is beneath it. key_root (the padlock art, authored by hand) is then pushed ABOVE it, so the
+/// padlock draws over the red rather than being washed by it.
+///
+/// Idempotent: re-running re-wires the existing overlay instead of building a second one.
 public static class BuildMisassemblyLock
 {
     const string ScenePath = "Assets/Scenes/region 1/CutScene_bear.unity";
     const string ShaderName = "WordFlow/LockVignette";
     const string MatPath = "Assets/Scenes/region 1/LockVignetteMaterial.mat";
     const string BeepPath = "Assets/Audio/countdown_beep.wav";
+    const string UnlockSfxPath = "Assets/Audio/unlock.wav";
     const string OverlayName = "lock_overlay";
-    const string IconName = "lock_icon";
+    const string KeyRootName = "key_root";
 
     [MenuItem("Tools/Quest/Build Misassembly Lock")]
     public static void Run()
@@ -545,7 +678,15 @@ public static class BuildMisassemblyLock
         Canvas canvas = Object.FindFirstObjectByType<Canvas>(FindObjectsInactive.Include);
         if (canvas == null) { Debug.LogError("[BuildMisassemblyLock] no Canvas in CutScene_bear"); return; }
 
-        // --- lock_overlay: full-screen additive vignette ------------------------------------------
+        Transform keyRoot = canvas.transform.Find(KeyRootName);
+        if (keyRoot == null)
+        {
+            Debug.LogError($"[BuildMisassemblyLock] {KeyRootName} not found under the Canvas — the " +
+                           "padlock art (lock / unlock / effect_star1..4) is authored there and is required");
+            return;
+        }
+
+        // --- lock_overlay: the full-screen additive vignette ---------------------------------------
         Transform existing = canvas.transform.Find(OverlayName);
         GameObject overlay = existing != null
             ? existing.gameObject
@@ -558,6 +699,7 @@ public static class BuildMisassemblyLock
         }
 
         Stretch((RectTransform)overlay.transform);
+        overlay.layer = keyRoot.gameObject.layer;
 
         var raw = overlay.GetComponent<RawImage>();
         if (raw == null) raw = overlay.AddComponent<RawImage>();
@@ -570,52 +712,52 @@ public static class BuildMisassemblyLock
         src.playOnAwake = false;
         src.loop = false;
 
-        // --- lock_icon: the symbol (Sprite left empty — the user drops their PNG in) --------------
-        Transform iconT = overlay.transform.Find(IconName);
-        GameObject icon = iconT != null ? iconT.gameObject : new GameObject(IconName, typeof(RectTransform));
-        if (iconT == null) icon.transform.SetParent(overlay.transform, false);
-
-        var iconRect = (RectTransform)icon.transform;
-        iconRect.anchorMin = new Vector2(0.5f, 0.5f);
-        iconRect.anchorMax = new Vector2(0.5f, 0.5f);
-        iconRect.pivot = new Vector2(0.5f, 0.5f);
-        iconRect.anchoredPosition = Vector2.zero;
-        iconRect.sizeDelta = new Vector2(420f, 420f);
-        iconRect.localScale = Vector3.one;
-
-        var iconImage = icon.GetComponent<Image>();
-        if (iconImage == null) iconImage = icon.AddComponent<Image>();
-        iconImage.preserveAspect = true;
-        iconImage.raycastTarget = false;
-        // iconImage.sprite is deliberately left as-is: the user drops the lock PNG in themselves.
-
-        // --- wire MisassemblyLock ------------------------------------------------------------------
+        // --- wire MisassemblyLock to the authored key_root art ---------------------------------------
         var lockComp = overlay.GetComponent<MisassemblyLock>();
         if (lockComp == null) lockComp = Undo.AddComponent<MisassemblyLock>(overlay);
+
+        var art = BuildNameMap(keyRoot);
 
         var beep = AssetDatabase.LoadAssetAtPath<AudioClip>(BeepPath);
         if (beep == null) Debug.LogWarning($"[BuildMisassemblyLock] beep clip not found: {BeepPath}");
 
+        var unlockSfx = AssetDatabase.LoadAssetAtPath<AudioClip>(UnlockSfxPath);
+        if (unlockSfx == null) Debug.LogWarning($"[BuildMisassemblyLock] unlock sfx not found: {UnlockSfxPath}");
+
         var so = new SerializedObject(lockComp);
         so.FindProperty("vignette").objectReferenceValue = raw;
-        so.FindProperty("lockIcon").objectReferenceValue = iconImage;
+        so.FindProperty("lockIcon").objectReferenceValue = Get(art, "lock");
+        so.FindProperty("unlockIcon").objectReferenceValue = Get(art, "unlock");
         so.FindProperty("audioSource").objectReferenceValue = src;
         if (beep != null) so.FindProperty("beepClip").objectReferenceValue = beep;
+        if (unlockSfx != null) so.FindProperty("unlockSfx").objectReferenceValue = unlockSfx;
+
+        // effect_star1..4 — the unlock burst. Their authored positions are the scatter destinations.
+        var burst = so.FindProperty("burst");
+        burst.arraySize = 4;
+        for (int i = 0; i < 4; i++)
+        {
+            burst.GetArrayElementAtIndex(i).objectReferenceValue = Get(art, $"effect_star{i + 1}");
+        }
+
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        // Top of the Canvas: the alert covers everything. Safe — it is additive.
+        // --- draw order: red under the padlock, both above everything else --------------------------
         overlay.transform.SetSiblingIndex(canvas.transform.childCount - 1);
+        keyRoot.SetSiblingIndex(canvas.transform.childCount - 1);   // key_root ends up on top
 
-        // The root MUST stay active: its Awake registers FogController.ExtraPulseProvider and hides
-        // the visuals itself. Shipping it inactive would silently kill the smoke lurch.
+        // Both roots MUST stay active: lock_overlay's Awake registers FogController.ExtraPulseProvider
+        // and hides the art itself. Shipping either inactive would silently kill the effect.
         overlay.SetActive(true);
+        keyRoot.gameObject.SetActive(true);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
 
         Debug.Log($"[BuildMisassemblyLock] DONE — {OverlayName} at sibling index " +
-                  $"{overlay.transform.GetSiblingIndex()} (top of Canvas), beep={(beep != null ? beep.name : "MISSING")}, " +
-                  $"lock icon sprite = {(iconImage.sprite != null ? iconImage.sprite.name : "(empty — drop the PNG in)")}, scene saved");
+                  $"{overlay.transform.GetSiblingIndex()}, {KeyRootName} at {keyRoot.GetSiblingIndex()} (on top), " +
+                  $"beep={(beep != null ? beep.name : "MISSING")}, unlock={(unlockSfx != null ? unlockSfx.name : "MISSING")}, " +
+                  "scene saved");
     }
 
     [MenuItem("Tools/Quest/Lock Preview On")]
@@ -633,6 +775,28 @@ public static class BuildMisassemblyLock
         EditorUtility.SetDirty(mat);
         AssetDatabase.SaveAssets();
         Debug.Log($"[LockPreview] _Intensity = {intensity}");
+    }
+
+    /// Key every child of key_root by its name with all whitespace stripped, so a stray space the
+    /// designer left in ("effect_star1 ") never breaks the lookup. Same guard the star board needed.
+    static Dictionary<string, Image> BuildNameMap(Transform root)
+    {
+        var map = new Dictionary<string, Image>();
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform c = root.GetChild(i);
+            var img = c.GetComponent<Image>();
+            if (img == null) continue;
+            map[Regex.Replace(c.name, @"\s+", "")] = img;
+        }
+        return map;
+    }
+
+    static Image Get(Dictionary<string, Image> map, string normalisedName)
+    {
+        if (map.TryGetValue(normalisedName, out Image img) && img != null) return img;
+        Debug.LogError($"[BuildMisassemblyLock] key_root is missing an Image named '{normalisedName}'");
+        return null;
     }
 
     static void Stretch(RectTransform r)
@@ -681,19 +845,20 @@ mcp__anklebreaker__unity_execute_menu_item   menuPath: "Tools/Quest/Build Misass
 mcp__anklebreaker__unity_console_log         port: <port>
 ```
 
-Expected: `[BuildMisassemblyLock] DONE — lock_overlay at sibling index N (top of Canvas), beep=countdown_beep, lock icon sprite = (empty — drop the PNG in), scene saved`. No errors.
+Expected: `[BuildMisassemblyLock] DONE — lock_overlay at sibling index N, key_root at N (on top), beep=countdown_beep, unlock=unlock, scene saved`, and **no `key_root is missing an Image named …` errors**. If one appears, the child is named differently than expected — list `key_root`'s children and fix the lookup key before continuing.
 
-- [ ] **Step 3: Verify the wiring**
+- [ ] **Step 3: Verify the wiring and the draw order**
 
 ```
 mcp__anklebreaker__unity_scene_hierarchy            parentPath: "Canvas"   maxDepth: 1   port: <port>
 mcp__anklebreaker__unity_component_get_properties   gameObjectPath: "lock_overlay"   componentType: "MisassemblyLock"   port: <port>
-mcp__anklebreaker__unity_component_get_properties   gameObjectPath: "lock_overlay"   componentType: "RawImage"        port: <port>
+mcp__anklebreaker__unity_component_get_properties   gameObjectPath: "lock_overlay"   componentType: "RawImage"          port: <port>
 ```
 
 Expected:
-- `lock_overlay` is the **last** child of the Canvas (after `star_hud`), and is **active**.
-- `MisassemblyLock`: `vignette`, `lockIcon`, `audioSource` all wired; `beepClip` = `countdown_beep`.
+- Canvas order ends `… star_hud`, **`lock_overlay`**, **`key_root`** — the padlock art is the very last child, so it draws over the red.
+- Both `lock_overlay` and `key_root` are **active**.
+- `MisassemblyLock`: `vignette`, `lockIcon`, `unlockIcon`, `audioSource` all wired; `burst` has 4 entries; `beepClip` = `countdown_beep`; `unlockSfx` = `unlock`. **No nulls.**
 - `RawImage`: material = `LockVignetteMaterial`, `raycastTarget` = **false** (it flips on only during a lock).
 
 - [ ] **Step 4: Commit**
@@ -702,7 +867,7 @@ Expected:
 git add Assets/Editor/BuildMisassemblyLock.cs Assets/Editor/BuildMisassemblyLock.cs.meta \
         "Assets/Scenes/region 1/LockVignetteMaterial.mat" "Assets/Scenes/region 1/LockVignetteMaterial.mat.meta" \
         "Assets/Scenes/region 1/CutScene_bear.unity"
-git commit -m "feat(lock): build the lock_overlay alert into CutScene_bear, plus a preview menu"
+git commit -m "feat(lock): build the lock_overlay alert and wire the key_root padlock art"
 ```
 
 ---
@@ -877,18 +1042,25 @@ Every knob is on `LockVignetteMaterial` (Inspector) — no code edit:
 | Red creeping too far into the middle | raise `_EdgeStart` and `_EdgeEnd` together |
 | Throb on each beep too subtle | `_PulseGain` (0.75 → 1.2) |
 
+The unlock burst's knobs are on the `MisassemblyLock` component (`lock_overlay` in the Inspector):
+`burstOutDuration`, `burstEndScale`, `unlockHold`. The burst's *directions* are the authored positions
+of `effect_star1..4` in `key_root` — to change where the pieces fly, drag them in the scene.
+
 - [ ] **Step 3: Ask the user to play the garbage-word path**
 
 A garbage word needs stones tapped and cannot be driven from here. Ask the user to play `CutScene_bear`
 and assemble **ปก** (or any of กป / าก / าป), then report:
 
-1. the screen flashes red the moment the second stone lands — **and the smoke is still visible through it**;
-2. the lock icon appears (or, if they have not dropped the PNG in yet, no icon but everything else works);
-3. **three** beeps land, ~1s apart;
-4. the smoke **visibly lurches in toward the book on each beep and settles back**;
-5. the stones **cannot be tapped** for those ~3 seconds;
-6. then the stones **spring home by themselves** and the board is playable again;
-7. the clock kept ticking the whole time (the smoke is further in than when the lock started) — but
+1. **before the garbage word, nothing from `key_root` is on screen** — no padlock, no burst pieces;
+2. the screen flashes red the moment the second stone lands — **and the smoke is still visible through it**;
+3. the **closed padlock** pops in, drawn crisply *over* the red (not washed out by it);
+4. **three** beeps land, ~1s apart;
+5. the smoke **visibly lurches in toward the book on each beep and settles back**;
+6. the stones **cannot be tapped** for those ~3 seconds;
+7. then the padlock **swaps to the opened one and bursts apart** (scatter + fade, like a star award),
+   `unlock.wav` plays, the stones **spring home by themselves**, and the board is playable again;
+8. afterwards `key_root` is fully hidden again — nothing lingers on screen;
+9. the clock kept ticking the whole time (the smoke is further in than when the lock started) — but
    **no faster than normal**: the lurch snapped back each time, it did not accumulate.
 
 - [ ] **Step 4: Ask the user to confirm the untouched paths**
@@ -913,10 +1085,11 @@ git commit -m "feat(lock): tune the red alert"
 
 ## Done when
 
-- A garbage word (ปก / กป / าก / าป) flashes the screen red, shows the lock, plays three beeps, lurches the smoke inward on each, and freezes the stones for ~3 seconds — after which they spring home.
-- **The smoke stays visible through the red** (additive blend).
+- A garbage word (ปก / กป / าก / าป) flashes the screen red, pops the **closed padlock**, plays three beeps, lurches the smoke inward on each, and freezes the stones for ~3 seconds.
+- The lock then **springs open and bursts apart** (`unlock` + `effect_star1..4` scatter and fade, like a star award), and the stones spring home.
+- **The smoke stays visible through the red** (additive blend), and the padlock stays crisp over it (`key_root` is the top sibling).
+- Nothing from `key_root` is visible before its cue or after the alert ends.
 - The clock keeps running through the lock, and the lurch does **not** make it run any faster.
 - The last-10-seconds countdown beep and its lurch are **unchanged**.
 - ปา and กา behave exactly as they did.
-- The lock icon Sprite slot is exposed and empty, ready for the user's PNG.
 - `git diff` never touches `WordAssemblyTimer.cs`, `EdgeFox.shader`, `EdgeFogMaterial.mat`, `CloudFogMaterial.mat` or `Assets/Scripts/Region1/Stars/`, and `FogController.cs` shows only the additive `ExtraPulseProvider` change.
