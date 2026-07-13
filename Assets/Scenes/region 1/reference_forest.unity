@@ -20511,10 +20511,10 @@ Tilemap:
     second:
       serializedVersion: 2
       m_AnimatedSprites:
-      - {fileID: 6877779958618312983, guid: df8f5268c10f3f243b1fbc5117f5de3d, type: 2}
-      - {fileID: -4208448715414611903, guid: df8f5268c10f3f243b1fbc5117f5de3d, type: 2}
-      - {fileID: 2501347932200553743, guid: df8f5268c10f3f243b1fbc5117f5de3d, type: 2}
-      - {fileID: -5982394755274091454, guid: df8f5268c10f3f243b1fbc5117f5de3d, type: 2}
+      - {fileID: 2391967856203582371, guid: df8f5268c10f3f243b1fbc5117f5de3d, type: 2}
+      - {fileID: -7654537597806236744, guid: df8f5268c10f3f243b1fbc5117f5de3d, type: 2}
+      - {fileID: 3157291596209226407, guid: df8f5268c10f3f243b1fbc5117f5de3d, type: 2}
+      - {fileID: -5774029765135776131, guid: df8f5268c10f3f243b1fbc5117f5de3d, type: 2}
       m_AnimationSpeed: 1
       m_AnimationTimeOffset: 0
       m_Flags: 0
@@ -27670,10 +27670,14 @@ MonoBehaviour:
   animator: {fileID: 0}
   unitsPerStep: 0.3
   idleDelay: 0.15
-  animSpeedUp: 1
-  animSpeedLeft: 1
+  animSpeedUp: 0.6
+  animSpeedLeft: 0.6
   animSpeedFront: 0.6
   animSpeedRight: 0.6
+  scaleUp: 1.15
+  scaleLeft: 1
+  scaleFront: 1
+  scaleRight: 1
 --- !u!95 &1659720019
 Animator:
   serializedVersion: 7
