@@ -330,7 +330,50 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             return;
         }
 
+        // Night redo: the bear/crow entrance has just played; skip the owl (zoom, dim, talking,
+        // bear-focus) entirely and open the craft book straight away, on a fresh 30s clock.
+        if (NightMode.RedoActive)
+        {
+            greetingRoutine = StartCoroutine(NightRedoRoutine());
+            return;
+        }
+
         greetingRoutine = StartCoroutine(GreetingRoutine());
+    }
+
+    private IEnumerator NightRedoRoutine()
+    {
+        ApplyPreservePlacedFrameSettings();
+        CacheFrames();
+
+        // The owl never appears tonight.
+        SetOwlFramesAlpha(0f);
+        for (int i = 0; i < frames.Count; i++)
+        {
+            frames[i].Target.gameObject.SetActive(false);
+        }
+        if (UsesTalkingPrefabAnimator)
+        {
+            StopTalkingAnimation();
+        }
+
+        if (startDelay > 0f)
+        {
+            yield return new WaitForSeconds(startDelay);
+        }
+
+        if (playBookRevealAfterBearFocus)
+        {
+            WordAssemblyTimer.Instance?.BeginFresh(); // fresh 30s — a night redo is a new attempt
+            yield return PlayBookRevealRoutine();     // same pop-in the day flow uses
+        }
+
+        if (playMagicStonePuzzleAfterBookReveal)
+        {
+            yield return PlayMagicStonePuzzleRevealRoutine(); // stones reveal one by one, as in day
+        }
+
+        greetingRoutine = null;
     }
 
     private IEnumerator RetryMagicStonePuzzleRoutine()

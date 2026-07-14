@@ -1,9 +1,13 @@
 // Stylised night overlay for reference_forest. A full-screen sprite tinted by its vertex
 // colour (NightLighting sets darkColor + alpha) that cuts soft circular openings around up to
-// four light fixtures. NightLighting.cs feeds per-light data via a MaterialPropertyBlock:
-//   _LightData0.._LightData3 = (centerX, centerY, innerRadius, outerRadius)  [world units]
+// eight light sources. NightLighting.cs feeds per-light data via a MaterialPropertyBlock:
+//   _LightData0.._LightData7 = (centerX, centerY, innerRadius, outerRadius)  [world units]
 //   _MinimumDarkness          = darkness kept at the brightest point (so holes aren't full daylight)
 // An unused light slot has outerRadius (w) == 0 and is ignored.
+// Slots 0-3: the fixture lights (fire_camp + lamps). Slots 4-7: runtime lights (hero + night quest
+// pools), driven by NightLighting.SetDynamicLight. Also reused, on a UGUI RawImage with an
+// instanced material, as the CutScene_bear/CutScene_ga night spotlight-follow overlay
+// (NightTintOverlay) — only slot 0 is used there.
 Shader "NSC/NightOverlayCutout"
 {
     Properties
@@ -56,6 +60,10 @@ Shader "NSC/NightOverlayCutout"
             float4 _LightData1;
             float4 _LightData2;
             float4 _LightData3;
+            float4 _LightData4;
+            float4 _LightData5;
+            float4 _LightData6;
+            float4 _LightData7;
             float  _MinimumDarkness;
 
             v2f vert (appdata v)
@@ -85,6 +93,10 @@ Shader "NSC/NightOverlayCutout"
                 dark = min(dark, DarknessFromLight(_LightData1, i.world));
                 dark = min(dark, DarknessFromLight(_LightData2, i.world));
                 dark = min(dark, DarknessFromLight(_LightData3, i.world));
+                dark = min(dark, DarknessFromLight(_LightData4, i.world));
+                dark = min(dark, DarknessFromLight(_LightData5, i.world));
+                dark = min(dark, DarknessFromLight(_LightData6, i.world));
+                dark = min(dark, DarknessFromLight(_LightData7, i.world));
                 col.a *= dark;
                 return col;
             }

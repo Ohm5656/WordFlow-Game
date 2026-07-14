@@ -1741,6 +1741,15 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             {
                 yield return StarHud.Instance.AwardRoutine(award);
             }
+
+            // The quest is only ever LEFT on the correct word (a wrong word forces a retry via
+            // Success_ga -> SuccessGaReturn), so this is the one place a quest's final score exists.
+            // Keyed by targetWordId (paa / kaa) so no scene wiring is needed. Best-of: a night redo
+            // can raise it, never lower it.
+            if (correct)
+            {
+                QuestStars.RecordBest(targetWordId, StarHud.EarnedCount);
+            }
         }
 
         Image flashImage = null;

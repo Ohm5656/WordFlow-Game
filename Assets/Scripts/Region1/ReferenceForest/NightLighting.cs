@@ -14,7 +14,11 @@ public sealed class NightLighting : MonoBehaviour
         Shader.PropertyToID("_LightData0"),
         Shader.PropertyToID("_LightData1"),
         Shader.PropertyToID("_LightData2"),
-        Shader.PropertyToID("_LightData3")
+        Shader.PropertyToID("_LightData3"),
+        Shader.PropertyToID("_LightData4"),
+        Shader.PropertyToID("_LightData5"),
+        Shader.PropertyToID("_LightData6"),
+        Shader.PropertyToID("_LightData7")
     };
 
     [Header("Darkening overlay")]
@@ -48,10 +52,30 @@ public sealed class NightLighting : MonoBehaviour
     private float nightAmount;
     private MaterialPropertyBlock overlayProperties;
 
+    // Runtime lights (shader slots 4-7): hero + night-quest pools. Zeroed = off.
+    // Slot 0 = hero, slots 1-2 = the two night quests (paa/kaa), slot 3 spare.
+    private readonly Vector4[] dynamicLights = new Vector4[4];
+
     private void Awake()
     {
         // Start as day; the quest fades night in.
         SetNight(0f);
+    }
+
+    /// <summary>Sets/clears one of the 4 runtime light slots (shader slots 4-7). Pass
+    /// outerRadius &lt;= 0 to switch the slot off. Used for the hero's follow-light and the
+    /// night-quest light pools; the 4 fixture lights (slots 0-3) are unaffected.</summary>
+    public void SetDynamicLight(int slot, Vector2 worldPos, float innerRadius, float outerRadius)
+    {
+        if (slot < 0 || slot >= dynamicLights.Length)
+        {
+            return;
+        }
+
+        dynamicLights[slot] = outerRadius > 0f
+            ? new Vector4(worldPos.x, worldPos.y, innerRadius, outerRadius)
+            : Vector4.zero;
+        SyncOverlayOpenings();
     }
 
     private void OnValidate()
@@ -126,6 +150,14 @@ public sealed class NightLighting : MonoBehaviour
             }
 
             overlayProperties.SetVector(LightDataIds[i], data);
+        }
+
+        // Slots 4-7: runtime lights (hero + night quests). Written every sync alongside the fixture
+        // slots — the property block is rebuilt from the renderer each call, so a partial write
+        // here would drop whichever dynamic lights aren't re-set this frame.
+        for (int i = 0; i < dynamicLights.Length; i++)
+        {
+            overlayProperties.SetVector(LightDataIds[4 + i], dynamicLights[i]);
         }
 
         overlayProperties.SetFloat("_MinimumDarkness", minimumDarknessInLight);
