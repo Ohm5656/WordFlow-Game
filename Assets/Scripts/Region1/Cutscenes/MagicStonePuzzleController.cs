@@ -102,6 +102,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [SerializeField] private string sessionId = "";
     [SerializeField] private string recordingSceneId = "cut_scene1";
     [SerializeField] private bool uploadRecordingToBackend = false;
+    [SerializeField] private bool debugMicFlow = false;
     [SerializeField] private float maxRecordingSeconds = 5f; // matches word_build_paa_polished micSeconds
     [SerializeField] private float activeIconPulseScale = 1.12f;
     [SerializeField] private float activeIconPulseSpeed = 5.5f;
@@ -1273,6 +1274,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
     private IEnumerator FadeInActionIcons()
     {
+        GetOrCreateGradeClient();
+
         Button resolvedSoundButton = EnsureActionButton(soundButtonRoot, HandleSoundButtonClicked);
         Button resolvedMicButton = EnsureActionButton(micButtonRoot, HandleMicButtonClicked);
         CanvasGroup soundGroup = EnsureCanvasGroup(soundButtonRoot);
@@ -1388,14 +1391,17 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
     private void HandleMicButtonClicked()
     {
+        if (debugMicFlow) Debug.Log($"[MagicStone] mic clicked canUse={CanUseActionButtons()} recording={isRecording} successPlaying={recordingSuccessPlaying} routineActive={micRecordingRoutine != null}");
         if (!CanUseActionButtons() || recordingSuccessPlaying)
         {
+            if (debugMicFlow) Debug.Log("[MagicStone] mic click ignored by guard.");
             return;
         }
 
         GameAudio.PlayClick();
         if (isRecording)
         {
+            if (debugMicFlow) Debug.Log("[MagicStone] mic clicked while recording; completing now.");
             CompleteRecordingAndUpload();
             return;
         }
@@ -1404,9 +1410,11 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         if (micRecordingRoutine != null)
         {
+            if (debugMicFlow) Debug.Log("[MagicStone] mic click ignored; recording routine already active.");
             return;
         }
 
+        if (debugMicFlow) Debug.Log("[MagicStone] mic recording routine starting.");
         micRecordingRoutine = StartCoroutine(RecordingRoutine());
     }
 
@@ -1558,6 +1566,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             yield break;
         }
 
+        if (debugMicFlow) Debug.Log($"[MagicStone] RecordingRoutine begin maxSeconds={maxRecordingSeconds} upload={uploadRecordingToBackend}");
         grade.StartRecording();
 
         isRecording = true;
@@ -1574,14 +1583,17 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         if (isRecording)
         {
+            if (debugMicFlow) Debug.Log("[MagicStone] recording window elapsed; completing recording.");
             CompleteRecordingAndUpload();
         }
 
+        if (debugMicFlow) Debug.Log("[MagicStone] RecordingRoutine end.");
         micRecordingRoutine = null;
     }
 
     private void CompleteRecordingAndUpload()
     {
+        if (debugMicFlow) Debug.Log($"[MagicStone] CompleteRecordingAndUpload recording={isRecording} upload={uploadRecordingToBackend}");
         if (!isRecording)
         {
             StopRecordingWithoutUpload();
@@ -1608,6 +1620,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
                 GradeApiClient.GradeContext ctx = BuildGradeContext();
                 ctx.outcomeTag = tag; // grade carries the outcome too, like word_build's FireGrade
+                if (debugMicFlow) Debug.Log($"[MagicStone] firing grade/build attempt word={ctx.targetWordId} outcome={tag} session={ctx.sessionId}");
                 grade.StopAndGrade(ctx, OnGraded);
                 FireBuildAttempt(tag);
             }
@@ -1620,6 +1633,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             StopCoroutine(uploadRecordingRoutine);
         }
 
+        if (debugMicFlow) Debug.Log("[MagicStone] recording success routine starting.");
         uploadRecordingRoutine = StartCoroutine(RecordingSuccessRoutine());
     }
 
@@ -1673,6 +1687,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         string kid = session != null && !string.IsNullOrEmpty(session.KidId) ? session.KidId : childId;
         string sid = session != null ? session.SessionId : null;
         string wordId = !string.IsNullOrEmpty(activeWordId) ? activeWordId : targetWordId;
+        if (debugMicFlow) Debug.Log($"[MagicStone] enqueue build-attempt kid={kid} session={sid} word={wordId} outcome={outcomeTag} latencyMs={latency}");
         telemetry.PostBuildAttempt(kid, sid, wordId, GetAssembledWord(), outcomeTag, latency);
     }
 
@@ -1711,6 +1726,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
     private IEnumerator RecordingSuccessRoutine()
     {
+        if (debugMicFlow) Debug.Log("[MagicStone] RecordingSuccessRoutine begin.");
         recordingSuccessPlaying = true;
         SetActionButtonInteractable(soundButton, false);
         SetActionButtonInteractable(micButton, false);
@@ -1739,7 +1755,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             int award = correct ? (builtInTime ? 2 : 1) : 0;
             if (award > 0)
             {
-                yield return StarHud.Instance.AwardRoutine(award);
+                if (debugMicFlow) Debug.Log($"[MagicStone] awarding stars count={award}.");
+                yield return RunWithRealtimeTimeout(StarHud.Instance.AwardRoutine(award), 8f, "star award");
             }
 
             // The quest is only ever LEFT on the correct word (a wrong word forces a retry via
@@ -1757,18 +1774,49 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         {
             flashImage = CreateFullscreenImage("MagicStoneWhiteFlash");
             SetFlashAlpha(flashImage, 0f);
-            yield return ShakeRitualTargets(flashImage);
+            if (debugMicFlow) Debug.Log("[MagicStone] success shake begin.");
+            yield return RunWithRealtimeTimeout(ShakeRitualTargets(flashImage), Mathf.Max(3f, ritualShakeDuration + 2f), "success shake");
 
             if (transitionDelayAfterSuccess > 0f)
             {
-                yield return new WaitForSeconds(transitionDelayAfterSuccess);
+                yield return new WaitForSecondsRealtime(transitionDelayAfterSuccess);
             }
 
-            yield return WhiteFlash(flashImage);
+            if (debugMicFlow) Debug.Log("[MagicStone] white flash begin.");
+            yield return RunWithRealtimeTimeout(WhiteFlash(flashImage), Mathf.Max(2f, whiteFlashFadeInDuration + whiteFlashHoldDuration + 1f), "white flash");
         }
 
+        if (debugMicFlow) Debug.Log($"[MagicStone] loading next scene {GetNextSceneName()}.");
         PlaySceneTransition(GetNextSceneName(), flashImage);
         uploadRecordingRoutine = null;
+    }
+
+    private IEnumerator RunWithRealtimeTimeout(IEnumerator routine, float timeoutSeconds, string label)
+    {
+        bool done = false;
+        Coroutine child = StartCoroutine(RunAndFlag(routine, () => done = true));
+        float deadline = Time.realtimeSinceStartup + Mathf.Max(0.1f, timeoutSeconds);
+
+        while (!done && Time.realtimeSinceStartup < deadline)
+        {
+            yield return null;
+        }
+
+        if (!done)
+        {
+            if (child != null)
+            {
+                StopCoroutine(child);
+            }
+
+            Debug.LogWarning($"[MagicStone] {label} timed out after {timeoutSeconds:0.0}s; continuing.");
+        }
+    }
+
+    private IEnumerator RunAndFlag(IEnumerator routine, System.Action onDone)
+    {
+        yield return routine;
+        onDone?.Invoke();
     }
 
     private IEnumerator ShowRecordingSuccessMarkRoutine()
@@ -2210,7 +2258,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         float safeDuration = Mathf.Max(0.01f, ritualShakeDuration);
 
-        for (float elapsed = 0f; elapsed < safeDuration; elapsed += Time.deltaTime)
+        for (float elapsed = 0f; elapsed < safeDuration; elapsed += Time.unscaledDeltaTime)
         {
             float t = Mathf.Clamp01(elapsed / safeDuration);
             float ramp = Mathf.Pow(SmoothStep(t), Mathf.Max(0.1f, ritualShakeRampPower));
@@ -2346,7 +2394,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         flashImage.color = color;
 
         float fadeDuration = Mathf.Max(0.01f, whiteFlashFadeInDuration);
-        for (float elapsed = 0f; elapsed < fadeDuration; elapsed += Time.deltaTime)
+        for (float elapsed = 0f; elapsed < fadeDuration; elapsed += Time.unscaledDeltaTime)
         {
             float t = Mathf.Clamp01(elapsed / fadeDuration);
             color.a = Mathf.Lerp(startAlpha, 1f, SmoothStep(t));
@@ -2359,7 +2407,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         if (whiteFlashHoldDuration > 0f)
         {
-            yield return new WaitForSeconds(whiteFlashHoldDuration);
+            yield return new WaitForSecondsRealtime(whiteFlashHoldDuration);
         }
     }
 
@@ -2471,7 +2519,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             float startAlpha = Mathf.Clamp01(flashImage.color.a);
             float safeDuration = Mathf.Max(0.01f, fadeOutDuration);
 
-            for (float elapsed = 0f; elapsed < safeDuration; elapsed += Time.deltaTime)
+            for (float elapsed = 0f; elapsed < safeDuration; elapsed += Time.unscaledDeltaTime)
             {
                 float t = Mathf.Clamp01(elapsed / safeDuration);
                 color.a = Mathf.Lerp(startAlpha, 0f, SmoothStep(t));
