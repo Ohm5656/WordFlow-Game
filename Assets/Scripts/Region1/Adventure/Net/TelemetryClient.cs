@@ -21,6 +21,7 @@ namespace WordFlow.Adventure.Net
         [SerializeField] private string authorization = "Bearer demo-token";
         [Tooltip("Seconds between pump ticks (also the floor on retry latency).")]
         [SerializeField] private float pumpIntervalSeconds = 1f;
+        [SerializeField] private bool verboseLogging = false;
 
         private readonly TelemetryQueue _queue = new TelemetryQueue();
         private string _journalPath;
@@ -51,6 +52,7 @@ namespace WordFlow.Adventure.Net
             var env = new Envelope { method = method, path = relativePath, body = jsonBody ?? "{}" };
             _queue.Enqueue(JsonUtility.ToJson(env));
             PersistJournal();
+            LogVerbose($"[Telemetry] queued {method} {relativePath}");
         }
 
         /// <summary>Record one word-build attempt (what the child built this try + how long it took).</summary>
@@ -131,11 +133,13 @@ namespace WordFlow.Adventure.Net
                 string bearer = ResolveBearer();
                 if (!string.IsNullOrWhiteSpace(bearer))
                     req.SetRequestHeader("Authorization", bearer);
+                LogVerbose($"[Telemetry] sending {req.method} {env.path}");
                 yield return req.SendWebRequest();
 
                 long code = req.responseCode;
                 if (req.result == UnityWebRequest.Result.Success && code >= 200 && code < 300)
                 {
+                    LogVerbose($"[Telemetry] sent {code} {env.path}");
                     _queue.OnSent();
                     PersistJournal();
                 }
@@ -161,6 +165,12 @@ namespace WordFlow.Adventure.Net
                 return AuthSession.Instance.BearerHeader;
 
             return string.IsNullOrWhiteSpace(authorization) ? null : authorization.Trim();
+        }
+
+        private void LogVerbose(string message)
+        {
+            if (verboseLogging)
+                Debug.Log(message);
         }
 
         // ---- disk journal ----
