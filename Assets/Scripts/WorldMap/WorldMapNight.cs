@@ -18,10 +18,13 @@ public sealed class WorldMapNight : MonoBehaviour
     private const string WorldMapSceneName = "WorldMap";
     private const string SetupObjectName = "WorldMap Night";
 
-    // Lifts island renderers above the dark overlay while preserving their order among themselves.
-    private const int DarkOverlayOrder = 32000;
-    private const int IslandOrderLift = 33000;
-    private const int MarkerOrder = 34000;
+    // The map's own sorting orders: BG_Map = 0, the islands (and their locks) = 3..9. Slotting the
+    // darkness at 1 puts it over the sky and UNDER every island, so the islands stay lit without
+    // touching a single renderer. (Do NOT try to lift the islands above the darkness instead:
+    // sortingOrder is a short, so anything past 32767 wraps negative and the island vanishes behind
+    // the background — that bug is what this replaced.)
+    private const int DarkOverlayOrder = 1;
+    private const int MarkerOrder = 100;
 
     [Header("Darkness")]
     [SerializeField] private Color darkColor = new Color(0.04f, 0.09f, 0.20f, 1f);
@@ -70,7 +73,7 @@ public sealed class WorldMapNight : MonoBehaviour
     private IEnumerator Run()
     {
         BuildDarkOverlay();
-        StartCoroutine(LightIslandsRoutine());
+        StartCoroutine(PlaceQuestMarkerRoutine());
 
         if (fadeStartDelay > 0f)
         {
@@ -122,10 +125,9 @@ public sealed class WorldMapNight : MonoBehaviour
         overlayGo.transform.localScale = new Vector3(width / spriteWorldSize, height / spriteWorldSize, 1f);
     }
 
-    // The islands are what the night leaves lit. Waits for WorldMapProblemIslands to apply progress
-    // (it caches the island list a frame into Start), then lifts every island renderer above the
-    // dark overlay and marks the one that still owes stars.
-    private IEnumerator LightIslandsRoutine()
+    // Waits for WorldMapProblemIslands to apply progress (it caches the island list a frame into
+    // Start) so the playable island's bounds are known, then marks it.
+    private IEnumerator PlaceQuestMarkerRoutine()
     {
         float deadline = Time.realtimeSinceStartup + Mathf.Max(0.5f, resolveTimeout);
         WorldMapProblemIslands map = null;
@@ -133,41 +135,23 @@ public sealed class WorldMapNight : MonoBehaviour
         while (Time.realtimeSinceStartup < deadline)
         {
             if (map == null) map = FindObjectOfType<WorldMapProblemIslands>();
-            if (map != null && map.IslandRoots != null && map.IslandRoots.Count > 0)
+            if (map != null && map.TryGetPlayableIslandWorldBounds(out Bounds bounds))
             {
-                for (int i = 0; i < map.IslandRoots.Count; i++)
-                {
-                    LiftAboveDarkness(map.IslandRoots[i]);
-                }
-
-                TryPlaceQuestMarker(map);
+                TryPlaceQuestMarker(bounds);
                 yield break;
             }
 
             yield return null;
         }
 
-        Debug.LogWarning("[WorldMapNight] could not resolve the islands in time — the map stays fully dark");
-    }
-
-    private static void LiftAboveDarkness(Transform islandRoot)
-    {
-        if (islandRoot == null) return;
-
-        SpriteRenderer[] renderers = islandRoot.GetComponentsInChildren<SpriteRenderer>(true);
-        for (int i = 0; i < renderers.Length; i++)
-        {
-            if (renderers[i] == null) continue;
-            renderers[i].sortingOrder += IslandOrderLift; // relative order among the island's parts is kept
-        }
+        Debug.LogWarning("[WorldMapNight] could not resolve the playable island in time — no night marker");
     }
 
     // "!" over the island whose region still has a quest under 3 stars — the same marker art the
     // forest quests use, so the cue reads identically.
-    private void TryPlaceQuestMarker(WorldMapProblemIslands map)
+    private void TryPlaceQuestMarker(Bounds bounds)
     {
         if (!QuestStars.AnyNeedsRedo(NightMode.QuestIds)) return;
-        if (!map.TryGetPlayableIslandWorldBounds(out Bounds bounds)) return;
 
         Sprite markSprite = Resources.Load<Sprite>("Night/quest_mark");
         if (markSprite == null)

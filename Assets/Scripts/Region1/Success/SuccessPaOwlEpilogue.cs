@@ -137,6 +137,7 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
         }
 
         AudioSource source = GetOrCreateAudioSource();
+        owlAnimator.speed = 0f;
         owlAnimator.gameObject.SetActive(true);
         owlCanvasGroup.alpha = 0f;
         // Crossfade: owl_hello fades out while the talking owl fades in — smooth dissolve at the seam.
@@ -154,7 +155,11 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
         for (int i = 0; i < clips.Length; i++)
         {
             if (clips[i] == null) continue;
-            if (!first && phraseGap > 0f) yield return new WaitForSeconds(phraseGap);
+            if (!first && phraseGap > 0f)
+            {
+                owlAnimator.speed = 0f;
+                yield return new WaitForSeconds(phraseGap);
+            }
             first = false;
             playedAny = true;
 
@@ -163,6 +168,7 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
             source.clip = clips[i];
             source.Play();
             yield return new WaitForSeconds(clips[i].length);
+            owlAnimator.speed = 0f;
         }
 
         if (!playedAny && fallbackHoldSeconds > 0f)

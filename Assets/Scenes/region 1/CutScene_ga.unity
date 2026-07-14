@@ -4971,13 +4971,13 @@ MonoBehaviour:
   talkingAnimator: {fileID: 0}
   talkingStateName: Owl
   talkingAnimationSpeed: 1.2
-  talkingSecondsPerLoop: 0
+  talkingSecondsPerLoop: 1.89
   greetingPhrase2AnimationSpeed: 0.8
   greetingPhrase2SecondsPerLoop: 0
   greetingPhrase3AnimationSpeed: 0.7
   greetingPhrase3SecondsPerLoop: 0
   bearFocusLookAnimationSpeed: 1
-  bearFocusLookSecondsPerLoop: 0
+  bearFocusLookSecondsPerLoop: 2.266667
   bearFocusMissionAnimationSpeed: 1
   bearFocusMissionSecondsPerLoop: 0
   hideTalkingPrefabWhenSilent: 1

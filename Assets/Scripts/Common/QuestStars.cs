@@ -26,6 +26,17 @@ public static class QuestStars
         return s > 0 && s < Max;
     }
 
+    /// Has any quest been scored at all? False on a fresh game — nothing has been played yet.
+    public static bool AnyRecorded(string[] questIds)
+    {
+        if (questIds == null) return false;
+        foreach (string id in questIds)
+        {
+            if (Get(id) > 0) return true;
+        }
+        return false;
+    }
+
     public static bool AnyNeedsRedo(string[] questIds)
     {
         if (questIds == null) return false;

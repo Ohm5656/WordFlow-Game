@@ -957,18 +957,18 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
                 continue;
             }
 
-            // This phrase's own mouth speed.
-            activeTalkingSpeed = lines[i].speed;
-            activeTalkingSecondsPerLoop = lines[i].secondsPerLoop;
-            if (UsesTalkingPrefabAnimator)
-            {
-                talkingAnimator.speed = GetTalkingAnimatorSpeed();
-            }
-
             if (playedAny && bearFocusVoiceGap > 0f)
             {
+                if (UsesTalkingPrefabAnimator) talkingAnimator.speed = 0f;
                 yield return new WaitForSeconds(bearFocusVoiceGap);
             }
+
+            // Restart the authored loop with every spoken phrase. Combined with a per-line
+            // seconds-per-loop value, this keeps the first and last mouth frames on the exact
+            // audio boundaries instead of carrying motion through the silent gap.
+            activeTalkingSpeed = lines[i].speed;
+            activeTalkingSecondsPerLoop = lines[i].secondsPerLoop;
+            RestartTalkingAnimation();
 
             LoadVoiceClip(clip);
             source.clip = clip;
@@ -985,11 +985,10 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
                 fadedIn = true;
             }
 
-            // Talk visualization. On the last phrase, reserve the fade-out window.
-            float talkPortion = (fade && i == lastIndex)
-                ? Mathf.Max(0f, hold - talkingFadeDuration)
-                : hold;
-            yield return PlayGreetingFrames(talkPortion, frameSequence);
+            // Keep the mouth moving for the complete clip. The previous timing reserved the
+            // fade-out window inside the voice and froze the mouth before the final syllable.
+            yield return PlayGreetingFrames(hold, frameSequence);
+            if (UsesTalkingPrefabAnimator) talkingAnimator.speed = 0f;
 
             // End of the whole round (last phrase): freeze on the current frame, hold, then fade out.
             if (i == lastIndex)
@@ -1404,6 +1403,12 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         talkingObject.SetActive(true);
         RestoreTalkingPlacedTransform();
         SetOwlFramesAlpha(1f);
+        talkingAnimator.speed = 0f;
+    }
+
+    private void RestartTalkingAnimation()
+    {
+        if (!UsesTalkingPrefabAnimator) return;
 
         talkingAnimator.speed = GetTalkingAnimatorSpeed();
         if (!string.IsNullOrWhiteSpace(talkingStateName))
