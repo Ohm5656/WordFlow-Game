@@ -1,48 +1,29 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-/// Self-bootstrapping night wash for the puzzle/success scenes during a night redo.
-///  - CutScene_bear / CutScene_ga: starts as a dark screen with a light circle FOLLOWING the
-///    bear/crow entrance animation; the moment the craft book pops (WordAssemblyTimer.SmokeActive
-///    flips true) the circle grows to swallow the whole screen and the overlay settles into a flat
-///    dim — readable for the puzzle, matching every other night scene.
-///  - Success_pa / Success_ga / Success_ga_correct / Success_ta_incorrect: flat dim only, no
-///    spotlight (there is no entrance animation to follow there).
+/// Self-bootstrapping night dressing for the puzzle/success scenes during a night redo.
+///
+/// The dark wash is inserted INTO the scene's own Canvas, directly above the `background` image and
+/// below everything else. That is what makes the night read correctly: the background goes dark
+/// while the actors on top of it — the bear, the crow, the craft book, the stones, the smoke, the
+/// star board — keep their full daylight brightness, so the quest object is the lit thing in a dark
+/// scene. (A screen-space overlay ON TOP of the canvas would have dimmed the book and stones too.)
+///
 /// Only appears while NightMode.RedoActive is true; does nothing during the day.
 public sealed class NightTintOverlay : MonoBehaviour
 {
-    private const string OverlayObjectName = "Night Tint";
+    private const string OverlayObjectName = "Night Background Tint";
+    private const string BackgroundObjectName = "background";
 
-    private static readonly string[] SpotlightScenes = { "CutScene_bear", "CutScene_ga" };
-    private static readonly string[] FlatDimScenes =
+    private static readonly string[] NightScenes =
     {
+        "CutScene_bear", "CutScene_ga",
         "Success_pa", "Success_ga", "Success_ga_correct", "Success_ta_incorrect",
     };
 
-    [Header("Colour")]
-    [SerializeField] private Color tintColor = new Color(0.04f, 0.09f, 0.20f, 1f);
-    [Tooltip("Overlay alpha while the spotlight is following the entrance animation — darker than the flat dim, since a spotlight beat reads best against real darkness.")]
-    [SerializeField] private float spotlightAlpha = 0.85f;
-    [Tooltip("Overlay alpha once the spotlight settles (and for the success scenes, which have no spotlight at all).")]
-    [SerializeField] private float flatDimAlpha = 0.38f;
-    [SerializeField] private float minimumDarknessInLight = 0.1f;
-
-    [Header("Spotlight")]
-    [Tooltip("Spotlight radius as a fraction of screen height (radii are in screen pixels — see NightOverlayCutout.shader usage notes).")]
-    [SerializeField] private float spotRadiusFactor = 0.42f;
-    [SerializeField] private float settleDuration = 0.8f;
-    [Tooltip("Settle to flat dim anyway if the puzzle clock never starts within this long (safety net).")]
-    [SerializeField] private float failsafeSeconds = 90f;
-
-    private Image overlayImage;
-    private Material materialInstance;
-    private Transform followTarget;
-    private bool settling;
-
-    private static readonly int LightData0Id = Shader.PropertyToID("_LightData0");
-    private static readonly int MinDarknessId = Shader.PropertyToID("_MinimumDarkness");
+    // Moonlit blue, matching reference_forest's night. Alpha is the knob: higher = darker night.
+    private static readonly Color TintColor = new Color(0.04f, 0.09f, 0.20f, 0.72f);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
@@ -57,161 +38,57 @@ public sealed class NightTintOverlay : MonoBehaviour
     private static void TryCreateForActiveScene()
     {
         if (!NightMode.RedoActive) return;
-
-        string sceneName = SceneManager.GetActiveScene().name;
-        bool spotlight = Contains(SpotlightScenes, sceneName);
-        bool flat = Contains(FlatDimScenes, sceneName);
-        if (!spotlight && !flat) return;
+        if (!IsNightScene(SceneManager.GetActiveScene().name)) return;
         if (GameObject.Find(OverlayObjectName) != null) return;
 
-        GameObject host = new GameObject(OverlayObjectName);
-        NightTintOverlay overlay = host.AddComponent<NightTintOverlay>();
-        overlay.Build(spotlight);
-    }
-
-    private static bool Contains(string[] values, string value)
-    {
-        for (int i = 0; i < values.Length; i++)
+        Canvas canvas = FindSceneCanvas();
+        if (canvas == null)
         {
-            if (values[i] == value) return true;
+            Debug.LogWarning("[NightTintOverlay] no root Canvas in this scene — night tint skipped");
+            return;
         }
 
-        return false;
-    }
+        // Sit directly above the background image; everything authored after it (actors, book,
+        // stones, fog, star board) draws on top of the tint and therefore stays bright.
+        Transform background = canvas.transform.Find(BackgroundObjectName);
+        int siblingIndex = background != null ? background.GetSiblingIndex() + 1 : 1;
 
-    private void Build(bool spotlightMode)
-    {
-        RectTransform rect = gameObject.AddComponent<RectTransform>();
+        GameObject tint = new GameObject(OverlayObjectName);
+        tint.transform.SetParent(canvas.transform, false);
+        tint.transform.SetSiblingIndex(siblingIndex);
+
+        RectTransform rect = tint.AddComponent<RectTransform>();
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
 
-        Canvas canvas = gameObject.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 9000; // under the 10000 scene-fade canvases, above everything else
-
-        GameObject panel = new GameObject("Night Tint Panel");
-        panel.transform.SetParent(transform, false);
-        RectTransform panelRect = panel.AddComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
-
-        overlayImage = panel.AddComponent<Image>();
-        overlayImage.sprite = Resources.Load<Sprite>("Night/night_white");
-        overlayImage.raycastTarget = false;
-
-        Material sharedMaterial = Resources.Load<Material>("Night/NightCutoutOverlay");
-        if (sharedMaterial != null)
-        {
-            // UGUI has no MaterialPropertyBlock — an instance is required so per-frame
-            // SetVector/SetFloat calls don't mutate the shared asset every other consumer uses.
-            materialInstance = new Material(sharedMaterial);
-            overlayImage.material = materialInstance;
-        }
-
-        followTarget = spotlightMode ? FindFollowTarget() : null;
-
-        if (spotlightMode && followTarget != null && materialInstance != null)
-        {
-            SetOverlayAlpha(spotlightAlpha);
-            StartCoroutine(SpotlightRoutine());
-        }
-        else
-        {
-            // Flat dim: either a success scene (no spotlight at all) or a puzzle scene whose
-            // entrance component wasn't found — fail safe to the readable flat wash.
-            SetOverlayAlpha(flatDimAlpha);
-            if (materialInstance != null)
-            {
-                materialInstance.SetVector(LightData0Id, Vector4.zero);
-                materialInstance.SetFloat(MinDarknessId, minimumDarknessInLight);
-            }
-        }
+        Image image = tint.AddComponent<Image>();
+        image.color = TintColor;
+        image.raycastTarget = false; // never eat a tap meant for a stone
     }
 
-    private static Transform FindFollowTarget()
+    private static Canvas FindSceneCanvas()
     {
-        BearCutscene bear = FindObjectOfType<BearCutscene>();
-        if (bear != null) return bear.transform;
-
-        CrowEntranceCutscene crow = FindObjectOfType<CrowEntranceCutscene>();
-        return crow != null ? crow.transform : null;
-    }
-
-    // Tracks the entrance animation every frame until either the craft book pops
-    // (WordAssemblyTimer.SmokeActive) or the failsafe timeout elapses, then settles to flat dim.
-    private IEnumerator SpotlightRoutine()
-    {
-        float radius = Screen.height * spotRadiusFactor;
-        float elapsed = 0f;
-
-        while (!settling)
+        Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Canvas best = null;
+        for (int i = 0; i < canvases.Length; i++)
         {
-            if (followTarget == null)
-            {
-                break; // entrance object gone without the book popping — settle below
-            }
-
-            Vector3 pos = followTarget.position; // ScreenSpaceOverlay UI: world position == screen pixels
-            materialInstance.SetVector(LightData0Id, new Vector4(pos.x, pos.y, radius * 0.4f, radius));
-            materialInstance.SetFloat(MinDarknessId, minimumDarknessInLight);
-
-            bool bookPopped = WordAssemblyTimer.Instance != null && WordAssemblyTimer.Instance.SmokeActive;
-            elapsed += Time.deltaTime;
-            if (bookPopped || elapsed > failsafeSeconds)
-            {
-                yield return SettleRoutine(pos, radius);
-                yield break;
-            }
-
-            yield return null;
+            Canvas c = canvases[i];
+            if (c == null || c.transform.parent != null) continue;        // root canvases only
+            if (best == null || c.sortingOrder < best.sortingOrder) best = c; // the scene's own (order 0)
         }
 
-        if (!settling)
-        {
-            yield return SettleRoutine(Vector3.zero, radius);
-        }
+        return best;
     }
 
-    // Grows the hole out past the screen edges while easing the alpha down to the flat dim, so the
-    // spotlight circle visually "melts away" into a uniform wash instead of popping off.
-    private IEnumerator SettleRoutine(Vector3 lastPos, float startRadius)
+    private static bool IsNightScene(string sceneName)
     {
-        settling = true;
-
-        float startAlpha = overlayImage.color.a;
-        float targetRadius = Screen.width * 2f;
-        float duration = Mathf.Max(0.01f, settleDuration);
-
-        for (float t = 0f; t < duration; t += Time.deltaTime)
+        for (int i = 0; i < NightScenes.Length; i++)
         {
-            float k = t / duration;
-            float radius = Mathf.Lerp(startRadius, targetRadius, k);
-            SetOverlayAlpha(Mathf.Lerp(startAlpha, flatDimAlpha, k));
-            materialInstance.SetVector(LightData0Id, new Vector4(lastPos.x, lastPos.y, radius * 0.4f, radius));
-            yield return null;
+            if (NightScenes[i] == sceneName) return true;
         }
 
-        SetOverlayAlpha(flatDimAlpha);
-        materialInstance.SetVector(LightData0Id, Vector4.zero); // fully off -> uniform flat darkness
-    }
-
-    private void SetOverlayAlpha(float alpha)
-    {
-        if (overlayImage == null) return;
-        Color c = tintColor;
-        c.a = alpha;
-        overlayImage.color = c;
-    }
-
-    private void OnDestroy()
-    {
-        if (materialInstance != null)
-        {
-            Destroy(materialInstance);
-        }
+        return false;
     }
 }

@@ -214,7 +214,9 @@ public sealed class BearCutscene : MonoBehaviour
         if (!string.IsNullOrEmpty(nextScene) || endFadeOutDuration > 0f)
         {
             yield return FadeOutAll(endFadeOutDuration);
-            if (owlEpilogue != null) yield return owlEpilogue.Play();
+            // Night redo: no owl praise — the child already earned it on the daytime run. Straight
+            // back to the forest for the next quest.
+            if (owlEpilogue != null && !NightMode.RedoActive) yield return owlEpilogue.Play();
             // Tell reference_forest to skip Beat 1 (bear) and resume at Beat 2 (crow quest).
             if (resumeForestAtBeat2) BearEncounterFlow.ResumeAtBeat2 = true;
             if (setPuzzleRetryFlags)

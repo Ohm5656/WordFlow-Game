@@ -168,6 +168,8 @@ public sealed class QuestPathSequence : MonoBehaviour
     [SerializeField] private float nightHeroLightRadius = 2.6f;
     [Tooltip("Radius of the light pool on each shown night quest (world units).")]
     [SerializeField] private float nightQuestLightRadius = 3.2f;
+    [Tooltip("Beat held after the last night quest, before the map fades back in.")]
+    [SerializeField] private float nightEndHold = 1.2f;
 
     private bool crowPatrolActive;
     private bool quest4PatrolActive;
@@ -751,19 +753,18 @@ public sealed class QuestPathSequence : MonoBehaviour
             }
         }
 
-        // Walk the remaining quest spots in order. Every spot is walked to (path fidelity); only a
-        // redoable, not-yet-attempted-tonight quest hands off to its puzzle — its actor/board/light
-        // are already up from Start(), so arriving just holds a beat before the scene switch.
+        // Walk only to the quests that still owe stars — a 3-star (or already-attempted) quest is
+        // skipped entirely, not walked past. Its actor/board/light are already up from Start(), so
+        // arriving just holds a beat before the scene switch.
         for (int i = startIndex; i < nightQuestIds.Length; i++)
         {
             string id = nightQuestIds[i];
-            yield return WalkToQuest(id);
-
             if (!QuestStars.NeedsRedo(id) || NightMode.IsDoneThisNight(id))
             {
-                continue; // 3-star, or already tried tonight: walk straight past, nothing shown
+                continue;
             }
 
+            yield return WalkToQuest(id);
             Vibrate();
             yield return new WaitForSeconds(questAutoHold);
 
@@ -775,9 +776,9 @@ public sealed class QuestPathSequence : MonoBehaviour
             yield break;
         }
 
-        // Nothing left to redo: walk home along the authored road and enter the house.
-        yield return WalkHome();
-        yield return FadeOutBody();
+        // Every quest is perfect (or done for tonight): the night is over. No walk home — go
+        // straight back to the night map.
+        yield return new WaitForSeconds(nightEndHold);
 
         NightMode.EndSession();
         yield return SceneFadeController.Cover(sceneExitCoverDuration);
@@ -845,22 +846,6 @@ public sealed class QuestPathSequence : MonoBehaviour
             crowPatrolActive = false;
             yield return FadeOutAndHide(new[] { crow1Sprite, crow2Sprite }, new[] { crow1Root, crow2Root });
         }
-    }
-
-    // Walk the remaining authored road (past every waypoint, no side quests) to the house, starting
-    // from wherever the last processed quest left the hero (wp_2 at the latest).
-    private IEnumerator WalkHome()
-    {
-        yield return WalkFacing(wp2, wp3);
-        yield return WalkFacing(wp3, wp4);
-        yield return WalkFacing(wp4, wp5);
-        yield return WalkFacing(wp5, wp6);
-        yield return WalkFacing(wp6, wp7);
-        yield return WalkFacing(wp7, wp8);
-        yield return WalkFacing(wp8, wp9);
-        yield return WalkFacing(wp9, wp10);
-        yield return WalkFacing(wp10, wp11);
-        yield return WalkFacing(wp11, wp12);
     }
 
     // Let the quest-enter cue finish while the encounter is still visible, then cover the screen.

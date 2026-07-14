@@ -2,42 +2,45 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// Self-bootstrapping night dressing for WorldMap: a world-space dark overlay (the same
-/// NSC/NightOverlayCutout shader reference_forest uses) with a soft circular opening over the
-/// playable island — everything else on the map is dark. No UI, no button: the child enters the
-/// night redo by clicking the (lit) island itself, exactly like the day flow
-/// (WorldMapProblemIslands.HandlePlayableIslandClick / LoadNextSceneRoutine starts the session).
-/// Built entirely at runtime (WorldMap has no dark-overlay object in the scene). Only appears when
-/// NightMode.NightPhase is true.
+/// Self-bootstrapping night dressing for WorldMap.
+///
+/// The sea/backdrop goes dark; the ISLANDS THEMSELVES stay lit. That is done by dropping a
+/// full-screen dark sprite over the map and then lifting every island's renderers above it — so the
+/// light follows the island artwork exactly, instead of a round glow that would also light the sea
+/// around it. An island that still has a quest under 3 stars gets the same "!" marker the forest
+/// quests use, bobbing over it, so the child knows which island to tap.
+///
+/// Tapping the island is what starts the night redo (WorldMapProblemIslands.LoadNextSceneRoutine
+/// opens the session) — there is no separate button.
+/// Only appears when NightMode.NightPhase is true.
 public sealed class WorldMapNight : MonoBehaviour
 {
     private const string WorldMapSceneName = "WorldMap";
     private const string SetupObjectName = "WorldMap Night";
 
-    [Header("Overlay")]
+    // Lifts island renderers above the dark overlay while preserving their order among themselves.
+    private const int DarkOverlayOrder = 32000;
+    private const int IslandOrderLift = 33000;
+    private const int MarkerOrder = 34000;
+
+    [Header("Darkness")]
     [SerializeField] private Color darkColor = new Color(0.04f, 0.09f, 0.20f, 1f);
     [SerializeField] private float maxDarkAlpha = 0.82f;
     [SerializeField] private float fadeStartDelay = 1.7f;
     [SerializeField] private float fadeDuration = 1.5f;
     [SerializeField] private float overscan = 1.1f;
 
-    [Header("Island opening")]
-    [Tooltip("Opening radius as a multiple of the island's own half-size (bigger = softer glow).")]
-    [SerializeField] private float islandRadiusMultiplier = 1.6f;
-    [SerializeField] private float islandInnerFraction = 0.45f;
-    [SerializeField] private float minimumDarknessInLight = 0.15f;
-    [Tooltip("How long to keep retrying to find the playable island's bounds before giving up.")]
-    [SerializeField] private float boundsResolveTimeout = 3f;
+    [Header("Quest marker")]
+    [Tooltip("Marker width as a fraction of the island's width.")]
+    [SerializeField] private float markerWidthFraction = 0.34f;
+    [Tooltip("Extra height above the island's top edge, as a fraction of the island's height.")]
+    [SerializeField] private float markerHeightFraction = 0.25f;
+    [SerializeField] private float markerBobAmplitude = 0.35f;
+    [SerializeField] private float markerBobPeriod = 2.4f;
+    [Tooltip("How long to keep retrying to find the islands before giving up.")]
+    [SerializeField] private float resolveTimeout = 3f;
 
     private SpriteRenderer overlay;
-    private MaterialPropertyBlock overlayProps;
-    private static readonly int[] LightDataIds =
-    {
-        Shader.PropertyToID("_LightData0"),
-        Shader.PropertyToID("_LightData1"),
-        Shader.PropertyToID("_LightData2"),
-        Shader.PropertyToID("_LightData3")
-    };
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
@@ -66,12 +69,8 @@ public sealed class WorldMapNight : MonoBehaviour
 
     private IEnumerator Run()
     {
-        BuildOverlay();
-
-        // Push a fully-closed hole immediately (island not lit yet) so the very first frame the
-        // overlay is visible it's already correct, then resolve the real island bounds.
-        PushLightData(Vector4.zero);
-        StartCoroutine(ResolveIslandHoleRoutine());
+        BuildDarkOverlay();
+        StartCoroutine(LightIslandsRoutine());
 
         if (fadeStartDelay > 0f)
         {
@@ -91,7 +90,7 @@ public sealed class WorldMapNight : MonoBehaviour
         overlay.color = c;
     }
 
-    private void BuildOverlay()
+    private void BuildDarkOverlay()
     {
         Sprite whiteSprite = Resources.Load<Sprite>("Night/night_white");
         Material material = Resources.Load<Material>("Night/NightCutoutOverlay");
@@ -108,15 +107,13 @@ public sealed class WorldMapNight : MonoBehaviour
 
         overlay = overlayGo.AddComponent<SpriteRenderer>();
         overlay.sprite = whiteSprite;
-        overlay.sharedMaterial = material;
-        overlay.sortingOrder = 32000; // matches reference_forest's NightDark convention
+        overlay.sharedMaterial = material; // unlit; its light slots default to 0 = uniform darkness
+        overlay.sortingOrder = DarkOverlayOrder;
 
         Color c = darkColor;
         c.a = 0f;
         overlay.color = c;
 
-        // Cover the full orthographic view with headroom (overscan) so nothing pokes out at the
-        // edges when the camera is exactly framed.
         float height = 2f * cam.orthographicSize * overscan;
         float width = height * cam.aspect;
         float spriteWorldSize = whiteSprite.bounds.size.x; // 8px @ PPU 100 = 0.08 world units, square
@@ -125,39 +122,76 @@ public sealed class WorldMapNight : MonoBehaviour
         overlayGo.transform.localScale = new Vector3(width / spriteWorldSize, height / spriteWorldSize, 1f);
     }
 
-    private IEnumerator ResolveIslandHoleRoutine()
+    // The islands are what the night leaves lit. Waits for WorldMapProblemIslands to apply progress
+    // (it caches the island list a frame into Start), then lifts every island renderer above the
+    // dark overlay and marks the one that still owes stars.
+    private IEnumerator LightIslandsRoutine()
     {
-        float deadline = Time.realtimeSinceStartup + Mathf.Max(0.5f, boundsResolveTimeout);
+        float deadline = Time.realtimeSinceStartup + Mathf.Max(0.5f, resolveTimeout);
         WorldMapProblemIslands map = null;
 
         while (Time.realtimeSinceStartup < deadline)
         {
             if (map == null) map = FindObjectOfType<WorldMapProblemIslands>();
-            if (map != null && map.TryGetPlayableIslandWorldBounds(out Bounds bounds))
+            if (map != null && map.IslandRoots != null && map.IslandRoots.Count > 0)
             {
-                float outer = Mathf.Max(bounds.extents.x, bounds.extents.y) * islandRadiusMultiplier;
-                float inner = outer * Mathf.Clamp01(islandInnerFraction);
-                PushLightData(new Vector4(bounds.center.x, bounds.center.y, inner, outer));
+                for (int i = 0; i < map.IslandRoots.Count; i++)
+                {
+                    LiftAboveDarkness(map.IslandRoots[i]);
+                }
+
+                TryPlaceQuestMarker(map);
                 yield break;
             }
 
             yield return null;
         }
 
-        Debug.LogWarning("[WorldMapNight] could not resolve the playable island's bounds in time — map stays fully dark");
+        Debug.LogWarning("[WorldMapNight] could not resolve the islands in time — the map stays fully dark");
     }
 
-    private void PushLightData(Vector4 slot0)
+    private static void LiftAboveDarkness(Transform islandRoot)
     {
-        if (overlay == null) return;
-        if (overlayProps == null) overlayProps = new MaterialPropertyBlock();
+        if (islandRoot == null) return;
 
-        overlay.GetPropertyBlock(overlayProps);
-        overlayProps.SetVector(LightDataIds[0], slot0);
-        overlayProps.SetVector(LightDataIds[1], Vector4.zero);
-        overlayProps.SetVector(LightDataIds[2], Vector4.zero);
-        overlayProps.SetVector(LightDataIds[3], Vector4.zero);
-        overlayProps.SetFloat("_MinimumDarkness", minimumDarknessInLight);
-        overlay.SetPropertyBlock(overlayProps);
+        SpriteRenderer[] renderers = islandRoot.GetComponentsInChildren<SpriteRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] == null) continue;
+            renderers[i].sortingOrder += IslandOrderLift; // relative order among the island's parts is kept
+        }
+    }
+
+    // "!" over the island whose region still has a quest under 3 stars — the same marker art the
+    // forest quests use, so the cue reads identically.
+    private void TryPlaceQuestMarker(WorldMapProblemIslands map)
+    {
+        if (!QuestStars.AnyNeedsRedo(NightMode.QuestIds)) return;
+        if (!map.TryGetPlayableIslandWorldBounds(out Bounds bounds)) return;
+
+        Sprite markSprite = Resources.Load<Sprite>("Night/quest_mark");
+        if (markSprite == null)
+        {
+            Debug.LogWarning("[WorldMapNight] Night/quest_mark sprite not found — no island marker");
+            return;
+        }
+
+        GameObject marker = new GameObject("Night Quest Marker");
+        marker.transform.SetParent(transform, false);
+
+        SpriteRenderer renderer = marker.AddComponent<SpriteRenderer>();
+        renderer.sprite = markSprite;
+        renderer.sortingOrder = MarkerOrder; // above the lifted islands
+
+        float targetWidth = bounds.size.x * markerWidthFraction;
+        float scale = targetWidth / Mathf.Max(0.0001f, markSprite.bounds.size.x);
+        marker.transform.localScale = Vector3.one * scale;
+
+        float markerHeight = markSprite.bounds.size.y * scale;
+        float y = bounds.max.y + bounds.size.y * markerHeightFraction + markerHeight * 0.5f;
+        marker.transform.position = new Vector3(bounds.center.x, y, 0f);
+
+        MarkerBob bob = marker.AddComponent<MarkerBob>();
+        bob.Configure(markerBobAmplitude, markerBobPeriod);
     }
 }

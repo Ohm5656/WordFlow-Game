@@ -114,6 +114,25 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     /// renderers). False until progress has been applied / no island is playable yet.
     public bool TryGetPlayableIslandWorldBounds(out Bounds bounds) => TryGetPlayableIslandSpriteBounds(out bounds);
 
+    /// Every island's root transform, in the authored order. Empty until progress has been applied
+    /// (the island list is cached a frame into Start). WorldMapNight reads this to keep the islands
+    /// lit above the night darkness.
+    public IReadOnlyList<Transform> IslandRoots
+    {
+        get
+        {
+            islandRootsCache.Clear();
+            for (int i = 0; i < runtimeIslands.Count; i++)
+            {
+                if (runtimeIslands[i].Root != null) islandRootsCache.Add(runtimeIslands[i].Root);
+            }
+
+            return islandRootsCache;
+        }
+    }
+
+    private readonly List<Transform> islandRootsCache = new List<Transform>();
+
     public static void MarkRegionCompleted(int completedRegionNumber)
     {
         if (completedRegionNumber < 1)
