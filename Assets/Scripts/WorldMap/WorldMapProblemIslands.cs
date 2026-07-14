@@ -597,7 +597,11 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
 
     private void HandlePlayableIslandClick()
     {
-        if (isLoadingNextScene || !playablePromptReady || playableIsland == null || worldCamera == null)
+        if (WorldMapNight.BlocksIslandInput
+            || isLoadingNextScene
+            || !playablePromptReady
+            || playableIsland == null
+            || worldCamera == null)
         {
             return;
         }
@@ -617,7 +621,43 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         StartCoroutine(LoadNextSceneRoutine());
     }
 
-    private IEnumerator LoadNextSceneRoutine()
+    /// Starts the same island-loading path as a direct island click. The night choice panel calls
+    /// this only after its press animation and temporary extra dim have finished.
+    public bool StartNightRedoFromChoice()
+    {
+        string nightSceneName = FindFirstConfiguredSceneName();
+        if (!NightMode.NightPhase
+            || isLoadingNextScene
+            || !progressApplied
+            || string.IsNullOrWhiteSpace(nightSceneName))
+        {
+            return false;
+        }
+
+        // This first implementation has one playable region with redoable quests. Use its configured
+        // scene directly instead of the highest unlocked island, which may already point at a later
+        // (not-yet-built) region after the daytime completion scene advanced map progress.
+        StartCoroutine(LoadNextSceneRoutine(nightSceneName));
+        return true;
+    }
+
+    private string FindFirstConfiguredSceneName()
+    {
+        for (int i = 0; i < runtimeIslands.Count; i++)
+        {
+            IslandRuntime island = runtimeIslands[i];
+            if (island != null
+                && island.Progress != null
+                && !string.IsNullOrWhiteSpace(island.Progress.SceneName))
+            {
+                return island.Progress.SceneName.Trim();
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private IEnumerator LoadNextSceneRoutine(string sceneOverride = null)
     {
         isLoadingNextScene = true;
         playablePromptReady = false;
@@ -639,9 +679,11 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
             yield return new WaitForSeconds(loadDelayAfterClick);
         }
 
-        string sceneName = playableIsland != null && playableIsland.Progress != null
-            ? playableIsland.Progress.SceneName
-            : string.Empty;
+        string sceneName = !string.IsNullOrWhiteSpace(sceneOverride)
+            ? sceneOverride
+            : playableIsland != null && playableIsland.Progress != null
+                ? playableIsland.Progress.SceneName
+                : string.Empty;
 
         if (!string.IsNullOrWhiteSpace(sceneName))
         {

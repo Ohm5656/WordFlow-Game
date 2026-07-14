@@ -244,6 +244,23 @@ public sealed class QuestPathSequence : MonoBehaviour
 
     private void Start()
     {
+        // On a fresh forest entry the opening fade used to leave the controller's default
+        // orientation visible (up/back) until the first movement frame. Face the first waypoint
+        // immediately so the hero is already looking the same way they are about to walk.
+        if (!NightMode.RedoActive
+            && !BearEncounterFlow.ResumeAtBeat2
+            && !BearEncounterFlow.ResumeAtBeat3
+            && body != null
+            && wp1 != null)
+        {
+            facingLock = OrientationFor(wp1.position - body.position);
+            if (bodyAnimator != null)
+            {
+                bodyAnimator.SetInteger("orientation", facingLock);
+                bodyAnimator.SetFloat("speed", 0f);
+            }
+        }
+
         if (NightMode.RedoActive)
         {
             // Must run before the RunNightRedo coroutine's first synchronous chunk consumes
@@ -390,6 +407,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         {
             // ---- Beat 1: walk to wp_1 — the bear quest pops the moment the hero arrives
             //      there, and fades in WHILE the hero keeps running toward it (no stop).
+            facingLock = -1;
             if (wp1 != null)
             {
                 yield return MoveTo(wp1.position);

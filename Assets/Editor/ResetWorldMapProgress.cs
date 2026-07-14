@@ -9,13 +9,44 @@ public static class ResetWorldMapProgress
     const string HighestKey = "WorldMapHighestUnlockedRegion";
     const string PendingKey = "WorldMapPendingUnlockRegion";
 
+    [InitializeOnEnterPlayMode]
+    static void ResetOnEnterPlayMode(EnterPlayModeOptions options)
+    {
+        ResetFreshDay(false);
+    }
+
     [MenuItem("Tools/Scenes/Reset WorldMap Progress")]
     public static void Run()
     {
-        Debug.Log($"[ResetWorldMap] BEFORE: Highest={PlayerPrefs.GetInt(HighestKey, -1)} Pending={PlayerPrefs.GetInt(PendingKey, -1)}");
+        ResetFreshDay(true);
+    }
+
+    static void ResetFreshDay(bool log)
+    {
+        if (log)
+        {
+            Debug.Log($"[ResetWorldMap] BEFORE: Highest={PlayerPrefs.GetInt(HighestKey, -1)} Pending={PlayerPrefs.GetInt(PendingKey, -1)}");
+        }
+
         PlayerPrefs.DeleteKey(HighestKey);
         PlayerPrefs.DeleteKey(PendingKey);
+
+        QuestStars.Clear(NightMode.QuestIds);
+        NightMode.ResetAll(NightMode.QuestIds);
+        PlayerPrefs.DeleteKey("StarEarnedCount");
+        PlayerPrefs.DeleteKey("WordAssemblyTimerRemaining");
+        PlayerPrefs.DeleteKey("MagicStonePuzzleRetryAfterCrow");
+        PlayerPrefs.DeleteKey("MagicStonePuzzleRetryAfterAlt");
         PlayerPrefs.Save();
-        Debug.Log("[ResetWorldMap] cleared -> next play: region 1 (Island2 -> reference_forest)");
+
+        // These can survive when Enter Play Mode Options disables domain reload.
+        BearEncounterFlow.ReturnToForest = false;
+        BearEncounterFlow.ResumeAtBeat2 = false;
+        BearEncounterFlow.ResumeAtBeat3 = false;
+
+        if (log)
+        {
+            Debug.Log("[ResetWorldMap] cleared -> next play is a fresh daytime run (Island2 -> reference_forest)");
+        }
     }
 }
