@@ -25,7 +25,7 @@ public sealed class BearIntroSequence : MonoBehaviour
     [SerializeField] private float zoomOrthoSize = 5.5f;
     [Tooltip("Extra offset added to the focus point so the framing isn't dead-centre.")]
     [SerializeField] private Vector2 zoomOffset = new Vector2(0f, 0.5f);
-    [SerializeField] private float zoomDuration = 1.1f;
+    [SerializeField] private float zoomDuration = 0.85f;
 
     [Header("Spotlight darkness")]
     [Tooltip("Big SpriteRenderer using the NightOverlayCutout material, covering the view.")]
@@ -38,7 +38,7 @@ public sealed class BearIntroSequence : MonoBehaviour
     [SerializeField] private float[] spotlightRadii = { 3f, 1.6f };
     [Range(0.01f, 0.9f)] [SerializeField] private float clearCenterFraction = 0.35f;
     [Range(0f, 1f)] [SerializeField] private float minimumDarknessInLight = 0.0f;
-    [SerializeField] private float darkFadeDuration = 0.9f;
+    [SerializeField] private float darkFadeDuration = 0.65f;
 
     [Header("Owl guide")]
     [SerializeField] private CanvasGroup owlGroup;
@@ -51,14 +51,18 @@ public sealed class BearIntroSequence : MonoBehaviour
     [SerializeField, Min(1f)] private float owlFps = 24f;
     [Tooltip("Overall speed multiplier for the owl animation (1 = fps as-is).")]
     [SerializeField, Min(0.05f)] private float owlSpeed = 1f;
-    [SerializeField] private float owlFadeDuration = 0.4f;
+    [Tooltip("Duration of the spoken \"แย่แล้ว\" motion. The oversized wow animation is trimmed here, then held on its last shown frame during the pause.")]
+    [SerializeField, Min(0f)] private float wowPhraseSeconds = 1.07f;
+    [Tooltip("Voice time where the next phrase begins and owl_talk takes over.")]
+    [SerializeField, Min(0f)] private float talkPhraseStartSeconds = 1.47f;
+    [SerializeField] private float owlFadeDuration = 0.25f;
 
     [Header("Voice")]
     [Tooltip("Baked owl line (Assets/Resources/TTS). Assigned in the inspector; no backend call.")]
     [SerializeField] private AudioClip voiceClip;
     [SerializeField, Range(0f, 1f)] private float voiceVolume = 1f;
     [Tooltip("Extra seconds to keep talking/holding after the voice clip ends.")]
-    [SerializeField] private float tailHold = 0.3f;
+    [SerializeField] private float tailHold = 0.15f;
 
     private AudioSource voiceSource;
     private MaterialPropertyBlock overlayProps;
@@ -99,7 +103,9 @@ public sealed class BearIntroSequence : MonoBehaviour
         Coroutine dark = StartCoroutine(FadeDark(0f, maxDarkAlpha, darkFadeDuration));
         Coroutine owlIn = StartCoroutine(FadeOwl(0f, 1f, owlFadeDuration));
 
-        // Start the voice + duck the music.
+        // Start the first owl frame and the voice on the same rendered frame. Previously the
+        // voice led the animation by owlFadeDuration, which made every mouth cue visibly late.
+        Coroutine owlAnim = StartCoroutine(PlayOwlFrames());
         float voiceLength = 0f;
         if (voiceClip != null)
         {
@@ -111,17 +117,17 @@ public sealed class BearIntroSequence : MonoBehaviour
             GameAudio.SetVoiceDucking(true);
         }
 
-        // owl_wow once ("แย่แล้ว"), then owl_talk loops until the voice line finishes.
-        yield return owlIn;
-        Coroutine owlAnim = StartCoroutine(PlayOwlFrames());
-
-        float wait = Mathf.Max(voiceLength + tailHold, EstimatedOwlWowSeconds());
-        yield return new WaitForSeconds(wait);
+        // owl_wow is trimmed exactly at the next phrase boundary; owl_talk then loops only while
+        // speech is audible. The optional tail is a silent frozen hold, not extra mouth motion.
+        float speakingSeconds = voiceLength > 0f ? voiceLength : EstimatedOwlWowSeconds();
+        if (speakingSeconds > 0f) yield return new WaitForSeconds(speakingSeconds);
 
         if (owlAnim != null) StopCoroutine(owlAnim);
         GameAudio.SetVoiceDucking(false);
+        if (tailHold > 0f) yield return new WaitForSeconds(tailHold);
 
         // Make sure the parallel visual cues have settled before handing back.
+        yield return owlIn;
         yield return zoom;
         yield return dark;
     }
@@ -230,27 +236,51 @@ public sealed class BearIntroSequence : MonoBehaviour
     private IEnumerator PlayOwlFrames()
     {
         if (owlImage == null) yield break;
-        float interval = 1f / (Mathf.Max(1f, owlFps) * Mathf.Max(0.05f, owlSpeed));
+        float frameRate = Mathf.Max(1f, owlFps) * Mathf.Max(0.05f, owlSpeed);
+        float wowDuration = wowPhraseSeconds > 0f
+            ? wowPhraseSeconds
+            : EstimatedOwlWowSeconds();
+        float talkStart = talkPhraseStartSeconds > 0f
+            ? Mathf.Max(wowDuration, talkPhraseStartSeconds)
+            : wowDuration;
+        float sequenceStartedAt = Time.time;
 
-        // owl_wow once
-        if (wowFrames != null)
+        // owl_wow stays on screen for "แย่แล้ว" only. Select frames from absolute elapsed time so
+        // a slow render frame cannot accumulate timing drift; clamp to trim rather than loop.
+        if (wowFrames != null && wowFrames.Length > 0)
         {
-            for (int i = 0; i < wowFrames.Length; i++)
+            int shownIndex = -1;
+            while (Time.time - sequenceStartedAt < wowDuration)
             {
-                if (wowFrames[i] != null) owlImage.sprite = wowFrames[i];
-                yield return new WaitForSeconds(interval);
+                float elapsed = Time.time - sequenceStartedAt;
+                int index = Mathf.Min(Mathf.FloorToInt(elapsed * frameRate), wowFrames.Length - 1);
+                if (index != shownIndex)
+                {
+                    shownIndex = index;
+                    if (wowFrames[index] != null) owlImage.sprite = wowFrames[index];
+                }
+                yield return null;
             }
         }
+
+        // Keep the final surprise pose still through the audible pause; do not move the mouth
+        // again until the next phrase actually begins.
+        while (Time.time - sequenceStartedAt < talkStart) yield return null;
 
         // owl_talk loop until stopped
         if (talkFrames != null && talkFrames.Length > 0)
         {
-            int i = 0;
+            float startedAt = Time.time;
+            int shownIndex = -1;
             while (true)
             {
-                if (talkFrames[i] != null) owlImage.sprite = talkFrames[i];
-                i = (i + 1) % talkFrames.Length;
-                yield return new WaitForSeconds(interval);
+                int index = Mathf.FloorToInt((Time.time - startedAt) * frameRate) % talkFrames.Length;
+                if (index != shownIndex)
+                {
+                    shownIndex = index;
+                    if (talkFrames[index] != null) owlImage.sprite = talkFrames[index];
+                }
+                yield return null;
             }
         }
     }

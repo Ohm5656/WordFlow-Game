@@ -46,6 +46,11 @@ public class FogController : MonoBehaviour
     /// Seconds left on the puzzle clock. Used to land a visual pulse on each countdown beep.
     public static System.Func<float> SmokeRemainingProvider;
 
+    /// An extra smoke lurch driven from outside the countdown — the mis-assembly lock beeps use it.
+    /// Max'd with the countdown beat pulse in Update, never replacing it: the last-10-seconds beep
+    /// lurch keeps behaving exactly as it always has. Returns 0..1; null means "no external lurch".
+    public static System.Func<float> ExtraPulseProvider;
+
     private Material fogMaterial;
 
     private float elapsedTime;
@@ -126,9 +131,18 @@ public class FogController : MonoBehaviour
             fogTime
         );
 
+        // The countdown beat pulse, raised by any external lurch (the mis-assembly lock). Max, never
+        // replacement — ComputeBeatPulse() and the 10-second beep it serves are untouched.
+        float pulse = ComputeBeatPulse();
+
+        if (ExtraPulseProvider != null)
+        {
+            pulse = Mathf.Max(pulse, ExtraPulseProvider());
+        }
+
         fogMaterial.SetFloat(
             PulseID,
-            ComputeBeatPulse()
+            pulse
         );
     }
 

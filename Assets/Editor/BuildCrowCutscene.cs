@@ -166,6 +166,8 @@ public static class BuildCrowCutscene
             oso.FindProperty("greetingPhrase1Clip").objectReferenceValue = null;
             oso.FindProperty("greetingPhrase2Clip").objectReferenceValue = null;
             oso.FindProperty("greetingPhrase3Clip").objectReferenceValue = null;
+            // CutScene_ga opens directly on the talking owl; PlayTalkingSequence owns the fade-in.
+            oso.FindProperty("owlHello").objectReferenceValue = null;
             oso.FindProperty("bearFocusLookLineId").stringValue = "kaa_intro_owl_2";
             oso.FindProperty("bearFocusLookVoiceClip").objectReferenceValue = null; // old paa clip
             oso.FindProperty("bearRoot").objectReferenceValue = crow.GetComponent<RectTransform>();

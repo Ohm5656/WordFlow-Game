@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 // Crow intro cutscene for CutScene_ga (replaces the bear entrance). The crow prefab
 // (UGUI Image + Animator with states ga_fly / ga_stone) fades in at wp_0, flies
@@ -35,6 +36,18 @@ public sealed class CrowEntranceCutscene : MonoBehaviour
     private void Awake()
     {
         if (crow == null) crow = GetComponent<Animator>();
+
+        // The rendered stone frames have a very thin semi-transparent line around the source
+        // canvas. Crop four source pixels in UV space only while ga_stone is playing. This leaves
+        // the PNGs, colour, layout and flight animation untouched.
+        Image crowImage = GetComponent<Image>();
+        if (crowImage != null)
+        {
+            CrowStoneEdgeCrop crop = GetComponent<CrowStoneEdgeCrop>();
+            if (crop == null) crop = gameObject.AddComponent<CrowStoneEdgeCrop>();
+            crop.Configure(crow, 4f);
+        }
+
         if (path == null)
         {
             GameObject go = GameObject.Find("waypoints");
@@ -150,4 +163,74 @@ public sealed class CrowEntranceCutscene : MonoBehaviour
     }
 
     private static float Smooth(float v) { v = Mathf.Clamp01(v); return v * v * (3f - 2f * v); }
+}
+
+/// <summary>
+/// Non-destructive UGUI crop for the stone portion of the crow animation. It remaps only the
+/// displayed UVs, so all source animation frames remain byte-for-byte unchanged.
+/// </summary>
+[DisallowMultipleComponent]
+public sealed class CrowStoneEdgeCrop : BaseMeshEffect
+{
+    private static readonly int StoneState = Animator.StringToHash("ga_stone");
+
+    private Animator animator;
+    private float insetPixels = 4f;
+
+    public void Configure(Animator targetAnimator, float pixels)
+    {
+        animator = targetAnimator;
+        insetPixels = Mathf.Max(0f, pixels);
+        if (graphic != null) graphic.SetVerticesDirty();
+    }
+
+    public override void ModifyMesh(VertexHelper vertexHelper)
+    {
+        if (!IsActive() || vertexHelper == null || insetPixels <= 0f)
+        {
+            return;
+        }
+
+        if (animator == null) animator = GetComponent<Animator>();
+        if (animator != null && animator.GetCurrentAnimatorStateInfo(0).shortNameHash != StoneState)
+        {
+            return;
+        }
+
+        Image image = graphic as Image;
+        Sprite sprite = image != null ? image.sprite : null;
+        Texture2D texture = sprite != null ? sprite.texture : null;
+        if (sprite == null || texture == null)
+        {
+            return;
+        }
+
+        Rect textureRect = sprite.textureRect;
+        float insetX = Mathf.Min(insetPixels, textureRect.width * 0.25f);
+        float insetY = Mathf.Min(insetPixels, textureRect.height * 0.25f);
+        if (insetX <= 0f && insetY <= 0f)
+        {
+            return;
+        }
+
+        float minU = textureRect.xMin / texture.width;
+        float maxU = textureRect.xMax / texture.width;
+        float minV = textureRect.yMin / texture.height;
+        float maxV = textureRect.yMax / texture.height;
+        float innerMinU = (textureRect.xMin + insetX) / texture.width;
+        float innerMaxU = (textureRect.xMax - insetX) / texture.width;
+        float innerMinV = (textureRect.yMin + insetY) / texture.height;
+        float innerMaxV = (textureRect.yMax - insetY) / texture.height;
+
+        UIVertex vertex = default;
+        for (int i = 0; i < vertexHelper.currentVertCount; i++)
+        {
+            vertexHelper.PopulateUIVertex(ref vertex, i);
+            Vector2 uv = vertex.uv0;
+            uv.x = Mathf.Lerp(innerMinU, innerMaxU, Mathf.InverseLerp(minU, maxU, uv.x));
+            uv.y = Mathf.Lerp(innerMinV, innerMaxV, Mathf.InverseLerp(minV, maxV, uv.y));
+            vertex.uv0 = uv;
+            vertexHelper.SetUIVertex(vertex, i);
+        }
+    }
 }

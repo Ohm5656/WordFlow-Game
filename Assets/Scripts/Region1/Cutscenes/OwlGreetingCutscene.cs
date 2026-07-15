@@ -11,7 +11,7 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [SerializeField] private string frameNamePrefix = "owl";
     [SerializeField] private bool useSingleVisibleFrame = false;
     [SerializeField] private bool preservePlacedFrameTransforms = true;
-    [SerializeField] private float startDelay = 0.1f;
+    [SerializeField] private float startDelay = 0.05f;
     [SerializeField] private int loopCount = 2;
     [SerializeField] private float greetingDuration = 5.35f;
     [SerializeField, HideInInspector] private float frameDuration = 0.16f;
@@ -27,12 +27,12 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
     [Header("Zoom")]
     [SerializeField] private bool zoomBeforeGreeting = true;
-    [SerializeField] private float zoomDuration = 0.75f;
+    [SerializeField] private float zoomDuration = 0.4f;
     [SerializeField] private float zoomScale = 1.22f;
     [SerializeField] private Vector2 zoomFocusPosition = new Vector2(320f, -120f);
-    [SerializeField] private float holdAfterZoom = 0.15f;
+    [SerializeField] private float holdAfterZoom = 0.04f;
     [SerializeField] private bool restoreZoomAfterGreeting = true;
-    [SerializeField] private float restoreZoomDuration = 0.55f;
+    [SerializeField] private float restoreZoomDuration = 0.35f;
     [SerializeField] private RectTransform zoomRoot;
     [SerializeField] private RectTransform backgroundBounds;
     [SerializeField] private bool clampZoomToBackground = true;
@@ -41,14 +41,14 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [Header("Background Focus")]
     [SerializeField] private bool dimBackgroundBeforeZoom = true;
     [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.55f);
-    [SerializeField] private float dimFadeInDuration = 0.35f;
-    [SerializeField] private float dimFadeOutDuration = 0.45f;
+    [SerializeField] private float dimFadeInDuration = 0.22f;
+    [SerializeField] private float dimFadeOutDuration = 0.25f;
 
     [Header("Bear Focus Follow Up")]
     [SerializeField] private bool playBearFocusAfterGreeting = true;
     [SerializeField] private RectTransform bearRoot;
-    [SerializeField] private float bearFocusDelay = 0.15f;
-    [SerializeField] private float bearGrowDuration = 0.45f;
+    [SerializeField] private float bearFocusDelay = 0.05f;
+    [SerializeField] private float bearGrowDuration = 0.3f;
     [SerializeField] private float bearFocusScaleMultiplier = 1.18f;
     [SerializeField] private float bearFocusGreetingDuration = 9.35f;
     [SerializeField] private bool bearFocusUseHierarchyOrder = true;
@@ -84,9 +84,9 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [SerializeField] private string bearFocusLookLineId;
     [Tooltip("Maximum time to wait for TTS line resolution before continuing without non-TTS fallback.")]
     [SerializeField, Min(0.1f)] private float ttsWaitTimeoutSeconds = 8f;
-    [SerializeField] private float voiceStartDelay = 0f;
+    [SerializeField] private float voiceStartDelay = 0.05f;
     [Tooltip("Pause between spoken owl phrases. Keep this audible for young players; the baked TTS clips were trimmed, so this is the main breathing room.")]
-    [SerializeField] private float bearFocusVoiceGap = 0.35f;
+    [SerializeField] private float bearFocusVoiceGap = 0.2f;
     [SerializeField] private bool useVoiceClipLengthForTalkDuration = true;
 
     [Header("Hello Animation — plays once before the first greeting phrase")]
@@ -122,20 +122,20 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [Tooltip("Hide the owl prefab whenever no voice line is playing.")]
     [SerializeField] private bool hideTalkingPrefabWhenSilent = true;
     [Tooltip("Seconds to fade the talking owl in when it enters and out when it leaves. 0 = pop instantly.")]
-    [SerializeField, Min(0f)] private float talkingFadeDuration = 0.35f;
+    [SerializeField, Min(0f)] private float talkingFadeDuration = 0.22f;
     [Tooltip("After a whole talking round finishes (all its phrases), freeze the owl on its current frame for this long before fading out. 0 = no hold.")]
-    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.5f;
+    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.15f;
 
     [Header("Book Reveal")]
     [SerializeField] private bool playBookRevealAfterBearFocus = true;
     [SerializeField] private RectTransform bookCraftRoot;
     [SerializeField] private Image bookCraftImage;
-    [SerializeField] private float bookRevealDelay = 0.5f;
+    [SerializeField] private float bookRevealDelay = 0.1f;
     [SerializeField] private Vector2 bookRevealStartPosition = Vector2.zero;
     [SerializeField] private float bookRevealStartScale = 0.08f;
-    [SerializeField] private float bookRevealDuration = 1.15f;
+    [SerializeField] private float bookRevealDuration = 0.65f;
     [SerializeField] private bool fadeOwlBeforeBookReveal = true;
-    [SerializeField] private float owlFadeOutBeforeBookDuration = 0.6f;
+    [SerializeField] private float owlFadeOutBeforeBookDuration = 0.35f;
     [SerializeField] private bool moveOwlToBookRevealPosition = false;
     [SerializeField] private float owlBookRevealMoveDuration = 0.75f;
     [SerializeField] private bool usePlacedOwlPositionAsBookRevealTarget = true;
@@ -330,7 +330,50 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             return;
         }
 
+        // Night redo: the bear/crow entrance has just played; skip the owl (zoom, dim, talking,
+        // bear-focus) entirely and open the craft book straight away, on a fresh 30s clock.
+        if (NightMode.RedoActive)
+        {
+            greetingRoutine = StartCoroutine(NightRedoRoutine());
+            return;
+        }
+
         greetingRoutine = StartCoroutine(GreetingRoutine());
+    }
+
+    private IEnumerator NightRedoRoutine()
+    {
+        ApplyPreservePlacedFrameSettings();
+        CacheFrames();
+
+        // The owl never appears tonight.
+        SetOwlFramesAlpha(0f);
+        for (int i = 0; i < frames.Count; i++)
+        {
+            frames[i].Target.gameObject.SetActive(false);
+        }
+        if (UsesTalkingPrefabAnimator)
+        {
+            StopTalkingAnimation();
+        }
+
+        if (startDelay > 0f)
+        {
+            yield return new WaitForSeconds(startDelay);
+        }
+
+        if (playBookRevealAfterBearFocus)
+        {
+            WordAssemblyTimer.Instance?.BeginFresh(); // fresh 30s — a night redo is a new attempt
+            yield return PlayBookRevealRoutine();     // same pop-in the day flow uses
+        }
+
+        if (playMagicStonePuzzleAfterBookReveal)
+        {
+            yield return PlayMagicStonePuzzleRevealRoutine(); // stones reveal one by one, as in day
+        }
+
+        greetingRoutine = null;
     }
 
     private IEnumerator RetryMagicStonePuzzleRoutine()
@@ -914,18 +957,18 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
                 continue;
             }
 
-            // This phrase's own mouth speed.
-            activeTalkingSpeed = lines[i].speed;
-            activeTalkingSecondsPerLoop = lines[i].secondsPerLoop;
-            if (UsesTalkingPrefabAnimator)
-            {
-                talkingAnimator.speed = GetTalkingAnimatorSpeed();
-            }
-
             if (playedAny && bearFocusVoiceGap > 0f)
             {
+                if (UsesTalkingPrefabAnimator) talkingAnimator.speed = 0f;
                 yield return new WaitForSeconds(bearFocusVoiceGap);
             }
+
+            // Restart the authored loop with every spoken phrase. Combined with a per-line
+            // seconds-per-loop value, this keeps the first and last mouth frames on the exact
+            // audio boundaries instead of carrying motion through the silent gap.
+            activeTalkingSpeed = lines[i].speed;
+            activeTalkingSecondsPerLoop = lines[i].secondsPerLoop;
+            RestartTalkingAnimation();
 
             LoadVoiceClip(clip);
             source.clip = clip;
@@ -942,11 +985,10 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
                 fadedIn = true;
             }
 
-            // Talk visualization. On the last phrase, reserve the fade-out window.
-            float talkPortion = (fade && i == lastIndex)
-                ? Mathf.Max(0f, hold - talkingFadeDuration)
-                : hold;
-            yield return PlayGreetingFrames(talkPortion, frameSequence);
+            // Keep the mouth moving for the complete clip. The previous timing reserved the
+            // fade-out window inside the voice and froze the mouth before the final syllable.
+            yield return PlayGreetingFrames(hold, frameSequence);
+            if (UsesTalkingPrefabAnimator) talkingAnimator.speed = 0f;
 
             // End of the whole round (last phrase): freeze on the current frame, hold, then fade out.
             if (i == lastIndex)
@@ -1361,6 +1403,12 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
         talkingObject.SetActive(true);
         RestoreTalkingPlacedTransform();
         SetOwlFramesAlpha(1f);
+        talkingAnimator.speed = 0f;
+    }
+
+    private void RestartTalkingAnimation()
+    {
+        if (!UsesTalkingPrefabAnimator) return;
 
         talkingAnimator.speed = GetTalkingAnimatorSpeed();
         if (!string.IsNullOrWhiteSpace(talkingStateName))

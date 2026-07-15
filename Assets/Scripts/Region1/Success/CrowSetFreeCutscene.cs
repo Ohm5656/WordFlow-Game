@@ -22,11 +22,11 @@ public sealed class CrowSetFreeCutscene : MonoBehaviour
 
     [Header("Flow")]
     [SerializeField] private bool playOnStart = true;
-    [SerializeField] private float fadeInDuration = 0.4f;
-    [Tooltip("Gentle dissolve of the big spread shatter — keep it slow so the light dust doesn't read as a white flash.")]
-    [SerializeField] private float fadeOutDuration = 1f;
+    [SerializeField] private float fadeInDuration = 0.3f;
+    [Tooltip("A short dissolve of the big spread shatter keeps the light dust readable without delaying the next beat.")]
+    [SerializeField] private float fadeOutDuration = 0.45f;
     [Tooltip("ga_set_free2 (the freed crow) eases back in over this — the clips are continuous, so a soft fade reads as one shot.")]
-    [SerializeField] private float clip2FadeInDuration = 0.6f;
+    [SerializeField] private float clip2FadeInDuration = 0.35f;
     [SerializeField] private string setFreeState = "ga_set_free";
     [SerializeField] private string setFree2State = "ga_set_free2";
 
@@ -119,7 +119,8 @@ public sealed class CrowSetFreeCutscene : MonoBehaviour
 
         routine = null;
 
-        // --- owl praise, then on to reference_forest ---
+        // --- owl praise (day only), then on to reference_forest ---
+        // Night redo: no praise — the child already earned it on the daytime run.
         if (owlEpilogue != null) yield return owlEpilogue.Play();
         if (resumeForestAtBeat2) BearEncounterFlow.ResumeAtBeat2 = true;
         if (resumeForestAtBeat3) BearEncounterFlow.ResumeAtBeat3 = true;

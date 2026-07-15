@@ -34,10 +34,17 @@ public sealed class CharacterRunDirection : MonoBehaviour
     [SerializeField] private float animSpeedFront = 1f;
     [SerializeField] private float animSpeedRight = 1f;
 
+    [Header("Per-direction vertical scale (compensates for source art being shorter in some directions; X is untouched)")]
+    [SerializeField] private float scaleUp = 1f;
+    [SerializeField] private float scaleLeft = 1f;
+    [SerializeField] private float scaleFront = 1f;
+    [SerializeField] private float scaleRight = 1f;
+
     private static readonly int SpeedParam = Animator.StringToHash("speed");
     private static readonly int OrientParam = Animator.StringToHash("orientation");
 
     private Vector3 lastPosition;
+    private Vector3 baseScale;   // transform.localScale as authored, before per-direction Y compensation
     private float smoothSpeed;   // EMA of measured world speed, units/sec
     private float stillTime;     // seconds since movement stopped (for idleDelay)
     private int playingHash;     // state we last told the Animator to play
@@ -58,6 +65,7 @@ public sealed class CharacterRunDirection : MonoBehaviour
     {
         if (animator == null) animator = GetComponent<Animator>();
         lastPosition = transform.position;
+        baseScale = transform.localScale;
 
         foreach (var (o, dir) in new[] { (0, "up"), (2, "left"), (4, "front"), (6, "right") })
         {
@@ -145,5 +153,8 @@ public sealed class CharacterRunDirection : MonoBehaviour
         animator.speed = run
             ? Mathf.Clamp(smoothSpeed * clipLen[o] / unitsPerLoop, 0.3f, 3f) * Mathf.Max(0.05f, mul)
             : 1f;
+
+        float scaleMul = o == 0 ? scaleUp : o == 2 ? scaleLeft : o == 6 ? scaleRight : scaleFront;
+        transform.localScale = new Vector3(baseScale.x, baseScale.y * scaleMul, baseScale.z);
     }
 }

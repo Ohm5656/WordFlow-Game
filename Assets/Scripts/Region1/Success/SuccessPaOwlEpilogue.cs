@@ -7,21 +7,25 @@ using WordFlow.Adventure.Net;
 // (the same talking owl used in CutScene_bear), set owlPosition to (0, -89), assign clips/TTS.
 public sealed class SuccessPaOwlEpilogue : MonoBehaviour
 {
+    [Header("Eligibility")]
+    [Tooltip("Quest whose perfect three-star completion earns this owl praise. Leave empty to always play.")]
+    [SerializeField] private string questId;
+
     [Tooltip("Animator on the owl talking prefab. Same prefab as CutScene_bear's talkingAnimator.")]
     [SerializeField] private Animator owlAnimator;
     [SerializeField] private string talkingStateName = "Owl";
     [Tooltip("Anchored position where the owl appears (local to its parent RectTransform).")]
     [SerializeField] private Vector2 owlPosition = new Vector2(0f, -89f);
-    [SerializeField] private float fadeInDuration = 0.35f;
-    [SerializeField] private float fadeOutDuration = 0.35f;
+    [SerializeField] private float fadeInDuration = 0.25f;
+    [SerializeField] private float fadeOutDuration = 0.25f;
     [Tooltip("After the owl finishes all phrases, freeze on its current frame for this long before fading out. 0 = no hold.")]
-    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.5f;
+    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.15f;
     [Tooltip("Pause between owl praise phrases. The TTS files are trimmed, so this gap keeps the line understandable for children.")]
-    [SerializeField] private float phraseGap = 0.35f;
+    [SerializeField] private float phraseGap = 0.25f;
     [Tooltip("Maximum time to wait for TTS before continuing without non-TTS fallback.")]
     [SerializeField, Min(0.1f)] private float ttsWaitTimeoutSeconds = 8f;
     [Tooltip("If TTS fails / no clip assigned, hold this long before fading out (so owl isn't invisible).")]
-    [SerializeField] private float fallbackHoldSeconds = 6f;
+    [SerializeField] private float fallbackHoldSeconds = 1.5f;
 
     [Header("Phrase 1 — มันหนีเข้าป่าไปแล้ว")]
     [SerializeField] private AudioClip phrase1Clip;
@@ -119,6 +123,11 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
 
     public IEnumerator Play()
     {
+        // A two-star result completes the quest but leaves a clear reason to revisit it at night.
+        // The praise belongs to the moment the saved best score first reaches all three stars.
+        if (!string.IsNullOrWhiteSpace(questId) && QuestStars.Get(questId) < QuestStars.Max)
+            yield break;
+
         if (owlAnimator == null) yield break;
 
         // The old implementation started the owl immediately even when its async TTS request
@@ -137,6 +146,7 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
         }
 
         AudioSource source = GetOrCreateAudioSource();
+        owlAnimator.speed = 0f;
         owlAnimator.gameObject.SetActive(true);
         owlCanvasGroup.alpha = 0f;
         // Crossfade: owl_hello fades out while the talking owl fades in — smooth dissolve at the seam.
@@ -154,7 +164,11 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
         for (int i = 0; i < clips.Length; i++)
         {
             if (clips[i] == null) continue;
-            if (!first && phraseGap > 0f) yield return new WaitForSeconds(phraseGap);
+            if (!first && phraseGap > 0f)
+            {
+                owlAnimator.speed = 0f;
+                yield return new WaitForSeconds(phraseGap);
+            }
             first = false;
             playedAny = true;
 
@@ -163,6 +177,7 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
             source.clip = clips[i];
             source.Play();
             yield return new WaitForSeconds(clips[i].length);
+            owlAnimator.speed = 0f;
         }
 
         if (!playedAny && fallbackHoldSeconds > 0f)

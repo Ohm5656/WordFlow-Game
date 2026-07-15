@@ -63,15 +63,15 @@ public sealed class QuestPathSequence : MonoBehaviour
     [SerializeField] private string crowSpritesResourcePath = "Characters/Animals/birds/bird6_16x20";
 
     [Header("Tuning")]
-    [SerializeField] private float startDelay = 0.3f;
-    [SerializeField] private float moveSpeed = 1.0f;
+    [SerializeField] private float startDelay = 0.1f;
+    [SerializeField] private float moveSpeed = 1.55f;
     [SerializeField] private float arriveDistance = 0.05f;
-    [SerializeField] private float fadeDuration = 0.5f;
+    [SerializeField] private float fadeDuration = 0.35f;
     [SerializeField] private float clickPadding = 0.35f;
     [Tooltip("Seconds a quest stays revealed at its point before it auto-completes (replaces the old tap-to-complete).")]
-    [SerializeField] private float questAutoHold = 1.5f;
+    [SerializeField] private float questAutoHold = 0.45f;
     [Tooltip("Animator 'speed' forced while walking so the walk clip plays even at low moveSpeed (state needs >0.01).")]
-    [SerializeField] private float walkAnimSpeedParam = 1f;
+    [SerializeField] private float walkAnimSpeedParam = 1.5f;
     [Tooltip("Walk this fraction of the way from wp_1 toward the bear in one continuous run before the quest reveals (0 = stop at wp_1).")]
     [SerializeField] private float questApproachFraction = 0.6f;
     [Tooltip("Buzz the device (tablet) like a notification when a quest appears.")]
@@ -87,7 +87,7 @@ public sealed class QuestPathSequence : MonoBehaviour
     [Tooltip("Scene loaded when the hero reaches the second quest (the crow / ga encounter).")]
     [SerializeField] private string crowEncounterSceneName = "CutScene_ga";
     [Tooltip("Black fade-out duration before loading the bear encounter scene.")]
-    [SerializeField] private float sceneExitCoverDuration = 1.0f;
+    [SerializeField] private float sceneExitCoverDuration = 0.65f;
 
     [Header("Crow flight")]
     [Tooltip("Crow 1 flies straight back and forth between these two points (wp_ga1 / wp_ga1 (1)).")]
@@ -155,6 +155,22 @@ public sealed class QuestPathSequence : MonoBehaviour
     [SerializeField] private NightLighting nightLighting;
     [SerializeField] private float nightFadeDuration = 6f;
 
+    [Header("Night redo")]
+    [Tooltip("Quest ids that own a puzzle, in walk order. Must equal each puzzle's targetWordId.")]
+    [SerializeField] private string[] nightQuestIds = { "paa", "kaa" };
+    [Tooltip("Puzzle scene per night quest id, index-for-index with nightQuestIds.")]
+    [SerializeField] private string[] nightQuestScenes = { "CutScene_bear", "CutScene_ga" };
+    [Tooltip("Scene loaded when the hero enters the house (day end, and after the last night quest).")]
+    [SerializeField] private string worldMapSceneName = "WorldMap";
+    [Tooltip("Star board shown next to a redoable quest at night: world offset above the actor.")]
+    [SerializeField] private Vector3 nightBadgeOffset = new Vector3(0f, 1.6f, 0f);
+    [Tooltip("Radius of the light circle following the hero at night (world units).")]
+    [SerializeField] private float nightHeroLightRadius = 2.6f;
+    [Tooltip("Radius of the light pool on each shown night quest (world units).")]
+    [SerializeField] private float nightQuestLightRadius = 3.2f;
+    [Tooltip("Beat held after the last night quest, before the map fades back in.")]
+    [SerializeField] private float nightEndHold = 0.6f;
+
     private bool crowPatrolActive;
     private bool quest4PatrolActive;
     private int facingLock = -1;
@@ -198,20 +214,68 @@ public sealed class QuestPathSequence : MonoBehaviour
         HideAtStart(sickPig1Root, sickPig1Sprite);
         HideAtStart(sickPig2Root, sickPig2Sprite);
         HideAtStart(pigMarkRoot, pigMarkSprite);
+
         if (nightLighting != null)
         {
-            nightLighting.SetNight(0f);
+            nightLighting.SetNight(NightMode.RedoActive ? 1f : 0f);
+        }
+
+        if (NightMode.RedoActive)
+        {
+            // The day run already healed the crops; the scene reloads with the blighted set active.
+            SwapCrops();
+
+            // Show every offerable quest from the very start — actor only, NO "!" marker (the day
+            // beats are click-triggered reveals; the night quests are just visible from scene load).
+            // The quest we're returning FROM (ActiveQuest, still set at this point — Start() clears
+            // it) is shown too, so it's on screen and can fade off cleanly.
+            string active = NightMode.ActiveQuest;
+            for (int i = 0; i < nightQuestIds.Length; i++)
+            {
+                string id = nightQuestIds[i];
+                bool offerable = QuestStars.NeedsRedo(id) && !NightMode.IsDoneThisNight(id);
+                if (offerable || id == active)
+                {
+                    ShowQuestActorNightly(id);
+                }
+            }
         }
     }
 
     private void Start()
     {
-        StartCoroutine(RunSequence());
+        // On a fresh forest entry the opening fade used to leave the controller's default
+        // orientation visible (up/back) until the first movement frame. Face the first waypoint
+        // immediately so the hero is already looking the same way they are about to walk.
+        if (!NightMode.RedoActive
+            && !BearEncounterFlow.ResumeAtBeat2
+            && !BearEncounterFlow.ResumeAtBeat3
+            && body != null
+            && wp1 != null)
+        {
+            facingLock = OrientationFor(wp1.position - body.position);
+            if (bodyAnimator != null)
+            {
+                bodyAnimator.SetInteger("orientation", facingLock);
+                bodyAnimator.SetFloat("speed", 0f);
+            }
+        }
+
+        if (NightMode.RedoActive)
+        {
+            // Must run before the RunNightRedo coroutine's first synchronous chunk consumes
+            // NightMode.ActiveQuest (StartCoroutine below runs its body immediately up to the
+            // first yield, within this same call).
+            SpawnNightBoardsAndLights();
+        }
+
+        StartCoroutine(NightMode.RedoActive ? RunNightRedo() : RunSequence());
     }
 
     private void OnDisable()
     {
         GameAudio.StopForestFootsteps();
+        QuestStarBadge.HideAll();
     }
 
     // Keep the character facing a fixed direction while it is stopped at a quest beat,
@@ -222,6 +286,11 @@ public sealed class QuestPathSequence : MonoBehaviour
         {
             bodyAnimator.SetInteger("orientation", facingLock);
             bodyAnimator.SetFloat("speed", 0f);
+        }
+
+        if (NightMode.RedoActive && nightLighting != null && body != null)
+        {
+            nightLighting.SetDynamicLight(0, body.position, nightHeroLightRadius * 0.35f, nightHeroLightRadius);
         }
     }
 
@@ -338,6 +407,7 @@ public sealed class QuestPathSequence : MonoBehaviour
         {
             // ---- Beat 1: walk to wp_1 — the bear quest pops the moment the hero arrives
             //      there, and fades in WHILE the hero keeps running toward it (no stop).
+            facingLock = -1;
             if (wp1 != null)
             {
                 yield return MoveTo(wp1.position);
@@ -585,6 +655,214 @@ public sealed class QuestPathSequence : MonoBehaviour
 
             // Reached wp_12: the hero fades out and disappears.
             yield return FadeOutBody();
+
+            // The day is over: the world stays in night phase, and the map offers a redo of every
+            // quest that is not yet perfect.
+            NightMode.NightPhase = true;
+            yield return SceneFadeController.Cover(sceneExitCoverDuration);
+            SceneManager.LoadScene(worldMapSceneName);
+        }
+    }
+
+    // ----------------------------------------------------------------- night redo
+
+    // Anchor point for a night quest's board + light pool: the bear itself for paa; the
+    // (never-activated) crow mark spot for kaa, since the crows themselves fly around.
+    private Transform QuestAnchor(string questId)
+    {
+        if (questId == "paa") return villager != null ? villager.transform : null;
+        if (questId == "kaa") return crowMarkRoot != null ? crowMarkRoot.transform : null;
+        return null;
+    }
+
+    // Night only: show a quest's actor WITHOUT its "!" marker — night quests are visible from
+    // scene start, not click-triggered reveals, so the exclamation mark never appears.
+    private void ShowQuestActorNightly(string questId)
+    {
+        if (questId == "paa")
+        {
+            if (villager != null)
+            {
+                villager.gameObject.SetActive(true);
+                SetAlpha(villager, 1f);
+            }
+        }
+        else if (questId == "kaa")
+        {
+            ShowResumeCrows(); // already marker-free (doesn't touch crowMarkRoot)
+        }
+    }
+
+    // Called from Start() before the night coroutine begins: spawns the star board + light pool
+    // for every quest visible at night (same "offerable OR returning" rule as Awake's reveal loop)
+    // and starts the crow patrol if kaa is one of them.
+    private void SpawnNightBoardsAndLights()
+    {
+        string active = NightMode.ActiveQuest;
+        for (int i = 0; i < nightQuestIds.Length; i++)
+        {
+            string id = nightQuestIds[i];
+            bool offerable = QuestStars.NeedsRedo(id) && !NightMode.IsDoneThisNight(id);
+            if (!offerable && id != active)
+            {
+                continue;
+            }
+
+            Transform anchor = QuestAnchor(id);
+            if (anchor != null)
+            {
+                StartCoroutine(QuestStarBadge.Spawn(id, anchor, nightBadgeOffset, QuestStars.Get(id), fadeDuration));
+
+                if (nightLighting != null)
+                {
+                    nightLighting.SetDynamicLight(1 + i, anchor.position,
+                        nightQuestLightRadius * 0.35f, nightQuestLightRadius);
+                }
+            }
+
+            if (id == "kaa")
+            {
+                StartCrowFlight(); // crows patrol from the very start at night
+            }
+        }
+    }
+
+    // Night version of RunSequence: walk the SAME road past every quest spot (so 3-star quests are
+    // walked straight past with nothing shown), but only the quests still under 3 stars — already
+    // visible from Awake, no click/reveal needed — hand off to their puzzle scene. Only beats 1
+    // (bear/paa) and 2 (crow/kaa) can be redone — beats 3-5 have no puzzle and therefore no stars.
+    private IEnumerator RunNightRedo()
+    {
+        // Coming back from a night puzzle? Pre-place the hero at that quest's spot; its actor is
+        // already visible (Awake showed it because it was still NightMode.ActiveQuest) so it can
+        // fade off cleanly below.
+        string returned = NightMode.ActiveQuest;
+        int startIndex = 0;
+        if (!string.IsNullOrEmpty(returned))
+        {
+            int returnedIndex = IndexOfQuest(returned);
+            startIndex = returnedIndex + 1;
+            PlaceHeroAtQuest(returned);
+            NightMode.MarkDoneThisNight(returned); // attempted tonight: never offer it again
+            NightMode.ActiveQuest = string.Empty;
+        }
+
+        // The forest never uses the day resume flags at night; drop whatever the success scene set.
+        BearEncounterFlow.ResumeAtBeat2 = false;
+        BearEncounterFlow.ResumeAtBeat3 = false;
+
+        yield return new WaitUntil(() => SceneFadeController.RevealComplete);
+        if (startDelay > 0f)
+        {
+            yield return new WaitForSeconds(startDelay);
+        }
+
+        if (!string.IsNullOrEmpty(returned))
+        {
+            // The quest is solved (or at least attempted): its actor, board and light pool fade
+            // off, exactly like the day flow's return.
+            GameAudio.PlayAfterQuest();
+            yield return new WaitForSeconds(questAutoHold);
+            yield return FadeOutQuestActors(returned);
+            yield return QuestStarBadge.FadeOut(returned, fadeDuration);
+            if (nightLighting != null)
+            {
+                nightLighting.SetDynamicLight(1 + IndexOfQuest(returned), Vector2.zero, 0f, 0f);
+            }
+        }
+
+        // Walk only to the quests that still owe stars — a 3-star (or already-attempted) quest is
+        // skipped entirely, not walked past. Its actor/board/light are already up from Start(), so
+        // arriving just holds a beat before the scene switch.
+        for (int i = startIndex; i < nightQuestIds.Length; i++)
+        {
+            string id = nightQuestIds[i];
+            if (!QuestStars.NeedsRedo(id) || NightMode.IsDoneThisNight(id))
+            {
+                continue;
+            }
+
+            yield return WalkToQuest(id);
+            Vibrate();
+            yield return new WaitForSeconds(questAutoHold);
+
+            NightMode.ActiveQuest = id;
+            MagicStonePuzzleController.ConsumeRetryAfterCrow(); // defensive: fresh puzzle, not retry
+            MagicStonePuzzleController.ConsumeRetryAfterAlt();
+            yield return PlayQuestEnterThenCover();
+            SceneManager.LoadScene(nightQuestScenes[i]);
+            yield break;
+        }
+
+        // Every quest is perfect (or done for tonight): the night is over. No walk home — go
+        // straight back to the night map.
+        yield return new WaitForSeconds(nightEndHold);
+
+        NightMode.EndSession();
+        yield return SceneFadeController.Cover(sceneExitCoverDuration);
+        SceneManager.LoadScene(worldMapSceneName);
+    }
+
+    private int IndexOfQuest(string questId)
+    {
+        if (nightQuestIds == null) return -1;
+        for (int i = 0; i < nightQuestIds.Length; i++)
+        {
+            if (nightQuestIds[i] == questId) return i;
+        }
+
+        return -1;
+    }
+
+    private void PlaceHeroAtQuest(string questId)
+    {
+        if (body == null) return;
+
+        if (questId == "paa" && wp1 != null)
+        {
+            Vector3 pos = wp1.position;
+            pos.z = body.position.z;
+            body.position = pos;
+            if (wp2 != null) facingLock = OrientationFor(wp2.position - wp1.position);
+        }
+        else if (questId == "kaa" && wp2 != null)
+        {
+            Vector3 pos = wp2.position;
+            pos.z = body.position.z;
+            body.position = pos;
+            if (wp3 != null) facingLock = OrientationFor(wp3.position - wp2.position);
+        }
+    }
+
+    // Walk to the quest's waypoint and hold the same facing the day beat would - no reveal here, so
+    // this runs unconditionally (redoable or not) to keep the hero on the authored road.
+    private IEnumerator WalkToQuest(string questId)
+    {
+        facingLock = -1;
+
+        if (questId == "paa")
+        {
+            if (wp1 != null) yield return MoveTo(wp1.position);
+            if (wp1 != null && wp2 != null) facingLock = OrientationFor(wp2.position - wp1.position);
+        }
+        else if (questId == "kaa")
+        {
+            if (wp2 != null) yield return MoveTo(wp2.position);
+            if (wp2 != null && wp3 != null) facingLock = OrientationFor(wp3.position - wp2.position);
+        }
+    }
+
+    private IEnumerator FadeOutQuestActors(string questId)
+    {
+        if (questId == "paa")
+        {
+            yield return FadeOutAndHide(new[] { villager, villagerMarkerSprite },
+                new[] { villager != null ? villager.gameObject : null, villagerMarkerRoot });
+        }
+        else if (questId == "kaa")
+        {
+            crowPatrolActive = false;
+            yield return FadeOutAndHide(new[] { crow1Sprite, crow2Sprite }, new[] { crow1Root, crow2Root });
         }
     }
 

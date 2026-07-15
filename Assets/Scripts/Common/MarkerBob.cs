@@ -15,6 +15,15 @@ public sealed class MarkerBob : MonoBehaviour
 
     private Vector3 baseLocal;
 
+    /// For markers built at runtime (e.g. the WorldMap night island marker), which have no
+    /// inspector to author these on.
+    public void Configure(float bobAmplitude, float bobPeriod)
+    {
+        amplitude = bobAmplitude;
+        period = bobPeriod;
+        baseLocal = transform.localPosition;
+    }
+
     private void OnEnable() => baseLocal = transform.localPosition;
 
     private void Update()

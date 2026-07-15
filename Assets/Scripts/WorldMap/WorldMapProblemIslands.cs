@@ -42,13 +42,13 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     [Header("Unlock Animation")]
     [SerializeField] private bool waitForSceneFadeBeforeUnlock = true;
     [SerializeField] private string sceneFadeObjectName = "WorldMap Fade Canvas";
-    [SerializeField] private float sceneFadeFallbackWait = 3.4f;
-    [SerializeField] private float unlockAnimationDelay = 0.45f;
-    [SerializeField] private float unlockAnimationDuration = 1.8f;
+    [SerializeField] private float sceneFadeFallbackWait = 1.1f;
+    [SerializeField] private float unlockAnimationDelay = 0.15f;
+    [SerializeField] private float unlockAnimationDuration = 0.95f;
     [SerializeField] private float unlockShakeDegrees = 2.5f;
     [SerializeField] private float unlockPopScale = 1.04f;
-    [SerializeField] private float unlockHoldDuration = 1.1f;
-    [SerializeField] private float unlockFadeOutDuration = 0.8f;
+    [SerializeField] private float unlockHoldDuration = 0.35f;
+    [SerializeField] private float unlockFadeOutDuration = 0.35f;
 
     [Header("Playable Island Prompt")]
     [SerializeField] private bool animatePlayableIslandPrompt = true;
@@ -104,6 +104,16 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         public Vector3 BaseLocalScale;
         public float Phase;
     }
+
+    /// The scene the currently-playable island loads (e.g. "reference_forest"). Empty if progress
+    /// has not been applied yet or no island is playable.
+    public string PlayableSceneName =>
+        playableIsland != null && playableIsland.Progress != null ? playableIsland.Progress.SceneName : string.Empty;
+
+    /// World-space sprite bounds of the currently-playable island (excludes lock/unlock/glow
+    /// renderers). False until progress has been applied / no island is playable yet.
+    public bool TryGetPlayableIslandWorldBounds(out Bounds bounds) => TryGetPlayableIslandSpriteBounds(out bounds);
+
 
     public static void MarkRegionCompleted(int completedRegionNumber)
     {
@@ -162,6 +172,7 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         if (highestUnlockedRegion >= firstRegion)
         {
             if (replayFirstUnlockUntilNextRegion
+                && !NightMode.NightPhase   // night: the island is long unlocked, do not replay it
                 && highestUnlockedRegion == firstRegion
                 && PlayerPrefs.GetInt(PendingUnlockRegionKey, 0) == 0)
             {
@@ -586,7 +597,11 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
 
     private void HandlePlayableIslandClick()
     {
-        if (isLoadingNextScene || !playablePromptReady || playableIsland == null || worldCamera == null)
+        if (WorldMapNight.BlocksIslandInput
+            || isLoadingNextScene
+            || !playablePromptReady
+            || playableIsland == null
+            || worldCamera == null)
         {
             return;
         }
@@ -606,7 +621,43 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         StartCoroutine(LoadNextSceneRoutine());
     }
 
-    private IEnumerator LoadNextSceneRoutine()
+    /// Starts the same island-loading path as a direct island click. The night choice panel calls
+    /// this only after its press animation and temporary extra dim have finished.
+    public bool StartNightRedoFromChoice()
+    {
+        string nightSceneName = FindFirstConfiguredSceneName();
+        if (!NightMode.NightPhase
+            || isLoadingNextScene
+            || !progressApplied
+            || string.IsNullOrWhiteSpace(nightSceneName))
+        {
+            return false;
+        }
+
+        // This first implementation has one playable region with redoable quests. Use its configured
+        // scene directly instead of the highest unlocked island, which may already point at a later
+        // (not-yet-built) region after the daytime completion scene advanced map progress.
+        StartCoroutine(LoadNextSceneRoutine(nightSceneName));
+        return true;
+    }
+
+    private string FindFirstConfiguredSceneName()
+    {
+        for (int i = 0; i < runtimeIslands.Count; i++)
+        {
+            IslandRuntime island = runtimeIslands[i];
+            if (island != null
+                && island.Progress != null
+                && !string.IsNullOrWhiteSpace(island.Progress.SceneName))
+            {
+                return island.Progress.SceneName.Trim();
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private IEnumerator LoadNextSceneRoutine(string sceneOverride = null)
     {
         isLoadingNextScene = true;
         playablePromptReady = false;
@@ -628,12 +679,23 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
             yield return new WaitForSeconds(loadDelayAfterClick);
         }
 
-        string sceneName = playableIsland != null && playableIsland.Progress != null
-            ? playableIsland.Progress.SceneName
-            : string.Empty;
+        string sceneName = !string.IsNullOrWhiteSpace(sceneOverride)
+            ? sceneOverride
+            : playableIsland != null && playableIsland.Progress != null
+                ? playableIsland.Progress.SceneName
+                : string.Empty;
 
         if (!string.IsNullOrWhiteSpace(sceneName))
         {
+            if (NightMode.NightPhase)
+            {
+                // Night: clicking the (lit) island IS the redo run. Fresh session; drop any stale
+                // wrong-word retry flags so the puzzle takes the fresh-clock path, not a resume.
+                NightMode.BeginSession(NightMode.QuestIds);
+                MagicStonePuzzleController.ConsumeRetryAfterCrow();
+                MagicStonePuzzleController.ConsumeRetryAfterAlt();
+            }
+
             // Fade the screen to black before loading; the target scene fades back in on entry.
             yield return SceneFadeController.Cover(sceneExitCoverDuration);
             SceneManager.LoadScene(sceneName.Trim());

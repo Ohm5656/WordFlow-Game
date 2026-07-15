@@ -18,21 +18,21 @@ public static class ApplyFastPacing
     {
         ["OwlGreetingCutscene"] = new (string, float)[]
         {
-            ("startDelay", 0.1f),
-            ("dimFadeInDuration", 0.3f),
-            ("dimFadeOutDuration", 0.35f),
-            ("zoomDuration", 0.55f),
-            ("holdAfterZoom", 0.08f),
-            ("restoreZoomDuration", 0.45f),
-            ("talkingFadeDuration", 0.28f),
-            ("holdFrozenAfterRound", 0.25f),
-            ("voiceStartDelay", 0.08f),
-            ("bearFocusVoiceGap", 0.35f),
-            ("bearFocusDelay", 0.1f),
-            ("bearGrowDuration", 0.4f),
-            ("bookRevealDelay", 0.25f),
-            ("bookRevealDuration", 0.9f),
-            ("owlFadeOutBeforeBookDuration", 0.5f),
+            ("startDelay", 0.05f),
+            ("dimFadeInDuration", 0.22f),
+            ("dimFadeOutDuration", 0.25f),
+            ("zoomDuration", 0.4f),
+            ("holdAfterZoom", 0.04f),
+            ("restoreZoomDuration", 0.35f),
+            ("talkingFadeDuration", 0.22f),
+            ("holdFrozenAfterRound", 0.15f),
+            ("voiceStartDelay", 0.05f),
+            ("bearFocusVoiceGap", 0.2f),
+            ("bearFocusDelay", 0.05f),
+            ("bearGrowDuration", 0.3f),
+            ("bookRevealDelay", 0.1f),
+            ("bookRevealDuration", 0.65f),
+            ("owlFadeOutBeforeBookDuration", 0.35f),
         },
         ["OwlHelloSequence"] = new (string, float)[]
         {
@@ -69,16 +69,16 @@ public static class ApplyFastPacing
         },
         ["SuccessPaOwlEpilogue"] = new (string, float)[]
         {
-            ("fadeInDuration", 0.32f),
-            ("fadeOutDuration", 0.32f),
-            ("fallbackHoldSeconds", 2.4f),
-            ("holdFrozenAfterRound", 0.3f),
-            ("phraseGap", 0.35f),
+            ("fadeInDuration", 0.25f),
+            ("fadeOutDuration", 0.25f),
+            ("fallbackHoldSeconds", 1.5f),
+            ("holdFrozenAfterRound", 0.15f),
+            ("phraseGap", 0.25f),
         },
         ["SuccessGaReturn"] = new (string, float)[]
         {
-            ("playSeconds", 4.1f), // ga clip is about 4s; avoid holding on empty frames
-            ("fadeDuration", 0.8f),
+            ("playSeconds", 2.9f),
+            ("fadeDuration", 0.45f),
         },
         ["CrowEntranceCutscene"] = new (string, float)[]
         {
@@ -104,20 +104,21 @@ public static class ApplyFastPacing
     {
         ["QuestPathSequence"] = new (string, float)[]
         {
-            ("startDelay", 0.22f),
-            ("moveSpeed", 1.25f),
-            ("walkAnimSpeedParam", 1.25f),
-            ("questAutoHold", 0.95f),
-            ("faceHoldBeforeQuest", 1.0f),
-            ("sceneExitCoverDuration", 0.75f),
+            ("startDelay", 0.1f),
+            ("moveSpeed", 1.55f),
+            ("fadeDuration", 0.35f),
+            ("walkAnimSpeedParam", 1.5f),
+            ("questAutoHold", 0.45f),
+            ("nightEndHold", 0.6f),
+            ("sceneExitCoverDuration", 0.65f),
         },
         ["WorldMapProblemIslands"] = new (string, float)[]
         {
-            ("sceneFadeFallbackWait", 1.8f),
-            ("unlockAnimationDelay", 0.3f),
-            ("unlockAnimationDuration", 1.25f),
-            ("unlockHoldDuration", 0.75f),
-            ("unlockFadeOutDuration", 0.6f),
+            ("sceneFadeFallbackWait", 1.1f),
+            ("unlockAnimationDelay", 0.15f),
+            ("unlockAnimationDuration", 0.95f),
+            ("unlockHoldDuration", 0.35f),
+            ("unlockFadeOutDuration", 0.35f),
             ("playableIslandPromptDuration", 1.5f),
             ("sceneExitCoverDuration", 0.65f),
         },
@@ -138,9 +139,9 @@ public static class ApplyFastPacing
         },
         ["CrowSetFreeCutscene"] = new (string, float)[]
         {
-            ("fadeInDuration", 0.35f),
-            ("fadeOutDuration", 0.75f),
-            ("clip2FadeInDuration", 0.5f),
+            ("fadeInDuration", 0.3f),
+            ("fadeOutDuration", 0.45f),
+            ("clip2FadeInDuration", 0.35f),
         },
     };
 
