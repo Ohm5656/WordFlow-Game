@@ -7,6 +7,10 @@ using WordFlow.Adventure.Net;
 // (the same talking owl used in CutScene_bear), set owlPosition to (0, -89), assign clips/TTS.
 public sealed class SuccessPaOwlEpilogue : MonoBehaviour
 {
+    [Header("Eligibility")]
+    [Tooltip("Quest whose perfect three-star completion earns this owl praise. Leave empty to always play.")]
+    [SerializeField] private string questId;
+
     [Tooltip("Animator on the owl talking prefab. Same prefab as CutScene_bear's talkingAnimator.")]
     [SerializeField] private Animator owlAnimator;
     [SerializeField] private string talkingStateName = "Owl";
@@ -119,6 +123,11 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
 
     public IEnumerator Play()
     {
+        // A two-star result completes the quest but leaves a clear reason to revisit it at night.
+        // The praise belongs to the moment the saved best score first reaches all three stars.
+        if (!string.IsNullOrWhiteSpace(questId) && QuestStars.Get(questId) < QuestStars.Max)
+            yield break;
+
         if (owlAnimator == null) yield break;
 
         // The old implementation started the owl immediately even when its async TTS request

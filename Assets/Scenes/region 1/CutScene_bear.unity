@@ -668,12 +668,12 @@ MonoBehaviour:
   audioSource: {fileID: 204294692}
   beepClip: {fileID: 8300000, guid: a3dbedb1174d9ae49a31478abdd8de82, type: 3}
   unlockSfx: {fileID: 8300000, guid: eada9bda2071d7c48a9b73117aa29503, type: 3}
-  beepCount: 5
+  beepCount: 3
   beepInterval: 1
   beepAudibleSeconds: 0.4
   beepWindow: 10
   pulseDecay: 6
-  lockoutDuration: 5
+  lockoutDuration: 3
   fadeInDuration: 0.12
   fadeOutDuration: 0.35
   iconPopDuration: 0.28

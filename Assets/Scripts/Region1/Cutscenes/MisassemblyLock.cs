@@ -2,14 +2,14 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// The garbage-word punishment: a fixed dark-red screen for five seconds, during which the stones
-/// are dead. Outside the countdown window it sounds five local beat-beeps that yank the smoke;
+/// The garbage-word punishment: a fixed dark-red screen for three seconds, during which the stones
+/// are dead. Outside the countdown window it sounds three local beat-beeps that yank the smoke;
 /// inside the last 10 seconds it rides the clock's existing beep and smoke rhythm instead.
 ///
 /// The clock is NOT paused while this plays. That is the whole point: being frozen out costs real
 /// seconds of smoke, so brute-forcing combinations has a price.
 ///
-/// The alert uses a multiply vignette. Its short fades are included in the five-second duration;
+/// The alert uses a multiply vignette. Its short fades are included in the three-second duration;
 /// beep pulses affect the smoke only, never the red intensity. The legacy key_root art stays wired
 /// for scene compatibility but remains hidden throughout, and no unlock sound is played.
 public sealed class MisassemblyLock : MonoBehaviour
@@ -39,7 +39,7 @@ public sealed class MisassemblyLock : MonoBehaviour
     [SerializeField] private AudioClip unlockSfx;
 
     [Header("Beats")]
-    [SerializeField, Min(1)] private int beepCount = 5;
+    [SerializeField, Min(1)] private int beepCount = 3;
     [SerializeField, Min(0.1f)] private float beepInterval = 1f;
     [SerializeField, Min(0.05f)] private float beepAudibleSeconds = 0.4f;
 
@@ -55,7 +55,7 @@ public sealed class MisassemblyLock : MonoBehaviour
 
     [Header("Lockout")]
     [Tooltip("Total input lock duration, including the fade-in and fade-out.")]
-    [SerializeField, Min(0.1f)] private float lockoutDuration = 5f;
+    [SerializeField, Min(0.1f)] private float lockoutDuration = 3f;
 
     [Header("Fades")]
     [SerializeField, Min(0.01f)] private float fadeInDuration = 0.12f;
@@ -145,7 +145,7 @@ public sealed class MisassemblyLock : MonoBehaviour
         float fadeIn = Mathf.Min(fadeInDuration, duration);
         float fadeOut = Mathf.Min(fadeOutDuration, Mathf.Max(0f, duration - fadeIn));
 
-        // Keep one local beat per second through the five-second lockout when the countdown is not
+        // Keep one local beat per second through the three-second lockout when the countdown is not
         // involved. Only align to clock boundaries when the 10-second rhythm is active or will begin
         // during this lockout; this prevents a near-boundary local beep from colliding with the countdown track.
         bool useClockRhythm = ClockRunning && ClockRemaining <= beepWindow + duration;

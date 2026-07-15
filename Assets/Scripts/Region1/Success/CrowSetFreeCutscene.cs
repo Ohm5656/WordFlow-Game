@@ -121,7 +121,7 @@ public sealed class CrowSetFreeCutscene : MonoBehaviour
 
         // --- owl praise (day only), then on to reference_forest ---
         // Night redo: no praise — the child already earned it on the daytime run.
-        if (owlEpilogue != null && !NightMode.RedoActive) yield return owlEpilogue.Play();
+        if (owlEpilogue != null) yield return owlEpilogue.Play();
         if (resumeForestAtBeat2) BearEncounterFlow.ResumeAtBeat2 = true;
         if (resumeForestAtBeat3) BearEncounterFlow.ResumeAtBeat3 = true;
         if (!string.IsNullOrEmpty(nextScene)) SceneManager.LoadScene(nextScene.Trim());

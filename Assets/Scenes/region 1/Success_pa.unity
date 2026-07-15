@@ -1056,6 +1056,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ce73b8e9bb90374db5b593e0dd85793, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SuccessPaOwlEpilogue
+  questId: paa
   owlAnimator: {fileID: 1333718656}
   talkingStateName: Owl
   owlPosition: {x: 0, y: -89}
