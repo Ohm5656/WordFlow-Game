@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/Login.unity
     guid: a4b53bf16bd5c9649a0b5aa75c158834
   - enabled: 0
@@ -62,5 +62,11 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/region 1/Success_ta_incorrect.unity
     guid: 766585d227019f24e9295d5014631e70
+  - enabled: 1
+    path: Assets/Scenes/Register.unity
+    guid: dc41bc9200ebcf54e8f768b7db56d628
+  - enabled: 1
+    path: Assets/Scenes/ForgotPassword.unity
+    guid: f468f01c7376b4649a1583a5a79dba2d
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
