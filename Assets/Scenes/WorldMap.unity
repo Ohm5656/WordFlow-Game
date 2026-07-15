@@ -2220,13 +2220,13 @@ MonoBehaviour:
   hideLockedIslandStars: 1
   waitForSceneFadeBeforeUnlock: 1
   sceneFadeObjectName: WorldMap Fade Canvas
-  sceneFadeFallbackWait: 1.8
-  unlockAnimationDelay: 0.3
-  unlockAnimationDuration: 1.25
+  sceneFadeFallbackWait: 1.1
+  unlockAnimationDelay: 0.15
+  unlockAnimationDuration: 0.95
   unlockShakeDegrees: 2.5
   unlockPopScale: 1.04
-  unlockHoldDuration: 0.75
-  unlockFadeOutDuration: 0.6
+  unlockHoldDuration: 0.35
+  unlockFadeOutDuration: 0.35
   animatePlayableIslandPrompt: 1
   playableIslandPromptDuration: 1.5
   playableIslandBreathScale: 1.018

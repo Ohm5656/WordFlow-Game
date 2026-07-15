@@ -11,7 +11,7 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [SerializeField] private string frameNamePrefix = "owl";
     [SerializeField] private bool useSingleVisibleFrame = false;
     [SerializeField] private bool preservePlacedFrameTransforms = true;
-    [SerializeField] private float startDelay = 0.1f;
+    [SerializeField] private float startDelay = 0.05f;
     [SerializeField] private int loopCount = 2;
     [SerializeField] private float greetingDuration = 5.35f;
     [SerializeField, HideInInspector] private float frameDuration = 0.16f;
@@ -27,12 +27,12 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
 
     [Header("Zoom")]
     [SerializeField] private bool zoomBeforeGreeting = true;
-    [SerializeField] private float zoomDuration = 0.75f;
+    [SerializeField] private float zoomDuration = 0.4f;
     [SerializeField] private float zoomScale = 1.22f;
     [SerializeField] private Vector2 zoomFocusPosition = new Vector2(320f, -120f);
-    [SerializeField] private float holdAfterZoom = 0.15f;
+    [SerializeField] private float holdAfterZoom = 0.04f;
     [SerializeField] private bool restoreZoomAfterGreeting = true;
-    [SerializeField] private float restoreZoomDuration = 0.55f;
+    [SerializeField] private float restoreZoomDuration = 0.35f;
     [SerializeField] private RectTransform zoomRoot;
     [SerializeField] private RectTransform backgroundBounds;
     [SerializeField] private bool clampZoomToBackground = true;
@@ -41,14 +41,14 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [Header("Background Focus")]
     [SerializeField] private bool dimBackgroundBeforeZoom = true;
     [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.55f);
-    [SerializeField] private float dimFadeInDuration = 0.35f;
-    [SerializeField] private float dimFadeOutDuration = 0.45f;
+    [SerializeField] private float dimFadeInDuration = 0.22f;
+    [SerializeField] private float dimFadeOutDuration = 0.25f;
 
     [Header("Bear Focus Follow Up")]
     [SerializeField] private bool playBearFocusAfterGreeting = true;
     [SerializeField] private RectTransform bearRoot;
-    [SerializeField] private float bearFocusDelay = 0.15f;
-    [SerializeField] private float bearGrowDuration = 0.45f;
+    [SerializeField] private float bearFocusDelay = 0.05f;
+    [SerializeField] private float bearGrowDuration = 0.3f;
     [SerializeField] private float bearFocusScaleMultiplier = 1.18f;
     [SerializeField] private float bearFocusGreetingDuration = 9.35f;
     [SerializeField] private bool bearFocusUseHierarchyOrder = true;
@@ -84,9 +84,9 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [SerializeField] private string bearFocusLookLineId;
     [Tooltip("Maximum time to wait for TTS line resolution before continuing without non-TTS fallback.")]
     [SerializeField, Min(0.1f)] private float ttsWaitTimeoutSeconds = 8f;
-    [SerializeField] private float voiceStartDelay = 0f;
+    [SerializeField] private float voiceStartDelay = 0.05f;
     [Tooltip("Pause between spoken owl phrases. Keep this audible for young players; the baked TTS clips were trimmed, so this is the main breathing room.")]
-    [SerializeField] private float bearFocusVoiceGap = 0.35f;
+    [SerializeField] private float bearFocusVoiceGap = 0.2f;
     [SerializeField] private bool useVoiceClipLengthForTalkDuration = true;
 
     [Header("Hello Animation — plays once before the first greeting phrase")]
@@ -122,20 +122,20 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
     [Tooltip("Hide the owl prefab whenever no voice line is playing.")]
     [SerializeField] private bool hideTalkingPrefabWhenSilent = true;
     [Tooltip("Seconds to fade the talking owl in when it enters and out when it leaves. 0 = pop instantly.")]
-    [SerializeField, Min(0f)] private float talkingFadeDuration = 0.35f;
+    [SerializeField, Min(0f)] private float talkingFadeDuration = 0.22f;
     [Tooltip("After a whole talking round finishes (all its phrases), freeze the owl on its current frame for this long before fading out. 0 = no hold.")]
-    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.5f;
+    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.15f;
 
     [Header("Book Reveal")]
     [SerializeField] private bool playBookRevealAfterBearFocus = true;
     [SerializeField] private RectTransform bookCraftRoot;
     [SerializeField] private Image bookCraftImage;
-    [SerializeField] private float bookRevealDelay = 0.5f;
+    [SerializeField] private float bookRevealDelay = 0.1f;
     [SerializeField] private Vector2 bookRevealStartPosition = Vector2.zero;
     [SerializeField] private float bookRevealStartScale = 0.08f;
-    [SerializeField] private float bookRevealDuration = 1.15f;
+    [SerializeField] private float bookRevealDuration = 0.65f;
     [SerializeField] private bool fadeOwlBeforeBookReveal = true;
-    [SerializeField] private float owlFadeOutBeforeBookDuration = 0.6f;
+    [SerializeField] private float owlFadeOutBeforeBookDuration = 0.35f;
     [SerializeField] private bool moveOwlToBookRevealPosition = false;
     [SerializeField] private float owlBookRevealMoveDuration = 0.75f;
     [SerializeField] private bool usePlacedOwlPositionAsBookRevealTarget = true;

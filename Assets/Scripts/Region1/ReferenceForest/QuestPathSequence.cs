@@ -63,15 +63,15 @@ public sealed class QuestPathSequence : MonoBehaviour
     [SerializeField] private string crowSpritesResourcePath = "Characters/Animals/birds/bird6_16x20";
 
     [Header("Tuning")]
-    [SerializeField] private float startDelay = 0.3f;
-    [SerializeField] private float moveSpeed = 1.0f;
+    [SerializeField] private float startDelay = 0.1f;
+    [SerializeField] private float moveSpeed = 1.55f;
     [SerializeField] private float arriveDistance = 0.05f;
-    [SerializeField] private float fadeDuration = 0.5f;
+    [SerializeField] private float fadeDuration = 0.35f;
     [SerializeField] private float clickPadding = 0.35f;
     [Tooltip("Seconds a quest stays revealed at its point before it auto-completes (replaces the old tap-to-complete).")]
-    [SerializeField] private float questAutoHold = 1.5f;
+    [SerializeField] private float questAutoHold = 0.45f;
     [Tooltip("Animator 'speed' forced while walking so the walk clip plays even at low moveSpeed (state needs >0.01).")]
-    [SerializeField] private float walkAnimSpeedParam = 1f;
+    [SerializeField] private float walkAnimSpeedParam = 1.5f;
     [Tooltip("Walk this fraction of the way from wp_1 toward the bear in one continuous run before the quest reveals (0 = stop at wp_1).")]
     [SerializeField] private float questApproachFraction = 0.6f;
     [Tooltip("Buzz the device (tablet) like a notification when a quest appears.")]
@@ -87,7 +87,7 @@ public sealed class QuestPathSequence : MonoBehaviour
     [Tooltip("Scene loaded when the hero reaches the second quest (the crow / ga encounter).")]
     [SerializeField] private string crowEncounterSceneName = "CutScene_ga";
     [Tooltip("Black fade-out duration before loading the bear encounter scene.")]
-    [SerializeField] private float sceneExitCoverDuration = 1.0f;
+    [SerializeField] private float sceneExitCoverDuration = 0.65f;
 
     [Header("Crow flight")]
     [Tooltip("Crow 1 flies straight back and forth between these two points (wp_ga1 / wp_ga1 (1)).")]
@@ -169,7 +169,7 @@ public sealed class QuestPathSequence : MonoBehaviour
     [Tooltip("Radius of the light pool on each shown night quest (world units).")]
     [SerializeField] private float nightQuestLightRadius = 3.2f;
     [Tooltip("Beat held after the last night quest, before the map fades back in.")]
-    [SerializeField] private float nightEndHold = 1.2f;
+    [SerializeField] private float nightEndHold = 0.6f;
 
     private bool crowPatrolActive;
     private bool quest4PatrolActive;

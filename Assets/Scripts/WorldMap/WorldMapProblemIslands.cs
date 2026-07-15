@@ -42,13 +42,13 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     [Header("Unlock Animation")]
     [SerializeField] private bool waitForSceneFadeBeforeUnlock = true;
     [SerializeField] private string sceneFadeObjectName = "WorldMap Fade Canvas";
-    [SerializeField] private float sceneFadeFallbackWait = 3.4f;
-    [SerializeField] private float unlockAnimationDelay = 0.45f;
-    [SerializeField] private float unlockAnimationDuration = 1.8f;
+    [SerializeField] private float sceneFadeFallbackWait = 1.1f;
+    [SerializeField] private float unlockAnimationDelay = 0.15f;
+    [SerializeField] private float unlockAnimationDuration = 0.95f;
     [SerializeField] private float unlockShakeDegrees = 2.5f;
     [SerializeField] private float unlockPopScale = 1.04f;
-    [SerializeField] private float unlockHoldDuration = 1.1f;
-    [SerializeField] private float unlockFadeOutDuration = 0.8f;
+    [SerializeField] private float unlockHoldDuration = 0.35f;
+    [SerializeField] private float unlockFadeOutDuration = 0.35f;
 
     [Header("Playable Island Prompt")]
     [SerializeField] private bool animatePlayableIslandPrompt = true;

@@ -1054,12 +1054,12 @@ MonoBehaviour:
   owlAnimator: {fileID: 1333718656}
   talkingStateName: Owl
   owlPosition: {x: 0, y: -89}
-  fadeInDuration: 0.32
-  fadeOutDuration: 0.32
-  holdFrozenAfterRound: 0.3
-  phraseGap: 0.35
+  fadeInDuration: 0.25
+  fadeOutDuration: 0.25
+  holdFrozenAfterRound: 0.15
+  phraseGap: 0.25
   ttsWaitTimeoutSeconds: 8
-  fallbackHoldSeconds: 2.4
+  fallbackHoldSeconds: 1.5
   phrase1Clip: {fileID: 0}
   phrase1LineId: kaa_voice_restored
   phrase1AnimSpeed: 1
@@ -2017,9 +2017,9 @@ MonoBehaviour:
   crow: {fileID: 0}
   owlEpilogue: {fileID: 427317406}
   playOnStart: 1
-  fadeInDuration: 0.35
-  fadeOutDuration: 0.75
-  clip2FadeInDuration: 0.5
+  fadeInDuration: 0.3
+  fadeOutDuration: 0.45
+  clip2FadeInDuration: 0.35
   setFreeState: ga_set_free
   setFree2State: ga_set_free2
   expandStartFrame: 37

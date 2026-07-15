@@ -25,7 +25,7 @@ public sealed class BearIntroSequence : MonoBehaviour
     [SerializeField] private float zoomOrthoSize = 5.5f;
     [Tooltip("Extra offset added to the focus point so the framing isn't dead-centre.")]
     [SerializeField] private Vector2 zoomOffset = new Vector2(0f, 0.5f);
-    [SerializeField] private float zoomDuration = 1.1f;
+    [SerializeField] private float zoomDuration = 0.85f;
 
     [Header("Spotlight darkness")]
     [Tooltip("Big SpriteRenderer using the NightOverlayCutout material, covering the view.")]
@@ -38,7 +38,7 @@ public sealed class BearIntroSequence : MonoBehaviour
     [SerializeField] private float[] spotlightRadii = { 3f, 1.6f };
     [Range(0.01f, 0.9f)] [SerializeField] private float clearCenterFraction = 0.35f;
     [Range(0f, 1f)] [SerializeField] private float minimumDarknessInLight = 0.0f;
-    [SerializeField] private float darkFadeDuration = 0.9f;
+    [SerializeField] private float darkFadeDuration = 0.65f;
 
     [Header("Owl guide")]
     [SerializeField] private CanvasGroup owlGroup;
@@ -55,14 +55,14 @@ public sealed class BearIntroSequence : MonoBehaviour
     [SerializeField, Min(0f)] private float wowPhraseSeconds = 1.07f;
     [Tooltip("Voice time where the next phrase begins and owl_talk takes over.")]
     [SerializeField, Min(0f)] private float talkPhraseStartSeconds = 1.47f;
-    [SerializeField] private float owlFadeDuration = 0.4f;
+    [SerializeField] private float owlFadeDuration = 0.25f;
 
     [Header("Voice")]
     [Tooltip("Baked owl line (Assets/Resources/TTS). Assigned in the inspector; no backend call.")]
     [SerializeField] private AudioClip voiceClip;
     [SerializeField, Range(0f, 1f)] private float voiceVolume = 1f;
     [Tooltip("Extra seconds to keep talking/holding after the voice clip ends.")]
-    [SerializeField] private float tailHold = 0.3f;
+    [SerializeField] private float tailHold = 0.15f;
 
     private AudioSource voiceSource;
     private MaterialPropertyBlock overlayProps;

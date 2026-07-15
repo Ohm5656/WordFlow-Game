@@ -27,8 +27,8 @@ public sealed class WorldMapNight : MonoBehaviour
     [Header("Darkness")]
     [SerializeField] private Color darkColor = new Color(0.04f, 0.09f, 0.20f, 1f);
     [SerializeField] private float maxDarkAlpha = 0.82f;
-    [SerializeField] private float fadeStartDelay = 1.7f;
-    [SerializeField] private float fadeDuration = 1.5f;
+    [SerializeField] private float fadeStartDelay = 0.35f;
+    [SerializeField] private float fadeDuration = 0.9f;
     [SerializeField] private float overscan = 1.1f;
 
     [Header("Night choices")]

@@ -1529,8 +1529,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 284b07e4e320fce4d86c585a3d95f64c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SuccessGaReturn
-  playSeconds: 4.1
-  fadeDuration: 0.8
+  playSeconds: 2.9
+  fadeDuration: 0.45
   fadeColor: {r: 0, g: 0, b: 0, a: 1}
   returnSceneName: CutScene_bear
 --- !u!1 &1440616828

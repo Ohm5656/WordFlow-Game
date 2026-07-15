@@ -12,16 +12,16 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
     [SerializeField] private string talkingStateName = "Owl";
     [Tooltip("Anchored position where the owl appears (local to its parent RectTransform).")]
     [SerializeField] private Vector2 owlPosition = new Vector2(0f, -89f);
-    [SerializeField] private float fadeInDuration = 0.35f;
-    [SerializeField] private float fadeOutDuration = 0.35f;
+    [SerializeField] private float fadeInDuration = 0.25f;
+    [SerializeField] private float fadeOutDuration = 0.25f;
     [Tooltip("After the owl finishes all phrases, freeze on its current frame for this long before fading out. 0 = no hold.")]
-    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.5f;
+    [SerializeField, Min(0f)] private float holdFrozenAfterRound = 0.15f;
     [Tooltip("Pause between owl praise phrases. The TTS files are trimmed, so this gap keeps the line understandable for children.")]
-    [SerializeField] private float phraseGap = 0.35f;
+    [SerializeField] private float phraseGap = 0.25f;
     [Tooltip("Maximum time to wait for TTS before continuing without non-TTS fallback.")]
     [SerializeField, Min(0.1f)] private float ttsWaitTimeoutSeconds = 8f;
     [Tooltip("If TTS fails / no clip assigned, hold this long before fading out (so owl isn't invisible).")]
-    [SerializeField] private float fallbackHoldSeconds = 6f;
+    [SerializeField] private float fallbackHoldSeconds = 1.5f;
 
     [Header("Phrase 1 — มันหนีเข้าป่าไปแล้ว")]
     [SerializeField] private AudioClip phrase1Clip;

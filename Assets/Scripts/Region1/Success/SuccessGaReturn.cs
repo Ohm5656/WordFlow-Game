@@ -10,8 +10,8 @@ using UnityEngine.UI;
 public sealed class SuccessGaReturn : MonoBehaviour
 {
     [Tooltip("Let the ga / bear_question animations play this long before fading out.")]
-    [SerializeField] private float playSeconds = 4.5f; // ponytail: ga clip ~4s; tune to clip length
-    [SerializeField] private float fadeDuration = 1f;
+    [SerializeField] private float playSeconds = 2.9f;
+    [SerializeField] private float fadeDuration = 0.45f;
     [SerializeField] private Color fadeColor = Color.black;
     [SerializeField] private string returnSceneName = "CutScene_bear";
 

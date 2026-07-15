@@ -668,12 +668,12 @@ MonoBehaviour:
   audioSource: {fileID: 204294692}
   beepClip: {fileID: 8300000, guid: a3dbedb1174d9ae49a31478abdd8de82, type: 3}
   unlockSfx: {fileID: 8300000, guid: eada9bda2071d7c48a9b73117aa29503, type: 3}
-  beepCount: 3
+  beepCount: 5
   beepInterval: 1
   beepAudibleSeconds: 0.4
   beepWindow: 10
   pulseDecay: 6
-  lockoutDuration: 3
+  lockoutDuration: 5
   fadeInDuration: 0.12
   fadeOutDuration: 0.35
   iconPopDuration: 0.28
@@ -5280,7 +5280,7 @@ MonoBehaviour:
   frameNamePrefix: owl
   useSingleVisibleFrame: 0
   preservePlacedFrameTransforms: 1
-  startDelay: 0.1
+  startDelay: 0.05
   loopCount: 2
   greetingDuration: 4
   frameDuration: 0.35
@@ -5292,24 +5292,24 @@ MonoBehaviour:
   bounceHeight: 0
   bounceScale: 1
   zoomBeforeGreeting: 0
-  zoomDuration: 0.55
+  zoomDuration: 0.4
   zoomScale: 1.5
   zoomFocusPosition: {x: 320, y: -120}
-  holdAfterZoom: 0.08
+  holdAfterZoom: 0.04
   restoreZoomAfterGreeting: 1
-  restoreZoomDuration: 0.45
+  restoreZoomDuration: 0.35
   zoomRoot: {fileID: 0}
   backgroundBounds: {fileID: 925051139}
   clampZoomToBackground: 1
   zoomViewportPadding: {x: 24, y: 24}
   dimBackgroundBeforeZoom: 1
   dimColor: {r: 0, g: 0, b: 0, a: 0.55}
-  dimFadeInDuration: 0.3
-  dimFadeOutDuration: 0.35
+  dimFadeInDuration: 0.22
+  dimFadeOutDuration: 0.25
   playBearFocusAfterGreeting: 1
   bearRoot: {fileID: 1922679171}
-  bearFocusDelay: 0.1
-  bearGrowDuration: 0.4
+  bearFocusDelay: 0.05
+  bearGrowDuration: 0.3
   bearFocusScaleMultiplier: 1.18
   bearFocusGreetingDuration: 6
   bearFocusUseHierarchyOrder: 1
@@ -5331,8 +5331,8 @@ MonoBehaviour:
   greetingLineId: 
   bearFocusLookLineId: paa_intro_owl_2
   ttsWaitTimeoutSeconds: 8
-  voiceStartDelay: 0.08
-  bearFocusVoiceGap: 0.22
+  voiceStartDelay: 0.05
+  bearFocusVoiceGap: 0.2
   useVoiceClipLengthForTalkDuration: 1
   owlHello: {fileID: 0}
   talkingAnimator: {fileID: 0}
@@ -5348,17 +5348,17 @@ MonoBehaviour:
   bearFocusMissionAnimationSpeed: 1
   bearFocusMissionSecondsPerLoop: 0
   hideTalkingPrefabWhenSilent: 1
-  talkingFadeDuration: 0.28
-  holdFrozenAfterRound: 0.25
+  talkingFadeDuration: 0.22
+  holdFrozenAfterRound: 0.15
   playBookRevealAfterBearFocus: 1
   bookCraftRoot: {fileID: 0}
   bookCraftImage: {fileID: 0}
-  bookRevealDelay: 0.25
+  bookRevealDelay: 0.1
   bookRevealStartPosition: {x: 0, y: 0}
   bookRevealStartScale: 0.08
-  bookRevealDuration: 0.9
+  bookRevealDuration: 0.65
   fadeOwlBeforeBookReveal: 1
-  owlFadeOutBeforeBookDuration: 0.5
+  owlFadeOutBeforeBookDuration: 0.35
   moveOwlToBookRevealPosition: 0
   owlBookRevealMoveDuration: 0.75
   usePlacedOwlPositionAsBookRevealTarget: 1
@@ -5590,7 +5590,7 @@ MonoBehaviour:
   playOnStart: 1
   playPaaThrowSfxOnStart: 0
   startWaypoint: 0
-  fadeInDuration: 0.6
+  fadeInDuration: 0.45
   cropLeftPixels: 0
   alsoFade: []
   endFadeOutDuration: 0
@@ -5602,7 +5602,7 @@ MonoBehaviour:
   - state: bear_run2
     toWaypoint: 1
     timing: 0
-    seconds: 1.4
+    seconds: 1.15
     speed: 0.5
     speedEnd: 0
     scale: 1
@@ -5611,7 +5611,7 @@ MonoBehaviour:
   - state: bear_run2
     toWaypoint: 2
     timing: 0
-    seconds: 1.25
+    seconds: 1.05
     speed: 0.6
     speedEnd: 0.4
     scale: 1
@@ -5629,11 +5629,11 @@ MonoBehaviour:
   - state: bear_breathing
     toWaypoint: -1
     timing: 2
-    seconds: 1.5
+    seconds: 1.1
     speed: 0.8
     speedEnd: 0
     scale: 1
-    fadeSeconds: 0.35
+    fadeSeconds: 0.25
     moveDelay: 0
 --- !u!1 &1927823505
 GameObject:

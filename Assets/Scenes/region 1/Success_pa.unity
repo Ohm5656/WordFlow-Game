@@ -1059,12 +1059,12 @@ MonoBehaviour:
   owlAnimator: {fileID: 1333718656}
   talkingStateName: Owl
   owlPosition: {x: 0, y: -89}
-  fadeInDuration: 0.32
-  fadeOutDuration: 0.32
-  holdFrozenAfterRound: 0.3
-  phraseGap: 0.35
+  fadeInDuration: 0.25
+  fadeOutDuration: 0.25
+  holdFrozenAfterRound: 0.15
+  phraseGap: 0.25
   ttsWaitTimeoutSeconds: 8
-  fallbackHoldSeconds: 2.4
+  fallbackHoldSeconds: 1.5
   phrase1Clip: {fileID: 0}
   phrase1LineId: paa_outro_owl_1
   phrase1AnimSpeed: 1

@@ -26977,19 +26977,19 @@ MonoBehaviour:
   crowMarkRoot: {fileID: 1339021964}
   crowMarkSprite: {fileID: 1339021967}
   crowSpritesResourcePath: Characters/Animals/birds/bird6_16x20
-  startDelay: 0.22
-  moveSpeed: 1.3
+  startDelay: 0.1
+  moveSpeed: 1.55
   arriveDistance: 0.05
-  fadeDuration: 0.5
+  fadeDuration: 0.35
   clickPadding: 0.35
-  questAutoHold: 0.95
-  walkAnimSpeedParam: 1.25
+  questAutoHold: 0.45
+  walkAnimSpeedParam: 1.5
   questApproachFraction: 0.6
   enableVibration: 1
   bearIntro: {fileID: 1689109216}
   bearEncounterSceneName: CutScene_bear
   crowEncounterSceneName: CutScene_ga
-  sceneExitCoverDuration: 0.75
+  sceneExitCoverDuration: 0.65
   crow1PointA: {fileID: 11856744}
   crow1PointB: {fileID: 1972073421}
   crow2PointA: {fileID: 1138346002}
@@ -27951,7 +27951,7 @@ MonoBehaviour:
   zoomFocus: {fileID: 54379680}
   zoomOrthoSize: 5.5
   zoomOffset: {x: 0, y: 0.5}
-  zoomDuration: 1.1
+  zoomDuration: 0.85
   spotlightOverlay: {fileID: 1689109217}
   darkColor: {r: 0.03, g: 0.03, b: 0.06, a: 1}
   maxDarkAlpha: 0.82
@@ -27963,7 +27963,7 @@ MonoBehaviour:
   - 1.6
   clearCenterFraction: 0.35
   minimumDarknessInLight: 0
-  darkFadeDuration: 0.9
+  darkFadeDuration: 0.65
   owlGroup: {fileID: 1941842555}
   owlImage: {fileID: 1941842553}
   wowFrames:
@@ -28085,10 +28085,10 @@ MonoBehaviour:
   owlSpeed: 1
   wowPhraseSeconds: 1.07
   talkPhraseStartSeconds: 1.47
-  owlFadeDuration: 0.4
+  owlFadeDuration: 0.25
   voiceClip: {fileID: 8300000, guid: 436a1fb196d5fa34599ecc05dae7b521, type: 3}
   voiceVolume: 1
-  tailHold: 0.3
+  tailHold: 0.15
 --- !u!212 &1689109217
 SpriteRenderer:
   serializedVersion: 2
