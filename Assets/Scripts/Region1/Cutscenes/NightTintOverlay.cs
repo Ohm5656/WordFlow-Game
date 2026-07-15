@@ -2,91 +2,240 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-/// Self-bootstrapping night dressing for the puzzle/success scenes during a night redo.
+/// <summary>
+/// Chooses the authored day/night background in quest cutscenes and gives foreground
+/// sprites a moonlit presentation during a night redo.
 ///
-/// The dark wash is inserted INTO the scene's own Canvas, directly above the `background` image and
-/// below everything else. That is what makes the night read correctly: the background goes dark
-/// while the actors on top of it — the bear, the crow, the craft book, the stones, the smoke, the
-/// star board — keep their full daylight brightness, so the quest object is the lit thing in a dark
-/// scene. (A screen-space overlay ON TOP of the canvas would have dimmed the book and stones too.)
-///
-/// Only appears while NightMode.RedoActive is true; does nothing during the day.
+/// This intentionally does not change reference_forest. That scene owns its own
+/// NightLighting system, while the scenes listed here use pre-painted night backgrounds.
+/// </summary>
 public sealed class NightTintOverlay : MonoBehaviour
 {
-    private const string OverlayObjectName = "Night Background Tint";
-    private const string BackgroundObjectName = "background";
+    private const string DayBackgroundName = "background";
+    private const string NightBackgroundName = "background_night";
 
-    private static readonly string[] NightScenes =
+    private static readonly string[] SupportedScenes =
     {
         "CutScene_bear", "CutScene_ga",
         "Success_pa", "Success_ga", "Success_ga_correct", "Success_ta_incorrect",
     };
 
-    // Moonlit blue, matching reference_forest's night. Alpha is the knob: higher = darker night.
-    private static readonly Color TintColor = new Color(0.04f, 0.09f, 0.20f, 0.72f);
+    // HUD remains legible instead of inheriting the world-space moonlight treatment.
+    private static readonly string[] UiRootsToKeepBright =
+    {
+        "star_hud", "star_root", "lock_overlay",
+    };
+
+    private static Material nightSpriteMaterial;
+    private static Material nightSpriteMatteCleanupMaterial;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
     {
         SceneManager.sceneLoaded -= HandleSceneLoaded;
         SceneManager.sceneLoaded += HandleSceneLoaded;
-        TryCreateForActiveScene();
+        ApplyForActiveScene();
     }
 
-    private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode) => TryCreateForActiveScene();
-
-    private static void TryCreateForActiveScene()
+    private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (!NightMode.RedoActive) return;
-        if (!IsNightScene(SceneManager.GetActiveScene().name)) return;
-        if (GameObject.Find(OverlayObjectName) != null) return;
+        ApplyForActiveScene();
+    }
+
+    private static void ApplyForActiveScene()
+    {
+        if (!IsSupportedScene(SceneManager.GetActiveScene().name))
+        {
+            return;
+        }
 
         Canvas canvas = FindSceneCanvas();
         if (canvas == null)
         {
-            Debug.LogWarning("[NightTintOverlay] no root Canvas in this scene — night tint skipped");
+            Debug.LogWarning("[NightSceneVisuals] no root Canvas in this scene — visual switch skipped");
             return;
         }
 
-        // Sit directly above the background image; everything authored after it (actors, book,
-        // stones, fog, star board) draws on top of the tint and therefore stays bright.
-        Transform background = canvas.transform.Find(BackgroundObjectName);
-        int siblingIndex = background != null ? background.GetSiblingIndex() + 1 : 1;
+        bool isNight = NightMode.RedoActive;
+        SwitchBackground(canvas.transform, isNight);
 
-        GameObject tint = new GameObject(OverlayObjectName);
-        tint.transform.SetParent(canvas.transform, false);
-        tint.transform.SetSiblingIndex(siblingIndex);
+        if (isNight)
+        {
+            ApplyNightSpriteMaterial(canvas.transform);
+        }
+    }
 
-        RectTransform rect = tint.AddComponent<RectTransform>();
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
+    private static void SwitchBackground(Transform canvas, bool isNight)
+    {
+        Graphic dayBackground = FindGraphic(canvas, DayBackgroundName);
+        Graphic nightBackground = FindGraphic(canvas, NightBackgroundName);
 
-        Image image = tint.AddComponent<Image>();
-        image.color = TintColor;
-        image.raycastTarget = false; // never eat a tap meant for a stone
+        if (dayBackground == null || nightBackground == null)
+        {
+            Debug.LogWarning("[NightSceneVisuals] expected both background and background_night under the scene Canvas");
+            return;
+        }
+
+        // Leave the day object's RectTransform alive: OwlGreetingCutscene uses it as the zoom bound.
+        // Only its Graphic is switched off. The two authored backgrounds share the same placement.
+        dayBackground.enabled = !isNight;
+        nightBackground.gameObject.SetActive(isNight);
+        nightBackground.enabled = isNight;
+    }
+
+    private static Graphic FindGraphic(Transform canvas, string objectName)
+    {
+        Transform target = canvas.Find(objectName);
+        return target != null ? target.GetComponent<Graphic>() : null;
+    }
+
+    private static void ApplyNightSpriteMaterial(Transform canvas)
+    {
+        Graphic[] graphics = canvas.GetComponentsInChildren<Graphic>(true);
+        for (int index = 0; index < graphics.Length; index++)
+        {
+            Graphic graphic = graphics[index];
+            if (!ShouldApplyNightMaterial(graphic))
+            {
+                continue;
+            }
+
+            // Graphic.material falls back to defaultMaterial when no authored material is assigned.
+            // Preserve specialised UI materials (for example, the lock vignette shader), but allow
+            // an older instance of our own runtime material to be replaced after a script reload.
+            if (graphic.material != graphic.defaultMaterial && !IsOurNightMaterial(graphic.material))
+            {
+                continue;
+            }
+
+            Image image = (Image)graphic;
+            bool needsMatteCleanup = IsGreenMatteActor(image.transform);
+            Material material = GetNightSpriteMaterial(needsMatteCleanup);
+            if (material != null)
+            {
+                graphic.material = material;
+            }
+        }
+    }
+
+    private static bool ShouldApplyNightMaterial(Graphic graphic)
+    {
+        if (graphic == null)
+        {
+            return false;
+        }
+
+        string name = graphic.gameObject.name;
+        if (name == DayBackgroundName || name == NightBackgroundName)
+        {
+            return false;
+        }
+
+        for (Transform current = graphic.transform; current != null; current = current.parent)
+        {
+            for (int index = 0; index < UiRootsToKeepBright.Length; index++)
+            {
+                if (current.name == UiRootsToKeepBright[index])
+                {
+                    return false;
+                }
+            }
+        }
+
+        // Empty Images are intentional UI layout/panel elements. Do not turn Unity's white default
+        // texture into a coloured rectangle; only actual sprite artwork needs the night presentation.
+        return graphic is Image image && image.sprite != null;
+    }
+
+    private static bool IsOurNightMaterial(Material material)
+    {
+        return material != null && material.shader != null && material.shader.name == "UI/NightSpritePalette";
+    }
+
+    private static bool IsGreenMatteActor(Transform transform)
+    {
+        // The source frame sequences for these two animated actors contain a teal/green
+        // background-removal matte in the pixels themselves. This is independent of
+        // Unity's optional alpha-split import setting, so checking associatedAlphaSplitTexture
+        // would miss the desktop import used in the editor.
+        //
+        // Keep this narrow: scenery has legitimate green foliage and must never be chroma-keyed.
+        for (Transform current = transform; current != null; current = current.parent)
+        {
+            string name = current.name.ToLowerInvariant();
+            if (name.Contains("crow") || name.Contains("bear"))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Material GetNightSpriteMaterial(bool cleanGreenMatte)
+    {
+        Material existingMaterial = cleanGreenMatte ? nightSpriteMatteCleanupMaterial : nightSpriteMaterial;
+        if (existingMaterial != null)
+        {
+            return existingMaterial;
+        }
+
+        Shader shader = Resources.Load<Shader>("NightSpritePalette");
+        if (shader == null)
+        {
+            Debug.LogError("[NightSceneVisuals] Resources/NightSpritePalette.shader is missing");
+            return null;
+        }
+
+        Material material = new Material(shader)
+        {
+            name = cleanGreenMatte ? "Night Sprite Palette + Matte Cleanup (Runtime)" : "Night Sprite Palette (Runtime)",
+            hideFlags = HideFlags.DontSave
+        };
+        material.SetFloat("_ChromaKeyStrength", cleanGreenMatte ? 1f : 0f);
+        material.SetFloat("_MatteAlphaFloor", cleanGreenMatte ? 0.94f : 0f);
+
+        if (cleanGreenMatte)
+        {
+            nightSpriteMatteCleanupMaterial = material;
+        }
+        else
+        {
+            nightSpriteMaterial = material;
+        }
+
+        return material;
     }
 
     private static Canvas FindSceneCanvas()
     {
         Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         Canvas best = null;
-        for (int i = 0; i < canvases.Length; i++)
+        for (int index = 0; index < canvases.Length; index++)
         {
-            Canvas c = canvases[i];
-            if (c == null || c.transform.parent != null) continue;        // root canvases only
-            if (best == null || c.sortingOrder < best.sortingOrder) best = c; // the scene's own (order 0)
+            Canvas canvas = canvases[index];
+            if (canvas == null || canvas.transform.parent != null)
+            {
+                continue;
+            }
+
+            if (best == null || canvas.sortingOrder < best.sortingOrder)
+            {
+                best = canvas;
+            }
         }
 
         return best;
     }
 
-    private static bool IsNightScene(string sceneName)
+    private static bool IsSupportedScene(string sceneName)
     {
-        for (int i = 0; i < NightScenes.Length; i++)
+        for (int index = 0; index < SupportedScenes.Length; index++)
         {
-            if (NightScenes[i] == sceneName) return true;
+            if (SupportedScenes[index] == sceneName)
+            {
+                return true;
+            }
         }
 
         return false;
