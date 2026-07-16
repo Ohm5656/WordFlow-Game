@@ -6,8 +6,9 @@ using UnityEngine;
 ///
 /// The night image is an independently composed illustration, not a colour treatment of the day
 /// Tilemaps. Its pens, roads and quest spaces therefore have their own world-space coordinates.
-/// This component changes positions only while a night-redo session is loading; a normal daytime
-/// scene load never reads or changes these values.
+/// A night redo applies these values immediately. At the end of a daytime run, the same animal
+/// positions are blended alongside the already-authored background fade so animals never jump
+/// between the day pens and the painted night pens.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class ReferenceForestNightActorCalibration : MonoBehaviour
@@ -48,15 +49,41 @@ public sealed class ReferenceForestNightActorCalibration : MonoBehaviour
     [Tooltip("Existing PatrolWalk movement is kept, but its centre/range is re-based to its night pen.")]
     [SerializeField] private PatrolCalibration[] patrols = Array.Empty<PatrolCalibration>();
 
+    private static ReferenceForestNightActorCalibration activeInstance;
+
     private bool applied;
+    private bool fadePatrolStartsCaptured;
+    private Vector3[] fadePatrolStarts = Array.Empty<Vector3>();
 
     private void Awake()
     {
+        activeInstance = this;
+
         // Daytime continues to use the authored scene transforms. The scene is reloaded for a
         // night redo, so changing runtime positions here cannot leak into the daytime layout.
         if (NightMode.RedoActive)
         {
             ApplyNightLayout();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (activeInstance == this)
+        {
+            activeInstance = null;
+        }
+    }
+
+    /// <summary>
+    /// Mirrors the existing background crossfade with a position-only handoff for animal patrols.
+    /// It deliberately leaves the fade timing, colours, and daytime authored transforms alone.
+    /// </summary>
+    public static void SetNightFadeAmount(float amount)
+    {
+        if (activeInstance != null)
+        {
+            activeInstance.BlendPatrolsToNight(amount);
         }
     }
 
@@ -102,6 +129,64 @@ public sealed class ReferenceForestNightActorCalibration : MonoBehaviour
             calibration.patrol.rangeBack = calibration.rangeBack;
             calibration.patrol.horizontal = calibration.horizontal;
             calibration.patrol.RestartFromCurrentPosition();
+        }
+    }
+
+    private void BlendPatrolsToNight(float amount)
+    {
+        // A redo already entered on its calibrated night layout. The normal day-to-night fade is
+        // the only path that needs a visual handoff between two different pen layouts.
+        if (NightMode.RedoActive || applied || patrols == null || patrols.Length == 0)
+        {
+            return;
+        }
+
+        amount = Mathf.Clamp01(amount);
+        if (amount <= 0f)
+        {
+            fadePatrolStartsCaptured = false;
+            return;
+        }
+
+        CaptureFadePatrolStarts();
+        for (int i = 0; i < patrols.Length; i++)
+        {
+            PatrolCalibration calibration = patrols[i];
+            if (calibration == null || calibration.patrol == null || i >= fadePatrolStarts.Length)
+            {
+                continue;
+            }
+
+            Transform target = calibration.patrol.transform;
+            Vector3 nightPosition = target.position;
+            nightPosition.x = calibration.nightPosition.x;
+            nightPosition.y = calibration.nightPosition.y;
+            target.position = Vector3.Lerp(fadePatrolStarts[i], nightPosition, amount);
+        }
+
+        if (amount >= 0.9999f)
+        {
+            // Preserve the existing patrol animation, but re-base its walk bounds only once the
+            // animal has reached the corresponding night pen.
+            ApplyNightLayout();
+        }
+    }
+
+    private void CaptureFadePatrolStarts()
+    {
+        if (fadePatrolStartsCaptured)
+        {
+            return;
+        }
+
+        fadePatrolStartsCaptured = true;
+        fadePatrolStarts = new Vector3[patrols.Length];
+        for (int i = 0; i < patrols.Length; i++)
+        {
+            PatrolCalibration calibration = patrols[i];
+            fadePatrolStarts[i] = calibration != null && calibration.patrol != null
+                ? calibration.patrol.transform.position
+                : Vector3.zero;
         }
     }
 }

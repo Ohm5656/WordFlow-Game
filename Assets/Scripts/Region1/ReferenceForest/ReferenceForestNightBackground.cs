@@ -58,6 +58,10 @@ public sealed class ReferenceForestNightBackground : MonoBehaviour
             activeInstance.SetNight(amount);
         }
 
+        // The painting is already crossfading here. Keep only its living animal actors in the
+        // matching relative pens, without changing this fade's duration or appearance.
+        ReferenceForestNightActorCalibration.SetNightFadeAmount(amount);
+
         // The daytime grade is part of the same visual hand-off. Fading it away while the
         // authored night painting fades in keeps the original moonlit palette untouched.
         DaySceneColorGrade.SetReferenceForestDayAmount(1f - amount);
