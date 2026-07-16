@@ -16,7 +16,9 @@ public static class QuestStarBadge
     // Sized in WORLD UNITS, computed from each sprite's own bounds at runtime — no pixel-perfect
     // guesswork needed if the art changes. Tune these three numbers in-editor by eye.
     private const float PanelWidthWorld = 2.1f;
-    private const float StarWidthFraction = 0.16f;    // of panel width
+    // star.png has transparent padding around its visible star, so its renderer needs a larger
+    // source width to make the visible art fill the embossed slot on panel_star.png.
+    private const float StarWidthFraction = 0.48f;    // of panel width
     private const float SparkleWidthFraction = 0.22f; // of panel width
 
     // Slot centres as fractions of the panel's own width/height (0,0 = bottom-left corner of the
@@ -31,6 +33,7 @@ public static class QuestStarBadge
     };
 
     private static readonly Dictionary<string, GameObject> Active = new Dictionary<string, GameObject>();
+    private static Material unlitMaterial;
 
     /// Builds and fades in the board for `questId` beside `anchor`. Safe to call once per quest —
     /// a second call while one is already up for that id is a no-op.
@@ -57,6 +60,7 @@ public static class QuestStarBadge
         SpriteRenderer panelRenderer = panelGo.AddComponent<SpriteRenderer>();
         panelRenderer.sprite = panelSprite;
         panelRenderer.sortingOrder = PanelOrder;
+        ApplyUnlitMaterial(panelRenderer);
 
         float panelRawWidth = Mathf.Max(0.0001f, panelSprite.bounds.size.x);
         float panelScale = PanelWidthWorld / panelRawWidth;
@@ -82,6 +86,7 @@ public static class QuestStarBadge
                 SpriteRenderer sparkleRenderer = sparkleGo.AddComponent<SpriteRenderer>();
                 sparkleRenderer.sprite = sparkleSprite;
                 sparkleRenderer.sortingOrder = SparkleOrder;
+                ApplyUnlitMaterial(sparkleRenderer);
                 float sparkleWidth = PanelWidthWorld * SparkleWidthFraction;
                 sparkleGo.transform.localScale = Vector3.one *
                     (sparkleWidth / Mathf.Max(0.0001f, sparkleSprite.bounds.size.x));
@@ -96,6 +101,7 @@ public static class QuestStarBadge
                 SpriteRenderer starRenderer = starGo.AddComponent<SpriteRenderer>();
                 starRenderer.sprite = starSprite;
                 starRenderer.sortingOrder = StarOrder;
+                ApplyUnlitMaterial(starRenderer);
                 float starWidth = PanelWidthWorld * StarWidthFraction;
                 starGo.transform.localScale = Vector3.one *
                     (starWidth / Mathf.Max(0.0001f, starSprite.bounds.size.x));
@@ -142,6 +148,42 @@ public static class QuestStarBadge
             if (kvp.Value != null) Object.Destroy(kvp.Value);
         }
         Active.Clear();
+
+        if (unlitMaterial != null)
+        {
+            Object.Destroy(unlitMaterial);
+            unlitMaterial = null;
+        }
+    }
+
+    private static void ApplyUnlitMaterial(SpriteRenderer renderer)
+    {
+        if (renderer == null)
+        {
+            return;
+        }
+
+        if (unlitMaterial == null)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            if (shader == null)
+            {
+                shader = Shader.Find("Sprites/Default");
+            }
+
+            if (shader == null)
+            {
+                Debug.LogWarning("[QuestStarBadge] Unlit sprite shader not found");
+                return;
+            }
+
+            unlitMaterial = new Material(shader)
+            {
+                name = "Quest Star Badge Unlit (Runtime)"
+            };
+        }
+
+        renderer.sharedMaterial = unlitMaterial;
     }
 
     private static void SetAlpha(List<SpriteRenderer> sprites, float a)

@@ -1,15 +1,19 @@
 fileFormatVersion: 2
-guid: 051473f10d156044aa158f55aa6b4ba7
+guid: 1f99564865a11944bb6e4edae84c5d25
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5414535511040442157
-    second: "\u0E14\u0E35\u0E44\u0E0B\u0E19\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D
-      (1)_0"
+      213: -7030022506645840940
+    second: boss_spirit_transparent_0
   - first:
-      213: 4934433445099895325
-    second: "\u0E14\u0E35\u0E44\u0E0B\u0E19\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D
-      (1)_1"
+      213: -1172625493316575876
+    second: boss_spirit_transparent_1
+  - first:
+      213: -2204408229455797014
+    second: boss_spirit_transparent_2
+  - first:
+      213: -5185445375855212152
+    second: boss_spirit_transparent_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -53,7 +57,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -102,7 +106,7 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-    buildTarget: WebGL
+    buildTarget: Android
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
@@ -115,7 +119,7 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-    buildTarget: Android
+    buildTarget: WebGL
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
@@ -131,14 +135,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "\u0E14\u0E35\u0E44\u0E0B\u0E19\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D
-        (1)_0"
+      name: boss_spirit_transparent_0
       rect:
         serializedVersion: 2
-        x: 210
-        y: 186
-        width: 687
-        height: 137
+        x: 689
+        y: 833
+        width: 11
+        height: 11
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -147,21 +150,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d2fbd4f1c5b442b40800000000000000
-      internalID: 5414535511040442157
+      spriteID: 4db9f50e6c7507e90800000000000000
+      internalID: -7030022506645840940
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: "\u0E14\u0E35\u0E44\u0E0B\u0E19\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D
-        (1)_1"
+      name: boss_spirit_transparent_1
       rect:
         serializedVersion: 2
-        x: 766
-        y: 185
-        width: 20
-        height: 26
+        x: 696
+        y: 839
+        width: 7
+        height: 7
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -170,8 +172,52 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d1a7cf61311aa7440800000000000000
-      internalID: 4934433445099895325
+      spriteID: c7d5c40a35ff9bfe0800000000000000
+      internalID: -1172625493316575876
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boss_spirit_transparent_2
+      rect:
+        serializedVersion: 2
+        x: 426
+        y: 184
+        width: 674
+        height: 648
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ae4e65f056e5861e0800000000000000
+      internalID: -2204408229455797014
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boss_spirit_transparent_3
+      rect:
+        serializedVersion: 2
+        x: 1106
+        y: 448
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 88945f187e89908b0800000000000000
+      internalID: -5185445375855212152
       vertices: []
       indices: 
       edges: []
@@ -190,8 +236,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      "\u0E14\u0E35\u0E44\u0E0B\u0E19\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D (1)_0": 5414535511040442157
-      "\u0E14\u0E35\u0E44\u0E0B\u0E19\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D (1)_1": 4934433445099895325
+      boss_spirit_transparent_0: -7030022506645840940
+      boss_spirit_transparent_1: -1172625493316575876
+      boss_spirit_transparent_2: -2204408229455797014
+      boss_spirit_transparent_3: -5185445375855212152
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

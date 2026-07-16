@@ -30,6 +30,8 @@ namespace WordFlow.Adventure.Net
             public string Uid;
             public long ExpiresInSeconds;
             public string Error;
+            public string FirebaseCode;
+            public long HttpStatus;
         }
 
         public void SignUp(string email, string password, Action<AuthResult> onResult)
@@ -56,7 +58,7 @@ namespace WordFlow.Adventure.Net
             using (var req = JsonPost(url, body))
             {
                 yield return req.SendWebRequest();
-                if (req.result != UnityWebRequest.Result.Success) { onResult?.Invoke(Failure(req)); yield break; }
+                if (req.result != UnityWebRequest.Result.Success) { onResult?.Invoke(Failure(req, verb)); yield break; }
                 var p = JsonUtility.FromJson<PasswordResponse>(req.downloadHandler.text);
                 onResult?.Invoke(new AuthResult
                 {
@@ -76,7 +78,7 @@ namespace WordFlow.Adventure.Net
             using (var req = UnityWebRequest.Post($"{SecureTokenUrl}?key={apiKey}", form))
             {
                 yield return req.SendWebRequest();
-                if (req.result != UnityWebRequest.Result.Success) { onResult?.Invoke(Failure(req)); yield break; }
+                if (req.result != UnityWebRequest.Result.Success) { onResult?.Invoke(Failure(req, "refresh")); yield break; }
                 var p = JsonUtility.FromJson<RefreshResponse>(req.downloadHandler.text);
                 onResult?.Invoke(new AuthResult
                 {
@@ -92,7 +94,11 @@ namespace WordFlow.Adventure.Net
             using (var req = JsonPost($"{IdentityBase}:sendOobCode?key={apiKey}", body))
             {
                 yield return req.SendWebRequest();
-                if (req.result != UnityWebRequest.Result.Success) onResult?.Invoke(false, Failure(req).Error);
+                if (req.result != UnityWebRequest.Result.Success)
+                {
+                    var failure = Failure(req, "password reset");
+                    onResult?.Invoke(false, MapPasswordResetError(failure.FirebaseCode, failure.Error));
+                }
                 else onResult?.Invoke(true, null);
             }
         }
@@ -110,7 +116,7 @@ namespace WordFlow.Adventure.Net
             return req;
         }
 
-        private static AuthResult Failure(UnityWebRequest req)
+        private static AuthResult Failure(UnityWebRequest req, string context)
         {
             string raw = req.downloadHandler != null ? req.downloadHandler.text : null;
             string code = null;
@@ -118,7 +124,8 @@ namespace WordFlow.Adventure.Net
             {
                 try { code = JsonUtility.FromJson<ErrorEnvelope>(raw).error.message; } catch { /* not JSON */ }
             }
-            return new AuthResult { Ok = false, Error = MapError(code) };
+            Debug.LogWarning($"[Auth] {context} failed: http={req.responseCode} result={req.result} firebase={code ?? "none"} unity={req.error ?? "none"}");
+            return new AuthResult { Ok = false, Error = MapError(code), FirebaseCode = code, HttpStatus = req.responseCode };
         }
 
         // Firebase returns machine codes (e.g. "EMAIL_EXISTS", sometimes suffixed); map the ones a
@@ -134,6 +141,23 @@ namespace WordFlow.Adventure.Net
             if (firebaseCode.StartsWith("WEAK_PASSWORD")) return "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
             if (firebaseCode.StartsWith("TOO_MANY_ATTEMPTS")) return "พยายามหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่";
             return "เกิดข้อผิดพลาด กรุณาลองใหม่";
+        }
+
+        private static string MapPasswordResetError(string firebaseCode, string fallback)
+        {
+            if (string.IsNullOrEmpty(firebaseCode))
+                return string.IsNullOrEmpty(fallback) ? MapError(firebaseCode) : fallback;
+            if (firebaseCode.StartsWith("EMAIL_NOT_FOUND"))
+                return "ไม่พบบัญชีสำหรับอีเมลนี้";
+            if (firebaseCode.StartsWith("INVALID_EMAIL"))
+                return "รูปแบบอีเมลไม่ถูกต้อง";
+            if (firebaseCode.StartsWith("OPERATION_NOT_ALLOWED"))
+                return "ยังไม่ได้เปิดใช้งานการเข้าสู่ระบบด้วยอีเมลใน Firebase";
+            if (firebaseCode.StartsWith("TOO_MANY_ATTEMPTS") || firebaseCode.StartsWith("RESET_PASSWORD_EXCEED_LIMIT"))
+                return "ส่งคำขอหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่";
+            if (firebaseCode.StartsWith("API_KEY_INVALID") || firebaseCode.StartsWith("INVALID_API_KEY"))
+                return "ตั้งค่า Firebase API key ไม่ถูกต้อง";
+            return string.IsNullOrEmpty(fallback) ? MapError(firebaseCode) : fallback;
         }
 
         private static long ParseLong(string s) => long.TryParse(s, out long v) ? v : 0;

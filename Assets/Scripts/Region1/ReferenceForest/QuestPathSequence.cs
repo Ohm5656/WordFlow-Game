@@ -173,8 +173,23 @@ public sealed class QuestPathSequence : MonoBehaviour
 
     private bool crowPatrolActive;
     private bool quest4PatrolActive;
+    private bool sequenceStarted;
     private int facingLock = -1;
     private Dictionary<string, Sprite> crowSprites;
+
+    /// <summary>
+    /// Used by the daytime adventure card while this sequence is deliberately disabled.
+    /// CharacterAppearance otherwise defaults to its down/back-facing idle during that wait.
+    /// </summary>
+    public void SetInitialIdleFacingRight()
+    {
+        facingLock = 6; // SuperRetroMainBundle.CharacterAppearance: right
+        if (bodyAnimator != null)
+        {
+            bodyAnimator.SetInteger("orientation", facingLock);
+            bodyAnimator.SetFloat("speed", 0f);
+        }
+    }
 
     private void Awake()
     {
@@ -244,6 +259,34 @@ public sealed class QuestPathSequence : MonoBehaviour
 
     private void Start()
     {
+        // The forest card can be registered after this component's Start callback on some
+        // editor/domain-reload paths. Keep the route inert until the card explicitly releases it.
+        if (ReferenceForestAdventureIntro.ShouldDeferQuestSequenceStart)
+        {
+            return;
+        }
+
+        BeginSequence();
+    }
+
+    /// <summary>
+    /// Releases the normal daytime route after the player presses the adventure-card button.
+    /// Safe to call whether Start has already been reached or not.
+    /// </summary>
+    public void BeginFromAdventureCard()
+    {
+        BeginSequence();
+    }
+
+    private void BeginSequence()
+    {
+        if (sequenceStarted)
+        {
+            return;
+        }
+
+        sequenceStarted = true;
+
         // On a fresh forest entry the opening fade used to leave the controller's default
         // orientation visible (up/back) until the first movement frame. Face the first waypoint
         // immediately so the hero is already looking the same way they are about to walk.
@@ -733,17 +776,22 @@ public sealed class QuestPathSequence : MonoBehaviour
     // (bear/paa) and 2 (crow/kaa) can be redone — beats 3-5 have no puzzle and therefore no stars.
     private IEnumerator RunNightRedo()
     {
-        // Coming back from a night puzzle? Pre-place the hero at that quest's spot; its actor is
-        // already visible (Awake showed it because it was still NightMode.ActiveQuest) so it can
-        // fade off cleanly below.
+        // Coming back from a night puzzle? Pre-place the hero at that quest's spot. A 2-star
+        // result stays visible and starts this same quest again; a 3-star result lets the route
+        // continue to the next unfinished quest.
         string returned = NightMode.ActiveQuest;
         int startIndex = 0;
+        bool returnedPerfect = false;
         if (!string.IsNullOrEmpty(returned))
         {
             int returnedIndex = IndexOfQuest(returned);
-            startIndex = returnedIndex + 1;
+            returnedPerfect = !QuestStars.NeedsRedo(returned);
+            startIndex = returnedPerfect ? returnedIndex + 1 : returnedIndex;
             PlaceHeroAtQuest(returned);
-            NightMode.MarkDoneThisNight(returned); // attempted tonight: never offer it again
+            if (returnedPerfect)
+            {
+                NightMode.MarkDoneThisNight(returned);
+            }
             NightMode.ActiveQuest = string.Empty;
         }
 
@@ -757,10 +805,10 @@ public sealed class QuestPathSequence : MonoBehaviour
             yield return new WaitForSeconds(startDelay);
         }
 
-        if (!string.IsNullOrEmpty(returned))
+        if (!string.IsNullOrEmpty(returned) && returnedPerfect)
         {
-            // The quest is solved (or at least attempted): its actor, board and light pool fade
-            // off, exactly like the day flow's return.
+            // A 3-star result is complete: remove its actor, board and light pool before
+            // continuing the night route.
             GameAudio.PlayAfterQuest();
             yield return new WaitForSeconds(questAutoHold);
             yield return FadeOutQuestActors(returned);
@@ -927,11 +975,14 @@ public sealed class QuestPathSequence : MonoBehaviour
         float duration = Mathf.Max(0.01f, nightFadeDuration);
         for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
         {
-            nightLighting.SetNight(SmootherStep(elapsed / duration));
+            float amount = SmootherStep(elapsed / duration);
+            nightLighting.SetNight(amount);
+            ReferenceForestNightBackground.SetSceneNight(amount);
             yield return null;
         }
 
         nightLighting.SetNight(1f);
+        ReferenceForestNightBackground.SetSceneNight(1f);
     }
 
     // ----------------------------------------------------------------- movement

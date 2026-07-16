@@ -14,6 +14,11 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     private const string HighestUnlockedRegionKey = "WorldMapHighestUnlockedRegion";
     private const string PendingUnlockRegionKey = "WorldMapPendingUnlockRegion";
 
+    // The adventure-card back button should return to a ready, already-unlocked island rather
+    // than replaying the first unlock animation.  This is intentionally session-only: opening a
+    // fresh game can still use the authored introductory unlock behaviour.
+    private static bool suppressFirstUnlockReplayOnce;
+
     [Header("Scene")]
     [SerializeField] private Camera worldCamera;
     [SerializeField] private IslandProgress[] islands =
@@ -136,6 +141,15 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    /// <summary>
+    /// Suppresses only the next automatic replay of the first island unlock. Used when the player
+    /// leaves the daytime adventure card before beginning its route.
+    /// </summary>
+    public static void SkipFirstUnlockReplayOnce()
+    {
+        suppressFirstUnlockReplayOnce = true;
+    }
+
     private void Awake()
     {
         if (worldCamera == null)
@@ -171,10 +185,15 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         int highestUnlockedRegion = PlayerPrefs.GetInt(HighestUnlockedRegionKey, 0);
         if (highestUnlockedRegion >= firstRegion)
         {
-            if (replayFirstUnlockUntilNextRegion
+            bool replayFirstUnlock = replayFirstUnlockUntilNextRegion
                 && !NightMode.NightPhase   // night: the island is long unlocked, do not replay it
                 && highestUnlockedRegion == firstRegion
-                && PlayerPrefs.GetInt(PendingUnlockRegionKey, 0) == 0)
+                && PlayerPrefs.GetInt(PendingUnlockRegionKey, 0) == 0;
+
+            bool skipReplayForAdventureCardBack = suppressFirstUnlockReplayOnce;
+            suppressFirstUnlockReplayOnce = false;
+
+            if (replayFirstUnlock && !skipReplayForAdventureCardBack)
             {
                 PlayerPrefs.SetInt(PendingUnlockRegionKey, firstRegion);
                 PlayerPrefs.Save();

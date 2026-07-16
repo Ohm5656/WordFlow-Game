@@ -46,9 +46,19 @@ public class PatrolWalk : MonoBehaviour
 
     void OnEnable()
     {
-        _start = transform.position;
+        RestartFromCurrentPosition();
         _sr = GetComponent<SpriteRenderer>();
+    }
+
+    /// <summary>
+    /// Re-bases this patrol after a runtime layout swap. Used by the night forest calibration so
+    /// the first turn-around point is measured from the new pen rather than the daytime one.
+    /// </summary>
+    public void RestartFromCurrentPosition()
+    {
+        _start = transform.position;
         _dir = initialDir >= 0 ? 1 : -1;
+        _t = 0f;
     }
 
     void Update()

@@ -98,27 +98,38 @@ Shader "UI/NightSpritePalette"
 
             fixed4 frag(v2f IN) : SV_Target
             {
-                fixed4 color = (tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd) * IN.color;
+                fixed4 texColor = tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd;
 
                 // Some quest sprites use Unity's ETC1 alpha-split import path. The alpha lives in
                 // _AlphaTex instead of the colour texture; sampling it here preserves the original
                 // cutout rather than rendering the transparent rectangle as image data.
-                color.a *= tex2D(_AlphaTex, IN.texcoord).r;
+                texColor.a *= tex2D(_AlphaTex, IN.texcoord).r;
+
+                fixed4 color = texColor * IN.color;
 
                 // Several imported actor frames carry a teal/green removal matte in their RGB data.
                 // The normal UI ETC material hides it through its original alpha path; when using a
                 // custom night material we remove that matte explicitly, without affecting assets
                 // that do not need it (_ChromaKeyStrength is zero for those sprites).
-                fixed greenDominance = color.g - max(color.r, color.b);
-                fixed greenMatte = smoothstep(0.06, 0.17, greenDominance) * smoothstep(0.18, 0.55, color.g);
+                fixed greenDominance = texColor.g - max(texColor.r, texColor.b);
+                fixed greenMatte = smoothstep(0.06, 0.17, greenDominance) * smoothstep(0.18, 0.55, texColor.g);
                 color.a *= 1.0 - greenMatte * _ChromaKeyStrength;
 
                 // The same generated frames have patterned remnants in other colours too
-                // (brown and near-black), but all of those pixels stay below the opaque actor
-                // silhouette. Trim that residual semi-transparent matte only for the dedicated
-                // actor material; ordinary scene artwork keeps this at zero.
-                fixed alphaMatte = smoothstep(_MatteAlphaFloor, 1.0, color.a);
-                color.a *= lerp(1.0, alphaMatte, _ChromaKeyStrength);
+                // (dim brown/gray and near-black). Trim only pixels that look like removal residue, using
+                // the texture alpha before UI fade/tint so CanvasGroup fades stay smooth and magic
+                // glow in the crow shatter clip remains visible.
+                fixed sourceLuminance = dot(texColor.rgb, fixed3(0.2126, 0.7152, 0.0722));
+                fixed maxChannel = max(texColor.r, max(texColor.g, texColor.b));
+                fixed minChannel = min(texColor.r, min(texColor.g, texColor.b));
+                fixed saturation = maxChannel - minChannel;
+                fixed darkResidue = 1.0 - smoothstep(0.08, 0.22, sourceLuminance);
+                fixed mutedResidue = (1.0 - smoothstep(0.10, 0.28, saturation)) * (1.0 - smoothstep(0.35, 0.65, sourceLuminance));
+                fixed brownResidue = smoothstep(0.03, 0.14, texColor.r - texColor.b) * smoothstep(0.02, 0.12, texColor.r - texColor.g) * (1.0 - smoothstep(0.22, 0.50, sourceLuminance));
+                fixed magicGlow = smoothstep(0.30, 0.65, sourceLuminance) * smoothstep(0.03, 0.16, texColor.r - texColor.g);
+                fixed residualMatte = saturate(max(greenMatte, max(darkResidue, max(mutedResidue, brownResidue))) * (1.0 - magicGlow));
+                fixed alphaMatte = smoothstep(_MatteAlphaFloor, 1.0, texColor.a);
+                color.a *= lerp(1.0, alphaMatte, residualMatte * _ChromaKeyStrength);
 
                 // Keep the original silhouette and alpha. Darken with cool moonlight while retaining
                 // some warm pixels so magic, fire and gold still read as intentional light sources.

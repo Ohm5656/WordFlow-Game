@@ -1769,11 +1769,13 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             }
         }
 
+        string nextScene = GetNextSceneName();
         Image flashImage = null;
         if (playSuccessShakeAndFlash)
         {
             flashImage = CreateFullscreenImage("MagicStoneWhiteFlash");
             SetFlashAlpha(flashImage, 0f);
+
             if (debugMicFlow) Debug.Log("[MagicStone] success shake begin.");
             yield return RunWithRealtimeTimeout(ShakeRitualTargets(flashImage), Mathf.Max(3f, ritualShakeDuration + 2f), "success shake");
 
@@ -1786,8 +1788,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             yield return RunWithRealtimeTimeout(WhiteFlash(flashImage), Mathf.Max(2f, whiteFlashFadeInDuration + whiteFlashHoldDuration + 1f), "white flash");
         }
 
-        if (debugMicFlow) Debug.Log($"[MagicStone] loading next scene {GetNextSceneName()}.");
-        PlaySceneTransition(GetNextSceneName(), flashImage);
+        if (debugMicFlow) Debug.Log($"[MagicStone] loading next scene {nextScene}.");
+        PlaySceneTransition(nextScene, flashImage);
         uploadRecordingRoutine = null;
     }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -19,16 +20,17 @@ public sealed class WorldMapNight : MonoBehaviour
     private const string WorldMapSceneName = "WorldMap";
     private const string SetupObjectName = "WorldMap Night";
     private const string ChoiceRootName = "ui";
+    private const string DayBackgroundName = "BG_Map";
+    private const string NightBackgroundName = "BG_Map_Night";
+    private static readonly string[] IslandNames = { "Island1", "Island2", "Island3", "Island4", "Island5" };
 
     // Existing map orders: BG = 0, islands/locks = 3..9, placed choice sprites = 20.
-    private const int DarkOverlayOrder = 1;
     private const int ChoiceDimOrder = 19;
 
-    [Header("Darkness")]
-    [SerializeField] private Color darkColor = new Color(0.04f, 0.09f, 0.20f, 1f);
-    [SerializeField] private float maxDarkAlpha = 0.82f;
-    [SerializeField] private float fadeStartDelay = 0.35f;
-    [SerializeField] private float fadeDuration = 0.9f;
+    [Header("Night island palette")]
+    [Tooltip("Cool moonlight applied only to island objects; the background itself uses the authored night painting.")]
+    [SerializeField] private Color islandMoonlightMultiplier = new Color(0.47f, 0.60f, 0.86f, 1f);
+    [Range(0f, 1f)] [SerializeField] private float islandWarmLightRetention = 0.30f;
     [SerializeField] private float overscan = 1.1f;
 
     [Header("Night choices")]
@@ -41,16 +43,27 @@ public sealed class WorldMapNight : MonoBehaviour
 
     public static bool BlocksIslandInput { get; private set; }
 
-    private SpriteRenderer overlay;
     private SpriteRenderer choiceDim;
     private SpriteRenderer practiceChoice;
     private SpriteRenderer incompleteChoice;
+    private SpriteRenderer dayBackground;
+    private SpriteRenderer nightBackground;
+    private Color dayBackgroundBaseColor;
+    private Color nightBackgroundBaseColor;
+    private Material backgroundUnlitMaterial;
+    private readonly List<IslandRendererState> islandRenderers = new List<IslandRendererState>();
     private Vector3 practiceBaseScale;
     private Vector3 incompleteBaseScale;
     private Color practiceBaseColor;
     private Color incompleteBaseColor;
     private bool choiceReady;
     private bool choicePressing;
+
+    private sealed class IslandRendererState
+    {
+        public SpriteRenderer Renderer;
+        public Color OriginalColor;
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
@@ -73,8 +86,12 @@ public sealed class WorldMapNight : MonoBehaviour
 
     private void Awake()
     {
+        ResolveBackgrounds();
+        CacheIslandRenderers();
         ResolveChoiceSprites();
         SetChoiceVisible(false);
+
+        SetMapPresentation(NightMode.NightPhase ? 1f : 0f);
 
         BlocksIslandInput = NightMode.NightPhase
             && QuestStars.AnyNeedsRedo(NightMode.QuestIds)
@@ -104,41 +121,37 @@ public sealed class WorldMapNight : MonoBehaviour
         }
     }
 
+    private void LateUpdate()
+    {
+        if (NightMode.NightPhase)
+        {
+            ApplyIslandPalette(1f);
+        }
+    }
+
     private void OnDestroy()
     {
         BlocksIslandInput = false;
+        if (backgroundUnlitMaterial != null)
+        {
+            Destroy(backgroundUnlitMaterial);
+        }
     }
 
     private IEnumerator Run()
     {
         if (!NightMode.NightPhase)
         {
+            SetMapPresentation(0f);
             BlocksIslandInput = false;
             yield break;
         }
 
-        overlay = BuildFullscreenOverlay("Night Overlay", DarkOverlayOrder, darkColor, 0f);
-        if (overlay == null)
-        {
-            BlocksIslandInput = false;
-            yield break;
-        }
+        // WorldMapFadeIn is black while this scene initializes, so the map can start directly in
+        // its painted night state. This prevents the previous day background from flashing for a
+        // frame before a dark overlay caught up.
+        SetMapPresentation(1f);
 
-        if (fadeStartDelay > 0f)
-        {
-            yield return new WaitForSeconds(fadeStartDelay);
-        }
-
-        float duration = Mathf.Max(0.01f, fadeDuration);
-        for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
-        {
-            SetAlpha(overlay, Mathf.Lerp(0f, maxDarkAlpha, elapsed / duration));
-            yield return null;
-        }
-        SetAlpha(overlay, maxDarkAlpha);
-
-        // The normal night must be fully visible first; only then dim the whole map and reveal the
-        // choices above it. This keeps the user's existing night transition intact.
         if (QuestStars.AnyNeedsRedo(NightMode.QuestIds) && HasBothChoices)
         {
             yield return RevealChoices();
@@ -286,6 +299,169 @@ public sealed class WorldMapNight : MonoBehaviour
     }
 
     private bool HasBothChoices => practiceChoice != null && incompleteChoice != null;
+
+    private void ResolveBackgrounds()
+    {
+        // BG_Map_Night is intentionally inactive in the authored daytime scene. GameObject.Find
+        // ignores inactive objects, so search the loaded scene hierarchy explicitly instead.
+        GameObject dayObject = FindSceneObject(DayBackgroundName);
+        GameObject nightObject = FindSceneObject(NightBackgroundName);
+        dayBackground = dayObject != null ? dayObject.GetComponent<SpriteRenderer>() : null;
+        nightBackground = nightObject != null ? nightObject.GetComponent<SpriteRenderer>() : null;
+
+        if (dayBackground == null || nightBackground == null)
+        {
+            Debug.LogWarning("[WorldMapNight] expected BG_Map and BG_Map_Night SpriteRenderers.");
+            return;
+        }
+
+        dayBackgroundBaseColor = dayBackground.color;
+        nightBackgroundBaseColor = nightBackground.color;
+        ApplyUnlitBackgroundMaterial();
+    }
+
+    private void CacheIslandRenderers()
+    {
+        islandRenderers.Clear();
+        HashSet<SpriteRenderer> seen = new HashSet<SpriteRenderer>();
+        for (int islandIndex = 0; islandIndex < IslandNames.Length; islandIndex++)
+        {
+            GameObject island = GameObject.Find(IslandNames[islandIndex]);
+            if (island == null)
+            {
+                continue;
+            }
+
+            SpriteRenderer[] renderers = island.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                SpriteRenderer renderer = renderers[i];
+                if (renderer == null || !seen.Add(renderer))
+                {
+                    continue;
+                }
+
+                islandRenderers.Add(new IslandRendererState
+                {
+                    Renderer = renderer,
+                    OriginalColor = renderer.color
+                });
+            }
+        }
+    }
+
+    private void SetMapPresentation(float amount)
+    {
+        bool night = amount > 0.0001f;
+        if (dayBackground != null)
+        {
+            dayBackground.gameObject.SetActive(!night);
+            dayBackground.enabled = !night;
+            dayBackground.color = dayBackgroundBaseColor;
+        }
+        if (nightBackground != null)
+        {
+            nightBackground.gameObject.SetActive(night);
+            nightBackground.enabled = night;
+            nightBackground.color = nightBackgroundBaseColor;
+        }
+
+        ApplyIslandPalette(amount);
+    }
+
+    private void ApplyUnlitBackgroundMaterial()
+    {
+        Shader unlitShader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+        if (unlitShader == null)
+        {
+            // Projects opened with a non-URP renderer can still display the painting safely.
+            unlitShader = Shader.Find("Sprites/Default");
+        }
+        if (unlitShader == null)
+        {
+            Debug.LogWarning("[WorldMapNight] could not find an unlit sprite shader for map backgrounds.");
+            return;
+        }
+
+        backgroundUnlitMaterial = new Material(unlitShader)
+        {
+            name = "World Map Background Unlit (Runtime)"
+        };
+        dayBackground.sharedMaterial = backgroundUnlitMaterial;
+        nightBackground.sharedMaterial = backgroundUnlitMaterial;
+    }
+
+    private static GameObject FindSceneObject(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+        {
+            return null;
+        }
+
+        Scene activeScene = SceneManager.GetActiveScene();
+        GameObject[] roots = activeScene.GetRootGameObjects();
+        for (int rootIndex = 0; rootIndex < roots.Length; rootIndex++)
+        {
+            Transform[] transforms = roots[rootIndex].GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                if (transforms[i].name == objectName)
+                {
+                    return transforms[i].gameObject;
+                }
+            }
+        }
+
+        // Unity can restore an unsaved scene from its backup while the hierarchy is being rebuilt.
+        // This fallback still finds disabled SpriteRenderers that have already been deserialized.
+        SpriteRenderer[] allRenderers = Resources.FindObjectsOfTypeAll<SpriteRenderer>();
+        for (int i = 0; i < allRenderers.Length; i++)
+        {
+            SpriteRenderer renderer = allRenderers[i];
+            if (renderer != null
+                && renderer.gameObject.scene == activeScene
+                && renderer.name == objectName)
+            {
+                return renderer.gameObject;
+            }
+        }
+
+        return null;
+    }
+
+    private void ApplyIslandPalette(float amount)
+    {
+        amount = Mathf.Clamp01(amount);
+        for (int i = 0; i < islandRenderers.Count; i++)
+        {
+            IslandRendererState state = islandRenderers[i];
+            if (state.Renderer == null)
+            {
+                continue;
+            }
+
+            // WorldMapProblemIslands animates lock/unlock alpha. Preserve that live alpha while
+            // applying only an RGB palette, so its current animation and click bounds stay intact.
+            Color current = state.Renderer.color;
+            Color color = Color.Lerp(state.OriginalColor, GradeIslandForNight(state.OriginalColor), amount);
+            color.a = current.a;
+            state.Renderer.color = color;
+        }
+    }
+
+    private Color GradeIslandForNight(Color source)
+    {
+        float luminance = source.r * 0.2126f + source.g * 0.7152f + source.b * 0.0722f;
+        float warmth = Mathf.Clamp01((source.r - source.b) * 1.65f);
+        Color cool = new Color(
+            source.r * islandMoonlightMultiplier.r,
+            source.g * islandMoonlightMultiplier.g,
+            source.b * islandMoonlightMultiplier.b,
+            source.a);
+        Color warm = new Color(source.r * 0.84f, source.g * 0.66f, source.b * 0.42f, source.a);
+        float retainWarmth = warmth * Mathf.Lerp(islandWarmLightRetention * 0.45f, islandWarmLightRetention, luminance);
+        return Color.Lerp(cool, warm, retainWarmth);
+    }
 
     private void SetChoiceVisible(bool visible)
     {
