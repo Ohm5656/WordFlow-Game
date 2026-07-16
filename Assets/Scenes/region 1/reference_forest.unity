@@ -3403,13 +3403,13 @@ MonoBehaviour:
   patrols:
   - label: Fox upper pen
     patrol: {fileID: 1995258172}
-    nightPosition: {x: 25.28, y: 9.65}
+    nightPosition: {x: 25.28, y: 9.95}
     rangeForward: 0.28
     rangeBack: 0.28
     horizontal: 1
   - label: Fox lower pen
     patrol: {fileID: 1517870744}
-    nightPosition: {x: 25.28, y: 8.76}
+    nightPosition: {x: 25.28, y: 9.06}
     rangeForward: 0.28
     rangeBack: 0.28
     horizontal: 1
