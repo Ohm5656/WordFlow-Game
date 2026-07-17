@@ -76,6 +76,10 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     [SerializeField, Min(0.1f)] private float collectionBookStartScale = 0.78f;
     [SerializeField, Min(0f)] private float collectionBookLift = 0.24f;
     [SerializeField, Range(0f, 0.05f)] private float collectionBookIdleScale = 0.012f;
+    [Tooltip("A short visual confirmation that Island1 was pressed before its collection book opens.")]
+    [SerializeField, Min(0.01f)] private float collectionIslandBounceDuration = 0.22f;
+    [SerializeField, Range(0.01f, 0.15f)] private float collectionIslandBounceScale = 0.075f;
+    [SerializeField, Min(0f)] private float collectionIslandBounceLift = 0.035f;
 
     private readonly List<AnimatedTarget> lockTargets = new List<AnimatedTarget>();
     private readonly List<IslandRuntime> runtimeIslands = new List<IslandRuntime>();
@@ -96,6 +100,7 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     private static Sprite fogQuadSprite;
 
     private Transform collectionIsland;
+    private Transform collectionIslandVisual;
     private Transform collectionBookRoot;
     private SpriteRenderer collectionBookRenderer;
     private Transform collectionSmokeRoot;
@@ -104,6 +109,9 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     private Color collectionBookBaseColor;
     private CollectionBookState collectionBookState;
     private float collectionBookStateTime;
+    private Vector3 collectionIslandVisualBaseLocalPosition;
+    private Vector3 collectionIslandVisualBaseLocalScale;
+    private float collectionIslandBounceTime = -1f;
     private CollectionSmokeRing[] collectionSmokeRings = System.Array.Empty<CollectionSmokeRing>();
 
     [System.Serializable]
@@ -210,6 +218,7 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
 
     private void Update()
     {
+        AnimateCollectionIslandPress();
         AnimateCollectionBook();
 
         if (!progressApplied)
@@ -232,6 +241,8 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
 
     private void OnDestroy()
     {
+        ResetCollectionIslandPress();
+
         for (int i = 0; i < collectionSmokeRings.Length; i++)
         {
             Material material = collectionSmokeRings[i]?.Material;
@@ -677,6 +688,18 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     private void CacheCollectionBook()
     {
         collectionIsland = FindSceneTransformByName(collectionIslandName);
+        collectionIslandVisual = collectionIsland != null ? collectionIsland.Find("Visuals") : null;
+        if (collectionIslandVisual == null)
+        {
+            collectionIslandVisual = collectionIsland;
+        }
+
+        if (collectionIslandVisual != null)
+        {
+            collectionIslandVisualBaseLocalPosition = collectionIslandVisual.localPosition;
+            collectionIslandVisualBaseLocalScale = collectionIslandVisual.localScale;
+        }
+
         collectionBookRoot = FindSceneTransformByName(collectionBookObjectName);
         if (collectionBookRoot == null)
         {
@@ -726,6 +749,7 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
             }
 
             GameAudio.PlayClick();
+            StartCollectionIslandPress();
             OpenCollectionBook();
             return true;
         }
@@ -740,6 +764,53 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         }
 
         return true;
+    }
+
+    private void StartCollectionIslandPress()
+    {
+        if (collectionIslandVisual == null)
+        {
+            return;
+        }
+
+        // Restarting keeps repeated taps deterministic even if a previous open animation was
+        // interrupted by a scene or night-mode transition.
+        collectionIslandBounceTime = 0f;
+        collectionIslandVisual.localPosition = collectionIslandVisualBaseLocalPosition;
+        collectionIslandVisual.localScale = collectionIslandVisualBaseLocalScale;
+    }
+
+    private void AnimateCollectionIslandPress()
+    {
+        if (collectionIslandVisual == null || collectionIslandBounceTime < 0f)
+        {
+            return;
+        }
+
+        collectionIslandBounceTime += Time.unscaledDeltaTime;
+        float normalizedTime = Mathf.Clamp01(collectionIslandBounceTime / Mathf.Max(0.01f, collectionIslandBounceDuration));
+        float bounce = Mathf.Sin(normalizedTime * Mathf.PI);
+        collectionIslandVisual.localScale = collectionIslandVisualBaseLocalScale
+                                          * (1f + bounce * collectionIslandBounceScale);
+        collectionIslandVisual.localPosition = collectionIslandVisualBaseLocalPosition
+                                             + Vector3.up * (bounce * collectionIslandBounceLift);
+
+        if (normalizedTime >= 1f)
+        {
+            ResetCollectionIslandPress();
+        }
+    }
+
+    private void ResetCollectionIslandPress()
+    {
+        collectionIslandBounceTime = -1f;
+        if (collectionIslandVisual == null)
+        {
+            return;
+        }
+
+        collectionIslandVisual.localPosition = collectionIslandVisualBaseLocalPosition;
+        collectionIslandVisual.localScale = collectionIslandVisualBaseLocalScale;
     }
 
     private void OpenCollectionBook()
