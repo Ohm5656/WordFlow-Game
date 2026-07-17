@@ -629,6 +629,18 @@ public sealed class OwlGreetingCutscene : MonoBehaviour
             bookCraftImage = bookCraftRoot.GetComponent<Image>();
             if (bookCraftImage == null)
             {
+                // The controller root can also carry controls (for example a sound button). Resolve
+                // the nested book visual explicitly before using the first arbitrary child Image,
+                // otherwise the visual remains visible while only a control is faded out.
+                Transform nestedBookVisual = bookCraftRoot.Find("book_craft");
+                if (nestedBookVisual != null)
+                {
+                    bookCraftImage = nestedBookVisual.GetComponent<Image>();
+                }
+            }
+
+            if (bookCraftImage == null)
+            {
                 bookCraftImage = bookCraftRoot.GetComponentInChildren<Image>(true);
             }
         }
