@@ -113,6 +113,7 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     private float collectionBookStateTime;
     private Vector3 collectionIslandVisualBaseLocalPosition;
     private Vector3 collectionIslandVisualBaseLocalScale;
+    private Vector3 collectionIslandVisualCenterOffset;
     private float collectionIslandBounceTime = -1f;
 
     [System.Serializable]
@@ -685,6 +686,7 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         {
             collectionIslandVisualBaseLocalPosition = collectionIslandVisual.localPosition;
             collectionIslandVisualBaseLocalScale = collectionIslandVisual.localScale;
+            collectionIslandVisualCenterOffset = GetCollectionIslandVisualCenterOffset();
         }
 
         collectionBookRoot = FindSceneTransformByName(collectionBookObjectName);
@@ -777,9 +779,18 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         collectionIslandBounceTime += Time.unscaledDeltaTime;
         float normalizedTime = Mathf.Clamp01(collectionIslandBounceTime / Mathf.Max(0.01f, collectionIslandBounceDuration));
         float bounce = Mathf.Sin(normalizedTime * Mathf.PI);
+        float scaleMultiplier = 1f + bounce * collectionIslandBounceScale;
         collectionIslandVisual.localScale = collectionIslandVisualBaseLocalScale
-                                          * (1f + bounce * collectionIslandBounceScale);
+                                          * scaleMultiplier;
+
+        // Island1's artwork is offset within its Visuals transform. Counter the offset caused by
+        // scaling around that transform's pivot so the visible island stays centered and only
+        // rises vertically during its press feedback.
+        Vector3 pivotCompensation = Vector3.Scale(
+            collectionIslandVisualCenterOffset,
+            collectionIslandVisualBaseLocalScale) * (scaleMultiplier - 1f);
         collectionIslandVisual.localPosition = collectionIslandVisualBaseLocalPosition
+                                             - pivotCompensation
                                              + Vector3.up * (bounce * collectionIslandBounceLift);
 
         if (normalizedTime >= 1f)
@@ -798,6 +809,38 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
 
         collectionIslandVisual.localPosition = collectionIslandVisualBaseLocalPosition;
         collectionIslandVisual.localScale = collectionIslandVisualBaseLocalScale;
+    }
+
+    private Vector3 GetCollectionIslandVisualCenterOffset()
+    {
+        if (collectionIslandVisual == null)
+        {
+            return Vector3.zero;
+        }
+
+        SpriteRenderer[] renderers = collectionIslandVisual.GetComponentsInChildren<SpriteRenderer>(true);
+        Bounds bounds = default;
+        bool hasBounds = false;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            SpriteRenderer renderer = renderers[i];
+            if (renderer == null || renderer.sprite == null)
+            {
+                continue;
+            }
+
+            if (!hasBounds)
+            {
+                bounds = renderer.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                bounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        return hasBounds ? collectionIslandVisual.InverseTransformPoint(bounds.center) : Vector3.zero;
     }
 
     private void OpenCollectionBook()
