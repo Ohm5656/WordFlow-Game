@@ -76,8 +76,9 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     [SerializeField, Min(0.1f)] private float collectionBookStartScale = 0.78f;
     [SerializeField, Min(0f)] private float collectionBookLift = 0.24f;
     [SerializeField, Range(0f, 0.05f)] private float collectionBookIdleScale = 0.012f;
+    [SerializeField, Range(0f, 0.85f)] private float collectionBookBackdropAlpha = 0.58f;
     [Tooltip("A short visual confirmation that Island1 was pressed before its collection book opens.")]
-    [SerializeField, Min(0.01f)] private float collectionIslandBounceDuration = 0.22f;
+    [SerializeField, Min(0.01f)] private float collectionIslandBounceDuration = 0.12f;
     [SerializeField, Range(0.01f, 0.15f)] private float collectionIslandBounceScale = 0.075f;
     [SerializeField, Min(0f)] private float collectionIslandBounceLift = 0.035f;
 
@@ -97,13 +98,14 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     private bool isLoadingNextScene;
     private bool progressApplied;
     private static Sprite glowRingSprite;
-    private static Sprite fogQuadSprite;
+    private static Sprite collectionBackdropSprite;
 
     private Transform collectionIsland;
     private Transform collectionIslandVisual;
     private Transform collectionBookRoot;
     private SpriteRenderer collectionBookRenderer;
-    private Transform collectionSmokeRoot;
+    private Transform collectionBackdropRoot;
+    private SpriteRenderer collectionBackdropRenderer;
     private Vector3 collectionBookBaseLocalPosition;
     private Vector3 collectionBookBaseLocalScale;
     private Color collectionBookBaseColor;
@@ -112,7 +114,6 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     private Vector3 collectionIslandVisualBaseLocalPosition;
     private Vector3 collectionIslandVisualBaseLocalScale;
     private float collectionIslandBounceTime = -1f;
-    private CollectionSmokeRing[] collectionSmokeRings = System.Array.Empty<CollectionSmokeRing>();
 
     [System.Serializable]
     private sealed class IslandProgress
@@ -143,18 +144,10 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     private enum CollectionBookState
     {
         Hidden,
+        OpeningQueued,
         Opening,
         Visible,
         Closing
-    }
-
-    private sealed class CollectionSmokeRing
-    {
-        public Transform Transform;
-        public Material Material;
-        public Color BaseColor;
-        public Vector2 SizeMultiplier;
-        public float Phase;
     }
 
     /// The scene the currently-playable island loads (e.g. "reference_forest"). Empty if progress
@@ -242,12 +235,6 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
     private void OnDestroy()
     {
         ResetCollectionIslandPress();
-
-        for (int i = 0; i < collectionSmokeRings.Length; i++)
-        {
-            Material material = collectionSmokeRings[i]?.Material;
-            if (material != null) Destroy(material);
-        }
     }
 
     private void EnsureInitialProgress()
@@ -722,7 +709,7 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         collectionBookBaseLocalPosition = collectionBookRoot.localPosition;
         collectionBookBaseLocalScale = collectionBookRoot.localScale;
         collectionBookBaseColor = collectionBookRenderer.color;
-        CreateCollectionSmokeRings();
+        CreateCollectionBackdrop();
         HideCollectionBookImmediate();
     }
 
@@ -750,7 +737,7 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
 
             GameAudio.PlayClick();
             StartCollectionIslandPress();
-            OpenCollectionBook();
+            collectionBookState = CollectionBookState.OpeningQueued;
             return true;
         }
 
@@ -818,9 +805,8 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         collectionBookState = CollectionBookState.Opening;
         collectionBookStateTime = 0f;
         collectionBookRoot.gameObject.SetActive(true);
-        if (collectionSmokeRoot != null) collectionSmokeRoot.gameObject.SetActive(true);
+        if (collectionBackdropRoot != null) collectionBackdropRoot.gameObject.SetActive(true);
         ApplyCollectionBookVisual(0f);
-        SetCollectionSmokeAlpha(0f);
     }
 
     private void AnimateCollectionBook()
@@ -833,6 +819,15 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         if (NightMode.NightPhase)
         {
             HideCollectionBookImmediate();
+            return;
+        }
+
+        if (collectionBookState == CollectionBookState.OpeningQueued)
+        {
+            if (collectionIslandBounceTime < 0f)
+            {
+                OpenCollectionBook();
+            }
             return;
         }
 
@@ -877,7 +872,6 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
             }
         }
 
-        AnimateCollectionSmoke(visualAmount);
     }
 
     private void ApplyCollectionBookVisual(float amount)
@@ -888,13 +882,15 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         collectionBookRoot.localScale = collectionBookBaseLocalScale
                                         * Mathf.Lerp(collectionBookStartScale, 1f, amount);
         SetCollectionBookAlpha(amount);
+        SetCollectionBackdropAlpha(amount);
     }
 
     private void HideCollectionBookImmediate()
     {
         collectionBookState = CollectionBookState.Hidden;
         collectionBookStateTime = 0f;
-        if (collectionSmokeRoot != null) collectionSmokeRoot.gameObject.SetActive(false);
+        ResetCollectionIslandPress();
+        if (collectionBackdropRoot != null) collectionBackdropRoot.gameObject.SetActive(false);
         if (collectionBookRoot != null)
         {
             collectionBookRoot.localPosition = collectionBookBaseLocalPosition;
@@ -912,121 +908,48 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         collectionBookRenderer.color = color;
     }
 
-    private void CreateCollectionSmokeRings()
+    private void CreateCollectionBackdrop()
     {
-        Shader shader = Shader.Find("WordFlow/EdgeFog");
-        if (shader == null || collectionBookRenderer == null || collectionBookRoot == null)
+        if (worldCamera == null || collectionBookRenderer == null || collectionBackdropRoot != null)
         {
-            Debug.LogWarning("[WorldMap] WordFlow/EdgeFog shader was not found; collection book will open without smoke rings.");
             return;
         }
 
-        Transform parent = collectionBookRoot.parent != null ? collectionBookRoot.parent : collectionBookRoot;
-        GameObject smokeObject = new GameObject("CollectionBookSmoke");
-        collectionSmokeRoot = smokeObject.transform;
-        collectionSmokeRoot.SetParent(parent, false);
-        collectionSmokeRoot.position = collectionBookRoot.position;
-
-        int bookOrder = collectionBookRenderer.sortingOrder;
-        Color gray = new Color(0.48f, 0.50f, 0.56f, 0.48f);
-        Color purple = new Color(0.49f, 0.27f, 0.66f, 0.44f);
-        collectionSmokeRings = new[]
-        {
-            CreateCollectionSmokeRing(shader, "GrayOuter", gray, new Vector2(1.09f, 1.075f), bookOrder - 4, 0.00f),
-            CreateCollectionSmokeRing(shader, "GrayInner", gray, new Vector2(1.06f, 1.050f), bookOrder - 3, 0.85f),
-            CreateCollectionSmokeRing(shader, "PurpleOuter", purple, new Vector2(1.035f, 1.025f), bookOrder - 2, 1.65f),
-            CreateCollectionSmokeRing(shader, "PurpleInner", purple, new Vector2(1.010f, 1.000f), bookOrder - 1, 2.45f)
-        };
+        GameObject backdropObject = new GameObject("CollectionBookBackdrop");
+        collectionBackdropRoot = backdropObject.transform;
+        collectionBackdropRenderer = backdropObject.AddComponent<SpriteRenderer>();
+        collectionBackdropRenderer.sprite = GetCollectionBackdropSprite();
+        collectionBackdropRenderer.sortingLayerID = collectionBookRenderer.sortingLayerID;
+        collectionBackdropRenderer.sortingOrder = collectionBookRenderer.sortingOrder - 1;
+        collectionBackdropRenderer.color = Color.black;
+        RefreshCollectionBackdropBounds();
     }
 
-    private CollectionSmokeRing CreateCollectionSmokeRing(
-        Shader shader,
-        string ringName,
-        Color color,
-        Vector2 sizeMultiplier,
-        int sortingOrder,
-        float phase)
+    private void RefreshCollectionBackdropBounds()
     {
-        GameObject ringObject = new GameObject(ringName);
-        ringObject.transform.SetParent(collectionSmokeRoot, false);
-        SpriteRenderer renderer = ringObject.AddComponent<SpriteRenderer>();
-        renderer.sprite = GetFogQuadSprite();
-        renderer.sortingLayerID = collectionBookRenderer.sortingLayerID;
-        renderer.sortingOrder = sortingOrder;
-
-        Material material = new Material(shader) { name = "CollectionBook_" + ringName };
-        ConfigureCollectionSmokeMaterial(material, color);
-        renderer.material = material;
-
-        return new CollectionSmokeRing
+        if (collectionBackdropRoot == null || worldCamera == null)
         {
-            Transform = ringObject.transform,
-            Material = material,
-            BaseColor = color,
-            SizeMultiplier = sizeMultiplier,
-            Phase = phase
-        };
-    }
-
-    private static void ConfigureCollectionSmokeMaterial(Material material, Color color)
-    {
-        material.SetColor("_FogColor", color);
-        material.SetFloat("_Progress", 0.38f);
-        material.SetFloat("_MaxReach", 0.22f);
-        material.SetFloat("_CoreFrac", 0.22f);
-        material.SetFloat("_Softness", 0.22f);
-        material.SetFloat("_NoiseScale", 3.4f);
-        material.SetFloat("_NoiseStrength", 0.16f);
-        material.SetFloat("_WarpAmount", 0.52f);
-        material.SetFloat("_WispStrength", 0.72f);
-        material.SetFloat("_Density", 0.54f);
-        material.SetFloat("_Speed", 0.018f);
-        material.SetFloat("_BoilSpeed", 0.16f);
-        material.SetFloat("_FadeIn", 0.2f);
-    }
-
-    private void AnimateCollectionSmoke(float visibility)
-    {
-        if (collectionSmokeRoot == null || collectionBookRenderer == null) return;
-
-        Bounds bookBounds = collectionBookRenderer.bounds;
-        Vector3 parentScale = collectionSmokeRoot.lossyScale;
-        float invParentX = 1f / Mathf.Max(0.0001f, Mathf.Abs(parentScale.x));
-        float invParentY = 1f / Mathf.Max(0.0001f, Mathf.Abs(parentScale.y));
-
-        for (int i = 0; i < collectionSmokeRings.Length; i++)
-        {
-            CollectionSmokeRing ring = collectionSmokeRings[i];
-            if (ring == null || ring.Transform == null || ring.Material == null) continue;
-
-            float wave = Mathf.Sin(Time.unscaledTime * 1.45f + ring.Phase);
-            float scaleBreath = 1f + wave * 0.012f;
-            ring.Transform.position = bookBounds.center
-                                      + new Vector3(Mathf.Sin(Time.unscaledTime * 0.9f + ring.Phase) * 0.025f,
-                                                    wave * 0.035f,
-                                                    0f);
-            ring.Transform.localScale = new Vector3(
-                bookBounds.size.x * ring.SizeMultiplier.x * scaleBreath * invParentX,
-                bookBounds.size.y * ring.SizeMultiplier.y * scaleBreath * invParentY,
-                1f);
-
-            Color color = ring.BaseColor;
-            color.a *= Mathf.Clamp01(visibility);
-            ring.Material.SetColor("_FogColor", color);
-            ring.Material.SetFloat("_FogTime", Time.unscaledTime + ring.Phase * 1.7f);
+            return;
         }
+
+        float height = worldCamera.orthographicSize * 2.05f;
+        float width = height * worldCamera.aspect;
+        Vector3 cameraPosition = worldCamera.transform.position;
+        collectionBackdropRoot.position = new Vector3(cameraPosition.x, cameraPosition.y, collectionBookRoot.position.z);
+        collectionBackdropRoot.localScale = new Vector3(width, height, 1f);
     }
 
-    private void SetCollectionSmokeAlpha(float visibility)
+    private void SetCollectionBackdropAlpha(float amount)
     {
-        for (int i = 0; i < collectionSmokeRings.Length; i++)
+        if (collectionBackdropRenderer == null)
         {
-            CollectionSmokeRing ring = collectionSmokeRings[i];
-            if (ring?.Material == null) continue;
-            Color color = ring.BaseColor;
-            color.a *= Mathf.Clamp01(visibility);
-            ring.Material.SetColor("_FogColor", color);
+            return;
         }
+
+        RefreshCollectionBackdropBounds();
+        Color color = Color.black;
+        color.a = collectionBookBackdropAlpha * Mathf.Clamp01(amount);
+        collectionBackdropRenderer.color = color;
     }
 
     private bool IsInsideCollectionIsland(Vector3 worldPosition)
@@ -1086,18 +1009,18 @@ public sealed class WorldMapProblemIslands : MonoBehaviour
         return null;
     }
 
-    private static Sprite GetFogQuadSprite()
+    private static Sprite GetCollectionBackdropSprite()
     {
-        if (fogQuadSprite != null) return fogQuadSprite;
-        fogQuadSprite = Sprite.Create(
+        if (collectionBackdropSprite != null) return collectionBackdropSprite;
+        collectionBackdropSprite = Sprite.Create(
             Texture2D.whiteTexture,
             new Rect(0f, 0f, 1f, 1f),
             new Vector2(0.5f, 0.5f),
             1f,
             0,
             SpriteMeshType.FullRect);
-        fogQuadSprite.name = "CollectionBookFogQuad";
-        return fogQuadSprite;
+        collectionBackdropSprite.name = "CollectionBookBackdropQuad";
+        return collectionBackdropSprite;
     }
 
     private void HandlePlayableIslandClick()
