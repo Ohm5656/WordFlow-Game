@@ -2,14 +2,15 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// The garbage-word punishment: a fixed dark-red screen for three seconds, during which the stones
-/// are dead. Outside the countdown window it sounds three local beat-beeps that yank the smoke;
+/// The garbage-word punishment: a short red edge-light for three seconds, during which the stones
+/// are dead. A supported phone vibrates once at the start; no gameplay UI is screen-shaken.
+/// Outside the countdown window it sounds three local beat-beeps that yank the smoke;
 /// inside the last 10 seconds it rides the clock's existing beep and smoke rhythm instead.
 ///
 /// The clock is NOT paused while this plays. That is the whole point: being frozen out costs real
 /// seconds of smoke, so brute-forcing combinations has a price.
 ///
-/// The alert uses a multiply vignette. Its short fades are included in the three-second duration;
+/// The alert uses an edge-only red vignette. Its short fades are included in the three-second duration;
 /// beep pulses affect the smoke only, never the red intensity. The legacy key_root art stays wired
 /// for scene compatibility but remains hidden throughout, and no unlock sound is played.
 public sealed class MisassemblyLock : MonoBehaviour
@@ -37,6 +38,10 @@ public sealed class MisassemblyLock : MonoBehaviour
 
     [Tooltip("Legacy unlock.wav reference. Kept serialized but deliberately not played.")]
     [SerializeField] private AudioClip unlockSfx;
+
+    [Header("Device haptics")]
+    [Tooltip("Vibrate once on supported phones when a non-word is assembled. This never shakes the game UI.")]
+    [SerializeField] private bool vibrateDeviceOnMisassembly = true;
 
     [Header("Beats")]
     [SerializeField, Min(1)] private int beepCount = 3;
@@ -134,6 +139,11 @@ public sealed class MisassemblyLock : MonoBehaviour
     public IEnumerator PlayRoutine()
     {
         IsLocked = true;
+
+        if (vibrateDeviceOnMisassembly && Application.isMobilePlatform)
+        {
+            Handheld.Vibrate();
+        }
 
         // raycastTarget on the full-screen vignette eats every tap on its own, belt-and-braces with
         // the CanInteract gate in MagicStonePuzzleController.
