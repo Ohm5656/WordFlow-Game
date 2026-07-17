@@ -77,6 +77,12 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     [SerializeField] private string altWord = "กา";
     [SerializeField] private string altWordId = "kaa";
     [SerializeField] private string altSceneName = "Assets/Scenes/region 1/Success_ga.unity";
+
+    [Header("Assembly Target Hint")]
+    [Tooltip("Optional sound button placed directly inside book_craft. It plays the target word while the child is assembling, independently from the result sound/mic controls.")]
+    [SerializeField] private RectTransform assemblySoundButtonRoot;
+
+    [Header("Result Actions")]
     [SerializeField] private RectTransform soundButtonRoot;
     [SerializeField] private RectTransform micButtonRoot;
     [SerializeField] private float craftResultDelay = 0.08f;
@@ -166,6 +172,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private Coroutine completionRoutine;
     private Button soundButton;
     private Button micButton;
+    private Button assemblySoundButton;
     private Coroutine soundPlaybackRoutine;
     private Coroutine micRecordingRoutine;
     private Coroutine uploadRecordingRoutine;
@@ -318,6 +325,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         if (pendingGameplayTts > 0)
             Debug.LogWarning($"[MagicStonePuzzle] TTS prefetch timed out with {pendingGameplayTts} line(s) pending; continuing without non-TTS fallback");
         gameplayAudioReady = true;
+        RefreshAssemblyHintInteractivity();
     }
 
     private static bool HasAnyLineId(string[] lineIds)
@@ -451,6 +459,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     {
         ResolveStones();
         ResolveCraftResultUi();
+        ResolveAssemblyHintUi();
         StopSoundPlayback();
         StopRecordingWithoutUpload();
         StopUploadFeedback();
@@ -482,6 +491,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         SetRootVisible(true);
         DisableDecorativeBookRaycasts();
+        HideAssemblyHintButton();
         HideCraftResultUi();
     }
 
@@ -498,6 +508,8 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         {
             yield break;
         }
+
+        ShowAssemblyHintButton();
 
         Vector2 offset = new Vector2(0f, revealYOffset);
         float startScale = Mathf.Max(0.01f, revealStartScale);
@@ -525,6 +537,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         _latency.Start(Time.realtimeSinceStartupAsDouble);
         revealFinished = true;
+        RefreshAssemblyHintInteractivity();
         Debug.Log($"[Pacing] stones interactive at {Time.timeSinceLevelLoad:0.0}s");
     }
 
@@ -837,6 +850,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private IEnumerator MisassemblyRoutine()
     {
         misassemblyLocked = true;
+        RefreshAssemblyHintInteractivity();
 
         if (MisassemblyLock.Instance != null)
         {
@@ -856,6 +870,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
         misassemblyLocked = false;
         misassemblyRoutine = null;
+        RefreshAssemblyHintInteractivity();
 
         // Restart the build timer for the next attempt (this is what the old else-branch did).
         _latency.Start(Time.realtimeSinceStartupAsDouble);
@@ -905,6 +920,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private IEnumerator WordResultRoutine()
     {
         ritualPlaying = true;
+        RefreshAssemblyHintInteractivity();
 
         // Read the clock BEFORE pausing it: star 3 is "assembled before the smoke closed".
         builtInTime = WordAssemblyTimer.Instance != null && WordAssemblyTimer.Instance.SmokeRemaining > 0f;
@@ -1229,6 +1245,89 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         }
     }
 
+    private void ResolveAssemblyHintUi()
+    {
+        if (assemblySoundButtonRoot != null || bookCraftRoot == null)
+        {
+            return;
+        }
+
+        // Keep this lookup inside the assembly book: Canvas/icon/sound is the result-page replay
+        // control and must retain its existing sound/mic flow.
+        Transform hint = bookCraftRoot.Find("sound (1)");
+        if (hint == null)
+        {
+            hint = bookCraftRoot.Find("assembly_sound");
+        }
+
+        assemblySoundButtonRoot = hint as RectTransform;
+    }
+
+    private void ShowAssemblyHintButton()
+    {
+        ResolveAssemblyHintUi();
+        if (assemblySoundButtonRoot == null)
+        {
+            return;
+        }
+
+        assemblySoundButtonRoot.gameObject.SetActive(true);
+        // The book art is a sibling in the same root. Put the hint last so it is rendered and hit
+        // tested in front of that art, without changing the result icons' hierarchy.
+        assemblySoundButtonRoot.SetAsLastSibling();
+
+        Image image = assemblySoundButtonRoot.GetComponent<Image>();
+        Button button = assemblySoundButtonRoot.GetComponent<Button>();
+        if (button == null)
+        {
+            button = assemblySoundButtonRoot.gameObject.AddComponent<Button>();
+        }
+
+        if (image != null && button.targetGraphic == null)
+        {
+            button.targetGraphic = image;
+        }
+
+        if (assemblySoundButton != button)
+        {
+            button.onClick.AddListener(HandleAssemblySoundButtonClicked);
+            assemblySoundButton = button;
+        }
+
+        RefreshAssemblyHintInteractivity();
+    }
+
+    private void HideAssemblyHintButton()
+    {
+        if (assemblySoundButtonRoot == null)
+        {
+            return;
+        }
+
+        SetGraphicRaycastTargets(assemblySoundButtonRoot, false);
+        if (assemblySoundButton != null)
+        {
+            assemblySoundButton.interactable = false;
+        }
+
+        assemblySoundButtonRoot.gameObject.SetActive(false);
+    }
+
+    private void RefreshAssemblyHintInteractivity()
+    {
+        if (assemblySoundButtonRoot == null || !assemblySoundButtonRoot.gameObject.activeInHierarchy)
+        {
+            return;
+        }
+
+        bool canPlayTarget = CanInteract && soundPlaybackClip != null;
+        SetGraphicRaycastTargets(assemblySoundButtonRoot, canPlayTarget);
+        if (assemblySoundButton != null)
+        {
+            assemblySoundButton.interactable = canPlayTarget;
+        }
+    }
+
     private void DisableDecorativeBookRaycasts()
     {
         SetGraphicRaycastTargets(bookCraftRoot, false);
@@ -1387,6 +1486,28 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         SetActionButtonInteractable(micButton, false);
         StartActionPulse(soundButtonRoot, ref soundPulseRoutine);
         soundPlaybackRoutine = StartCoroutine(SoundPlaybackStateRoutine(source));
+    }
+
+    private void HandleAssemblySoundButtonClicked()
+    {
+        if (!CanInteract || soundPlaybackClip == null)
+        {
+            return;
+        }
+
+        GameAudio.PlayClick();
+
+        // Always use the quest's configured target echo here. In particular, do not use
+        // ActiveSoundClip: that is deliberately variant-aware for the post-build result page.
+        AudioSource source = GetOrCreateActionAudioSource();
+        if (source == null)
+        {
+            return;
+        }
+
+        source.Stop();
+        source.clip = soundPlaybackClip;
+        source.Play();
     }
 
     private void HandleMicButtonClicked()
