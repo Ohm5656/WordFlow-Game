@@ -83,6 +83,14 @@ public sealed class StarHud : MonoBehaviour
     [SerializeField, Min(0f)] private float recapHoldBeforeFade = 1.2f;
     [SerializeField, Min(0.01f)] private float recapFadeDuration = 0.6f;
 
+    [Header("Result focus (2 / 3 star Success scenes)")]
+    [Tooltip("How much the complete star sign grows when the final score is presented.")]
+    [SerializeField, Min(1f)] private float resultFocusScale = 1.85f;
+    [SerializeField, Range(0f, 1f)] private float resultDimAlpha = 0.58f;
+    [SerializeField, Min(0.01f)] private float resultMoveDuration = 0.28f;
+    [SerializeField, Min(0f)] private float resultHoldDuration = 0.6f;
+    [SerializeField, Min(0.01f)] private float resultFadeOutDuration = 0.22f;
+
     [Header("Audio (optional)")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip starEarnedSfx;
@@ -102,6 +110,8 @@ public sealed class StarHud : MonoBehaviour
     private Vector3[][] slotBurstScale;
 
     private int shown; // stars currently sitting in slots
+    private bool recapFinished;
+    private bool resultPresentationPlaying;
 
     private void Awake()
     {
@@ -118,6 +128,7 @@ public sealed class StarHud : MonoBehaviour
         }
 
         shown = 0;
+        recapFinished = !recapOnStart;
     }
 
     private void OnDestroy()
@@ -127,7 +138,13 @@ public sealed class StarHud : MonoBehaviour
 
     private void Start()
     {
-        if (recapOnStart) StartCoroutine(RecapRoutine());
+        if (recapOnStart) StartCoroutine(RecapThenMarkFinished());
+    }
+
+    private IEnumerator RecapThenMarkFinished()
+    {
+        yield return RecapRoutine();
+        recapFinished = true;
     }
 
     private void CacheAuthoredLayout()
@@ -587,6 +604,246 @@ public sealed class StarHud : MonoBehaviour
         {
             if (slots[i] != null) SetActive(slots[i].end, false);
         }
+    }
+
+    /// <summary>
+    /// Presents a completed two- or three-star result without adding a second long reward loop.
+    /// The normal Success-scene recap stays in the corner while the story plays; this is its short,
+    /// focused confirmation immediately before the owl decision.
+    /// </summary>
+    public IEnumerator PresentResultRoutine(int finalStars)
+    {
+        finalStars = Mathf.Clamp(finalStars, 0, Mathf.Min(MaxStars, slots != null ? slots.Length : 0));
+        if (finalStars < 2 || starFrame == null || resultPresentationPlaying)
+        {
+            yield break;
+        }
+
+        resultPresentationPlaying = true;
+
+        // A very short timeout keeps an unusual scene setup from holding the next story beat if a
+        // recap object was disabled before its coroutine could finish.
+        float recapDeadline = Time.unscaledTime + 3f;
+        while (!recapFinished && Time.unscaledTime < recapDeadline)
+        {
+            yield return null;
+        }
+
+        EnsureFinalStarsVisible(finalStars);
+
+        RectTransform[] elements = GetResultElements(finalStars);
+        if (elements.Length == 0)
+        {
+            resultPresentationPlaying = false;
+            yield break;
+        }
+
+        Vector2[] originalPositions = new Vector2[elements.Length];
+        Vector3[] originalScales = new Vector3[elements.Length];
+        for (int i = 0; i < elements.Length; i++)
+        {
+            originalPositions[i] = elements[i].anchoredPosition;
+            originalScales[i] = elements[i].localScale;
+        }
+
+        CanvasGroup boardGroup = GetComponent<CanvasGroup>();
+        bool addedBoardGroup = boardGroup == null;
+        if (addedBoardGroup) boardGroup = gameObject.AddComponent<CanvasGroup>();
+        float originalBoardAlpha = boardGroup.alpha;
+
+        Canvas foregroundCanvas = PromoteBoardAboveDimmer(out bool addedForegroundCanvas);
+        int dimmerOrder = foregroundCanvas != null ? foregroundCanvas.sortingOrder - 1 : 32000;
+        Canvas dimmerCanvas = CreateResultDimmer(dimmerOrder, out Image dimmer);
+        Vector2 focusCentre = GetScreenCentreInBoardSpace();
+
+        // Enter: the background dims while the entire existing sign and its filled stars travel as
+        // one unit. The easing reaches the destination quickly, then settles naturally.
+        for (float elapsed = 0f; elapsed < resultMoveDuration; elapsed += Time.unscaledDeltaTime)
+        {
+            float t = Mathf.Clamp01(elapsed / resultMoveDuration);
+            ApplyResultLayout(elements, originalPositions, originalScales, focusCentre, EaseOutBack(t, 0.7f));
+            SetDimmerAlpha(dimmer, resultDimAlpha * SmoothStep(t));
+            yield return null;
+        }
+        ApplyResultLayout(elements, originalPositions, originalScales, focusCentre, 1f);
+        SetDimmerAlpha(dimmer, resultDimAlpha);
+
+        if (resultHoldDuration > 0f)
+        {
+            yield return new WaitForSecondsRealtime(resultHoldDuration);
+        }
+
+        if (finalStars < MaxStars)
+        {
+            // Two stars are a clear completion, but still invite a night redo. Fade the focused
+            // sign away rather than returning it to the HUD, then continue without owl praise.
+            for (float elapsed = 0f; elapsed < resultFadeOutDuration; elapsed += Time.unscaledDeltaTime)
+            {
+                float t = Mathf.Clamp01(elapsed / resultFadeOutDuration);
+                boardGroup.alpha = Mathf.Lerp(originalBoardAlpha, 0f, SmoothStep(t));
+                SetDimmerAlpha(dimmer, resultDimAlpha * (1f - SmoothStep(t)));
+                yield return null;
+            }
+            boardGroup.alpha = 0f;
+            SetDimmerAlpha(dimmer, 0f);
+            DestroyResultDimmer(dimmerCanvas);
+            RestoreForegroundCanvas(foregroundCanvas, addedForegroundCanvas);
+            resultPresentationPlaying = false;
+            yield break;
+        }
+
+        // Three stars earned: restore the small HUD first so the owl owns the next beat instead of
+        // competing with a large result card.
+        for (float elapsed = 0f; elapsed < resultMoveDuration; elapsed += Time.unscaledDeltaTime)
+        {
+            float t = Mathf.Clamp01(elapsed / resultMoveDuration);
+            ApplyResultLayout(elements, originalPositions, originalScales, focusCentre, 1f - SmoothStep(t));
+            SetDimmerAlpha(dimmer, resultDimAlpha * (1f - SmoothStep(t)));
+            yield return null;
+        }
+        RestoreResultLayout(elements, originalPositions, originalScales);
+        boardGroup.alpha = originalBoardAlpha;
+        SetDimmerAlpha(dimmer, 0f);
+        DestroyResultDimmer(dimmerCanvas);
+        RestoreForegroundCanvas(foregroundCanvas, addedForegroundCanvas);
+        if (addedBoardGroup) Destroy(boardGroup);
+        resultPresentationPlaying = false;
+    }
+
+    private void EnsureFinalStarsVisible(int finalStars)
+    {
+        SetActive(starFrame, true);
+        for (int i = 0; i < finalStars && i < slots.Length; i++)
+        {
+            Slot slot = slots[i];
+            if (slot == null || slot.end == null) continue;
+            SetActive(slot.end, true);
+            SetAlpha(slot.end, 1f);
+        }
+        shown = Mathf.Max(shown, finalStars);
+    }
+
+    private RectTransform[] GetResultElements(int finalStars)
+    {
+        RectTransform[] elements = new RectTransform[1 + finalStars];
+        elements[0] = starFrame;
+        int count = 1;
+        for (int i = 0; i < finalStars && i < slots.Length; i++)
+        {
+            RectTransform end = slots[i] != null ? slots[i].end : null;
+            if (end != null) elements[count++] = end;
+        }
+
+        if (count == elements.Length) return elements;
+        RectTransform[] compact = new RectTransform[count];
+        System.Array.Copy(elements, compact, count);
+        return compact;
+    }
+
+    private Vector2 GetScreenCentreInBoardSpace()
+    {
+        RectTransform parent = starFrame != null ? starFrame.parent as RectTransform : null;
+        if (parent == null) return Vector2.zero;
+
+        Canvas parentCanvas = GetComponentInParent<Canvas>();
+        Camera camera = parentCanvas != null && parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? parentCanvas.worldCamera
+            : null;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            parent,
+            new Vector2(Screen.width * 0.5f, Screen.height * 0.5f),
+            camera,
+            out Vector2 centre);
+        return centre;
+    }
+
+    private void ApplyResultLayout(
+        RectTransform[] elements,
+        Vector2[] originalPositions,
+        Vector3[] originalScales,
+        Vector2 focusCentre,
+        float amount)
+    {
+        amount = Mathf.Clamp01(amount);
+        Vector2 framePosition = originalPositions[0];
+        for (int i = 0; i < elements.Length; i++)
+        {
+            RectTransform element = elements[i];
+            if (element == null) continue;
+
+            Vector2 focusedPosition = focusCentre + (originalPositions[i] - framePosition) * resultFocusScale;
+            element.anchoredPosition = Vector2.LerpUnclamped(originalPositions[i], focusedPosition, amount);
+            element.localScale = Vector3.LerpUnclamped(originalScales[i], originalScales[i] * resultFocusScale, amount);
+        }
+    }
+
+    private static void RestoreResultLayout(RectTransform[] elements, Vector2[] positions, Vector3[] scales)
+    {
+        for (int i = 0; i < elements.Length; i++)
+        {
+            if (elements[i] == null) continue;
+            elements[i].anchoredPosition = positions[i];
+            elements[i].localScale = scales[i];
+        }
+    }
+
+    private Canvas PromoteBoardAboveDimmer(out bool addedCanvas)
+    {
+        Canvas canvas = GetComponent<Canvas>();
+        addedCanvas = canvas == null;
+        if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
+
+        Canvas parentCanvas = GetComponentInParent<Canvas>();
+        int parentOrder = parentCanvas != null ? parentCanvas.sortingOrder : 0;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = Mathf.Min(short.MaxValue - 1, parentOrder + 32001);
+        return canvas;
+    }
+
+    private static Canvas CreateResultDimmer(int sortingOrder, out Image dimmer)
+    {
+        GameObject canvasObject = new GameObject("StarResultDimmer", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = Mathf.Clamp(sortingOrder, short.MinValue + 1, short.MaxValue - 2);
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(3840f, 2160f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        GameObject imageObject = new GameObject("Dim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        imageObject.transform.SetParent(canvasObject.transform, false);
+        RectTransform rect = imageObject.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        dimmer = imageObject.GetComponent<Image>();
+        dimmer.color = new Color(0f, 0f, 0f, 0f);
+        dimmer.raycastTarget = false;
+        return canvas;
+    }
+
+    private static void SetDimmerAlpha(Image dimmer, float alpha)
+    {
+        if (dimmer == null) return;
+        Color color = dimmer.color;
+        color.a = Mathf.Clamp01(alpha);
+        dimmer.color = color;
+    }
+
+    private static void DestroyResultDimmer(Canvas dimmerCanvas)
+    {
+        if (dimmerCanvas != null) Destroy(dimmerCanvas.gameObject);
+    }
+
+    private static void RestoreForegroundCanvas(Canvas canvas, bool addedCanvas)
+    {
+        if (canvas == null || !addedCanvas) return;
+        Destroy(canvas);
     }
 
     private void PlaySfx(AudioClip clip)

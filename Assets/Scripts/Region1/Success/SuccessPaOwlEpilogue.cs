@@ -123,9 +123,18 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
 
     public IEnumerator Play()
     {
+        int finalStars = string.IsNullOrWhiteSpace(questId) ? 0 : QuestStars.Get(questId);
+
+        // The short, centred score confirmation is shared by both outcomes: two stars fades out
+        // and proceeds quietly; three stars returns to the HUD before the owl takes the stage.
+        if (StarHud.Instance != null && finalStars >= 2)
+        {
+            yield return StarHud.Instance.PresentResultRoutine(finalStars);
+        }
+
         // A two-star result completes the quest but leaves a clear reason to revisit it at night.
         // The praise belongs to the moment the saved best score first reaches all three stars.
-        if (!string.IsNullOrWhiteSpace(questId) && QuestStars.Get(questId) < QuestStars.Max)
+        if (!string.IsNullOrWhiteSpace(questId) && finalStars < QuestStars.Max)
             yield break;
 
         if (owlAnimator == null) yield break;
