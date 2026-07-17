@@ -143,7 +143,9 @@ public sealed class SuccessPaOwlEpilogue : MonoBehaviour
         // had not completed, producing a silent animation that then disappeared.
         yield return WaitForTts();
 
-        if (playLoseSting) GameAudio.PlayLose(); else GameAudio.PlayWin();
+        // win.wav now belongs to the centred star-result reveal, so the owl begins only after
+        // that celebration has resolved. Wrong-word scenes still keep their loss sting here.
+        if (playLoseSting) GameAudio.PlayLose();
 
         if (owlRect != null) owlRect.anchoredPosition = owlPosition;
 

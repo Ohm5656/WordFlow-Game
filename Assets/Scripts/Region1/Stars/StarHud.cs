@@ -86,6 +86,8 @@ public sealed class StarHud : MonoBehaviour
     [Header("Result focus (2 / 3 star Success scenes)")]
     [Tooltip("How much the complete star sign grows when the final score is presented.")]
     [SerializeField, Min(1f)] private float resultFocusScale = 1.85f;
+    [Tooltip("The centred result starts slightly smaller, then fades and pops to its focused size.")]
+    [SerializeField, Range(0.1f, 1f)] private float resultRevealStartScale = 0.82f;
     [SerializeField, Range(0f, 1f)] private float resultDimAlpha = 0.58f;
     [SerializeField, Min(0.01f)] private float resultMoveDuration = 0.28f;
     [SerializeField, Min(0f)] private float resultHoldDuration = 0.6f;
@@ -656,16 +658,24 @@ public sealed class StarHud : MonoBehaviour
         Canvas dimmerCanvas = CreateResultDimmer(dimmerOrder, out Image dimmer);
         Vector2 focusCentre = GetScreenCentreInBoardSpace();
 
-        // Enter: the background dims while the entire existing sign and its filled stars travel as
-        // one unit. The easing reaches the destination quickly, then settles naturally.
+        // The score must not travel across the screen from its HUD position. Hide it, place it
+        // directly at centre, then reveal it with a short fade and pop instead.
+        ApplyFocusedResultLayout(elements, originalPositions, originalScales, focusCentre, resultRevealStartScale);
+        boardGroup.alpha = 0f;
+        SetDimmerAlpha(dimmer, 0f);
+        GameAudio.PlayWin();
+
         for (float elapsed = 0f; elapsed < resultMoveDuration; elapsed += Time.unscaledDeltaTime)
         {
             float t = Mathf.Clamp01(elapsed / resultMoveDuration);
-            ApplyResultLayout(elements, originalPositions, originalScales, focusCentre, EaseOutBack(t, 0.7f));
+            float revealScale = Mathf.LerpUnclamped(resultRevealStartScale, 1f, EaseOutBack(t, 0.7f));
+            ApplyFocusedResultLayout(elements, originalPositions, originalScales, focusCentre, revealScale);
+            boardGroup.alpha = originalBoardAlpha * SmoothStep(t);
             SetDimmerAlpha(dimmer, resultDimAlpha * SmoothStep(t));
             yield return null;
         }
-        ApplyResultLayout(elements, originalPositions, originalScales, focusCentre, 1f);
+        ApplyFocusedResultLayout(elements, originalPositions, originalScales, focusCentre, 1f);
+        boardGroup.alpha = originalBoardAlpha;
         SetDimmerAlpha(dimmer, resultDimAlpha);
 
         if (resultHoldDuration > 0f)
@@ -774,6 +784,24 @@ public sealed class StarHud : MonoBehaviour
             Vector2 focusedPosition = focusCentre + (originalPositions[i] - framePosition) * resultFocusScale;
             element.anchoredPosition = Vector2.LerpUnclamped(originalPositions[i], focusedPosition, amount);
             element.localScale = Vector3.LerpUnclamped(originalScales[i], originalScales[i] * resultFocusScale, amount);
+        }
+    }
+
+    private void ApplyFocusedResultLayout(
+        RectTransform[] elements,
+        Vector2[] originalPositions,
+        Vector3[] originalScales,
+        Vector2 focusCentre,
+        float scaleMultiplier)
+    {
+        Vector2 framePosition = originalPositions[0];
+        for (int i = 0; i < elements.Length; i++)
+        {
+            RectTransform element = elements[i];
+            if (element == null) continue;
+
+            element.anchoredPosition = focusCentre + (originalPositions[i] - framePosition) * resultFocusScale;
+            element.localScale = originalScales[i] * (resultFocusScale * scaleMultiplier);
         }
     }
 
