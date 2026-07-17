@@ -178,10 +178,15 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
     private Coroutine uploadRecordingRoutine;
     private Coroutine soundPulseRoutine;
     private Coroutine micPulseRoutine;
+    private Coroutine assemblyHintPlaybackRoutine;
+    private Coroutine assemblyHintPulseRoutine;
     private Vector3 soundIconBaseScale = Vector3.one;
     private Vector3 micIconBaseScale = Vector3.one;
+    private Vector3 assemblyHintBaseScale = Vector3.one;
     private bool hasSoundIconBaseScale;
     private bool hasMicIconBaseScale;
+    private bool hasAssemblyHintBaseScale;
+    private bool assemblyHintPlaying;
     private bool isRecording;
     private bool recordingSuccessPlaying;
     private bool crowFeedbackPlaying;
@@ -1288,11 +1293,12 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             button.targetGraphic = image;
         }
 
-        if (assemblySoundButton != button)
-        {
-            button.onClick.AddListener(HandleAssemblySoundButtonClicked);
-            assemblySoundButton = button;
-        }
+        // Several controllers can discover this shared assembly button in a scene. Keep exactly
+        // one owner, just like the result-page sound/mic controls, so a tap plays one guide only.
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(HandleAssemblySoundButtonClicked);
+        assemblySoundButton = button;
+        CaptureActionIconBaseScale(assemblySoundButtonRoot);
 
         RefreshAssemblyHintInteractivity();
     }
@@ -1310,6 +1316,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             assemblySoundButton.interactable = false;
         }
 
+        StopAssemblyHintPlayback();
         assemblySoundButtonRoot.gameObject.SetActive(false);
     }
 
@@ -1320,7 +1327,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             return;
         }
 
-        bool canPlayTarget = CanInteract && soundPlaybackClip != null;
+        bool canPlayTarget = CanInteract && soundPlaybackClip != null && !assemblyHintPlaying;
         SetGraphicRaycastTargets(assemblySoundButtonRoot, canPlayTarget);
         if (assemblySoundButton != null)
         {
@@ -1490,7 +1497,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
 
     private void HandleAssemblySoundButtonClicked()
     {
-        if (!CanInteract || soundPlaybackClip == null)
+        if (!CanInteract || soundPlaybackClip == null || assemblyHintPlaying)
         {
             return;
         }
@@ -1508,6 +1515,10 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         source.Stop();
         source.clip = soundPlaybackClip;
         source.Play();
+        assemblyHintPlaying = true;
+        RefreshAssemblyHintInteractivity();
+        StartActionPulse(assemblySoundButtonRoot, ref assemblyHintPulseRoutine);
+        assemblyHintPlaybackRoutine = StartCoroutine(AssemblyHintPlaybackStateRoutine(source));
     }
 
     private void HandleMicButtonClicked()
@@ -1573,8 +1584,36 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         soundPlaybackRoutine = null;
     }
 
+    private IEnumerator AssemblyHintPlaybackStateRoutine(AudioSource source)
+    {
+        while (source != null && source.isPlaying)
+        {
+            yield return null;
+        }
+
+        assemblyHintPlaying = false;
+        StopActionPulse(assemblySoundButtonRoot, ref assemblyHintPulseRoutine);
+        assemblyHintPlaybackRoutine = null;
+        RefreshAssemblyHintInteractivity();
+    }
+
+    private void StopAssemblyHintPlayback()
+    {
+        if (assemblyHintPlaybackRoutine != null)
+        {
+            StopCoroutine(assemblyHintPlaybackRoutine);
+            assemblyHintPlaybackRoutine = null;
+        }
+
+        assemblyHintPlaying = false;
+        StopActionPulse(assemblySoundButtonRoot, ref assemblyHintPulseRoutine);
+        RefreshAssemblyHintInteractivity();
+    }
+
     private void StopSoundPlayback()
     {
+        StopAssemblyHintPlayback();
+
         if (soundPlaybackRoutine != null)
         {
             StopCoroutine(soundPlaybackRoutine);
@@ -1853,6 +1892,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         SetActionButtonInteractable(micButton, false);
         StopActionPulse(soundButtonRoot, ref soundPulseRoutine);
         StopActionPulse(micButtonRoot, ref micPulseRoutine);
+        StopAssemblyHintPlayback();
 
         if (recordingSuccessSfx != null)
         {
@@ -2056,6 +2096,11 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
             micIconBaseScale = iconRoot.localScale;
             hasMicIconBaseScale = true;
         }
+        else if (iconRoot == assemblySoundButtonRoot && !hasAssemblyHintBaseScale)
+        {
+            assemblyHintBaseScale = iconRoot.localScale;
+            hasAssemblyHintBaseScale = true;
+        }
     }
 
     private Vector3 GetActionIconBaseScale(RectTransform iconRoot)
@@ -2070,6 +2115,11 @@ public sealed class MagicStonePuzzleController : MonoBehaviour
         if (iconRoot == micButtonRoot)
         {
             return micIconBaseScale;
+        }
+
+        if (iconRoot == assemblySoundButtonRoot)
+        {
+            return assemblyHintBaseScale;
         }
 
         return iconRoot != null ? iconRoot.localScale : Vector3.one;
