@@ -1,7 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>Cycles a fixed sprite sequence on a UGUI Image at a constant frame rate.</summary>
+/// <summary>
+/// Plays a sprite sequence on a UGUI Image at a constant frame rate, ping-ponging
+/// forward then backward forever. Wrapping straight from the last frame to the first
+/// shows a visible seam when the sequence does not loop cleanly; bouncing hides it.
+/// </summary>
 public sealed class UISpriteLoop : MonoBehaviour
 {
     [SerializeField] private Image target;
@@ -17,7 +21,13 @@ public sealed class UISpriteLoop : MonoBehaviour
             return;
         }
 
+        if (frames.Length == 1)
+        {
+            target.sprite = frames[0];
+            return;
+        }
+
         elapsed += Time.deltaTime;
-        target.sprite = frames[(int)(elapsed * fps) % frames.Length];
+        target.sprite = frames[Mathf.RoundToInt(Mathf.PingPong(elapsed * fps, frames.Length - 1))];
     }
 }
