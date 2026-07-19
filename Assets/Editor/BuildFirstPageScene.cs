@@ -68,9 +68,29 @@ public static class BuildFirstPageScene
         so.ApplyModifiedPropertiesWithoutUndo();
 
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), ScenePath);
+
+        // TMP resets a freshly AddComponent-ed text back to the default font when it
+        // first initializes, so the font only sticks once the scene has been written
+        // and reopened. Same post-pass ThaiTMPSetup uses for the Login scene.
+        ApplyThaiFont(EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single), thaiFont);
+
         RegisterAtIndexZero(ScenePath);
 
         Debug.Log("[FirstPage] Scene built and registered at build index 0.");
+    }
+
+    private static void ApplyThaiFont(Scene scene, TMP_FontAsset font)
+    {
+        foreach (var root in scene.GetRootGameObjects())
+        {
+            foreach (var tmp in root.GetComponentsInChildren<TMP_Text>(true))
+            {
+                tmp.font = font;
+                EditorUtility.SetDirty(tmp);
+            }
+        }
+
+        EditorSceneManager.SaveScene(scene);
     }
 
     private static RawImage CreateVideoSurface(Transform canvasTransform)
@@ -120,6 +140,7 @@ public static class BuildFirstPageScene
         text.fontSize = 36;
         text.alignment = TextAlignmentOptions.Center;
         text.color = Color.white;
+        EditorUtility.SetDirty(text);
         var textRt = textGO.GetComponent<RectTransform>();
         textRt.anchorMin = Vector2.zero;
         textRt.anchorMax = Vector2.one;
