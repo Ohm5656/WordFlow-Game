@@ -17,6 +17,10 @@ public sealed class FirstPageIntro : MonoBehaviour
     private const float MinSpeed = 1f;
     private const float MaxSpeed = 2f;
     private const float TextFadeDuration = 0.6f;
+    private const float PromptPulsePeriod = 1.15f;
+    private const float PromptMinimumAlpha = 0.55f;
+    private const float PromptMinimumScale = 0.97f;
+    private const float PromptMaximumScale = 1.03f;
     private const float SceneFadeDuration = 0.6f;
     private const double FallbackClipLength = 5.0417; // seconds, matches the baked source clips
 
@@ -79,6 +83,11 @@ public sealed class FirstPageIntro : MonoBehaviour
             transitioning = true;
             StartCoroutine(GoToWorldMap());
         }
+
+        if (acceptingInput && !transitioning)
+        {
+            AnimatePressToStart();
+        }
     }
 
     private void OnFirstClipReady(VideoPlayer vp)
@@ -135,6 +144,19 @@ public sealed class FirstPageIntro : MonoBehaviour
 
         pressToStartGroup.alpha = 1f;
         acceptingInput = true;
+    }
+
+    /// <summary>
+    /// A subtle, familiar title-screen pulse: the prompt gently brightens and
+    /// scales while the idle video is waiting for input.
+    /// </summary>
+    private void AnimatePressToStart()
+    {
+        float phase = (Mathf.Sin(Time.unscaledTime * Mathf.PI * 2f / PromptPulsePeriod) + 1f) * 0.5f;
+        pressToStartGroup.alpha = Mathf.Lerp(PromptMinimumAlpha, 1f, phase);
+
+        float scale = Mathf.Lerp(PromptMinimumScale, PromptMaximumScale, phase);
+        pressToStartGroup.transform.localScale = Vector3.one * scale;
     }
 
     private IEnumerator GoToWorldMap()
