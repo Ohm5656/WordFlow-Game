@@ -10,9 +10,20 @@ public sealed class UISpriteLoop : MonoBehaviour
 {
     [SerializeField] private Image target;
     [SerializeField] private Sprite[] frames;
+    [Min(1f)]
     [SerializeField] private float fps = 24f;
 
-    private float elapsed;
+    private float frameTimer;
+    private int frameIndex;
+    private int direction = 1;
+
+    private void OnEnable()
+    {
+        frameTimer = 0f;
+        frameIndex = 0;
+        direction = 1;
+        SetCurrentFrame();
+    }
 
     private void Update()
     {
@@ -27,7 +38,42 @@ public sealed class UISpriteLoop : MonoBehaviour
             return;
         }
 
-        elapsed += Time.deltaTime;
-        target.sprite = frames[Mathf.RoundToInt(Mathf.PingPong(elapsed * fps, frames.Length - 1))];
+        frameIndex = Mathf.Clamp(frameIndex, 0, frames.Length - 1);
+        float frameDuration = 1f / Mathf.Max(1f, fps);
+        frameTimer += Time.deltaTime;
+
+        // Advance a whole number of frames. This stays smooth if a rendered frame
+        // takes longer than normal and never turns the end of the sequence into a
+        // last-frame-to-first-frame jump.
+        while (frameTimer >= frameDuration)
+        {
+            frameTimer -= frameDuration;
+            AdvanceFrame();
+        }
+
+        SetCurrentFrame();
+    }
+
+    private void AdvanceFrame()
+    {
+        int finalFrame = frames.Length - 1;
+        if (frameIndex == finalFrame)
+        {
+            direction = -1;
+        }
+        else if (frameIndex == 0)
+        {
+            direction = 1;
+        }
+
+        frameIndex += direction;
+    }
+
+    private void SetCurrentFrame()
+    {
+        if (target != null && frames != null && frames.Length > 0)
+        {
+            target.sprite = frames[Mathf.Clamp(frameIndex, 0, frames.Length - 1)];
+        }
     }
 }

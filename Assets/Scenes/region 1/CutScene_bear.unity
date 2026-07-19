@@ -148,6 +148,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 217762118}
   - {fileID: 2070422875}
   m_Father: {fileID: 971624839}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -219,6 +220,7 @@ MonoBehaviour:
   altWord: "\u0E01\u0E32"
   altWordId: kaa
   altSceneName: Assets/Scenes/region 1/Success_ga.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -668,6 +670,7 @@ MonoBehaviour:
   audioSource: {fileID: 204294692}
   beepClip: {fileID: 8300000, guid: a3dbedb1174d9ae49a31478abdd8de82, type: 3}
   unlockSfx: {fileID: 8300000, guid: eada9bda2071d7c48a9b73117aa29503, type: 3}
+  vibrateDeviceOnMisassembly: 1
   beepCount: 3
   beepInterval: 1
   beepAudibleSeconds: 0.4
@@ -890,6 +893,81 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 214939921}
+  m_CullTransparentMesh: 1
+--- !u!1 &217762117
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 217762118}
+  - component: {fileID: 217762120}
+  - component: {fileID: 217762119}
+  m_Layer: 5
+  m_Name: sound (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &217762118
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 217762117}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 91873488}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -896}
+  m_SizeDelta: {x: 430.9751, y: 421.2532}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &217762119
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 217762117}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 786117082362074018, guid: d115df9101e941841946a7f09d4d08af, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &217762120
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 217762117}
   m_CullTransparentMesh: 1
 --- !u!1 &243362520
 GameObject:
@@ -1407,15 +1485,15 @@ RectTransform:
   m_GameObject: {fileID: 695002818}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.7, y: 0.35, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1646416021}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 694, y: -449.99}
-  m_SizeDelta: {x: 472.1557, y: 899.9839}
+  m_AnchoredPosition: {x: 688, y: -378.36}
+  m_SizeDelta: {x: 500, y: 979}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &695002820
 MonoBehaviour:
@@ -1437,7 +1515,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -3480174512281879912, guid: f1af0387c546d6147937c47b67fe1c9d, type: 3}
+  m_Sprite: {fileID: -7032150645464476754, guid: ab8c0138f1c015d4c95eb1159c8cfa11, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3379,6 +3457,7 @@ MonoBehaviour:
   altWord: "\u0E01\u0E32"
   altWordId: kaa
   altSceneName: Assets/Scenes/region 1/Success_ga.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -3539,8 +3618,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 520, y: -92.843}
-  m_SizeDelta: {x: 988.5045, y: 638.8161}
+  m_AnchoredPosition: {x: 542, y: -48}
+  m_SizeDelta: {x: 431.099, y: 404.624}
   m_Pivot: {x: 0.5, y: 0.4999999}
 --- !u!114 &1278119725
 MonoBehaviour:
@@ -3562,7 +3641,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: fa95fd3fc2e0f16428049e6e3260d713, type: 3}
+  m_Sprite: {fileID: 2684087349741533242, guid: b465d0b5c1997f848b920e62baac591b, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3607,15 +3686,15 @@ RectTransform:
   m_GameObject: {fileID: 1361877097}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.7, y: 0.35, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1646416021}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -634, y: -449.99}
-  m_SizeDelta: {x: 472.1557, y: 899.9839}
+  m_AnchoredPosition: {x: -632, y: -378}
+  m_SizeDelta: {x: 500.298, y: 979.72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1361877099
 MonoBehaviour:
@@ -3637,7 +3716,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -2714947130423497534, guid: f1af0387c546d6147937c47b67fe1c9d, type: 3}
+  m_Sprite: {fileID: 1740539771578665868, guid: 7fc96e6b2e6cf2b4b9847dca74bc82eb, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3671,7 +3750,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1402757264
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3757,6 +3836,7 @@ MonoBehaviour:
   altWord: "\u0E01\u0E32"
   altWordId: kaa
   altSceneName: Assets/Scenes/region 1/Success_ga.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -4139,7 +4219,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 503, y: -69}
-  m_SizeDelta: {x: 906.0201, y: 610.6534}
+  m_SizeDelta: {x: 431, y: 404}
   m_Pivot: {x: 0.5, y: 0.4999999}
 --- !u!114 &1592036573
 MonoBehaviour:
@@ -4154,14 +4234,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.5169811, g: 0.5169811, b: 0.5169811, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f2097643332a23943af28c7d4dbcd973, type: 3}
+  m_Sprite: {fileID: -856714013644274890, guid: 2057103545dd27440a84eaddfb78a56a, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -4541,6 +4621,7 @@ MonoBehaviour:
   altWord: "\u0E01\u0E32"
   altWordId: kaa
   altSceneName: Assets/Scenes/region 1/Success_ga.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -4919,6 +5000,7 @@ MonoBehaviour:
   altWord: "\u0E01\u0E32"
   altWordId: kaa
   altSceneName: Assets/Scenes/region 1/Success_ga.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -5726,15 +5808,15 @@ RectTransform:
   m_GameObject: {fileID: 1946246605}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.7, y: 0.35, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1646416021}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 39.99182, y: -449.99}
-  m_SizeDelta: {x: 457.1794, y: 899.9839}
+  m_AnchoredPosition: {x: 46, y: -378.36002}
+  m_SizeDelta: {x: 500, y: 979}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1946246607
 MonoBehaviour:
@@ -5756,7 +5838,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -7867402966719221576, guid: f1af0387c546d6147937c47b67fe1c9d, type: 3}
+  m_Sprite: {fileID: -8877904513128440925, guid: 11d6b9e85cd2dee41bb50c2c1f87acb1, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -6274,6 +6356,12 @@ MonoBehaviour:
   recapGap: 0.15
   recapHoldBeforeFade: 1.2
   recapFadeDuration: 0.6
+  resultFocusScale: 1.85
+  resultRevealStartScale: 0.82
+  resultDimAlpha: 0.58
+  resultMoveDuration: 0.28
+  resultHoldDuration: 0.6
+  resultFadeOutDuration: 0.22
   audioSource: {fileID: 0}
   starEarnedSfx: {fileID: 8300000, guid: 8cd704fce5f9d84488104ed4e53ad0c5, type: 3}
   fadeOutSfx: {fileID: 0}
@@ -6378,6 +6466,7 @@ MonoBehaviour:
   altWord: "\u0E01\u0E32"
   altWordId: kaa
   altSceneName: Assets/Scenes/region 1/Success_ga.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08

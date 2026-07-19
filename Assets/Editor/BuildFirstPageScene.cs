@@ -23,15 +23,17 @@ public static class BuildFirstPageScene
     private const string LogoFramesDir = "Assets/Art/login/WordFlow_logo_cropped";
     private const string LogoPrefabPath = "Assets/Prefabs/FirstPageLogo.prefab";
     private const string LogoChildName = "Logo";
+    private const string AuthPrefabPath = "Assets/Prefabs/FirstPageAuthButtons.prefab";
+    private const string AuthChildName = "AuthButtons";
     private const string LoginBtnPath = "Assets/Art/login/login_btn.png";
     private const string SignupBtnPath = "Assets/Art/login/signup_btn.png";
 
     [MenuItem("Tools/FirstPage/Build Scene")]
     public static void Build()
     {
+        VideoClip introForwardClip = LoadClip("Assets/Video/intro_forward.mp4");
         VideoClip introReverseClip = LoadClip("Assets/Video/intro_rev.mp4");
-        VideoClip idleClip = LoadClip("Assets/Video/idle.mp4");
-        VideoClip idleReverseClip = LoadClip("Assets/Video/idle_rev.mp4");
+        VideoClip idleLoopClip = LoadClip("Assets/Video/idle_loop.mp4");
         RenderTexture rtA = AssetDatabase.LoadAssetAtPath<RenderTexture>("Assets/Video/FirstPageIntroA.renderTexture");
         RenderTexture rtB = AssetDatabase.LoadAssetAtPath<RenderTexture>("Assets/Video/FirstPageIntroB.renderTexture");
         TMP_FontAsset thaiFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(ThaiFontPath);
@@ -40,7 +42,7 @@ public static class BuildFirstPageScene
         Sprite signupSprite = ImportSprite(SignupBtnPath, 1024);
         Sprite[] logoFrames = ImportLogoFrames();
 
-        if (introReverseClip == null || idleClip == null || idleReverseClip == null
+        if (introForwardClip == null || introReverseClip == null || idleLoopClip == null
             || rtA == null || rtB == null || thaiFont == null
             || loginSprite == null || signupSprite == null || logoFrames.Length == 0)
         {
@@ -61,7 +63,7 @@ public static class BuildFirstPageScene
         RawImage videoSurface = CreateVideoSurface(canvas.transform);
         (CanvasGroup logoGroup, RectTransform logoRect) = InstantiateLogo(canvas.transform, logoFrames);
         (CanvasGroup authGroup, RectTransform authRect, Button loginBtn, Button signupBtn) =
-            CreateAuthButtons(canvas.transform, loginSprite, signupSprite);
+            InstantiateAuthButtons(canvas.transform, loginSprite, signupSprite);
         CanvasGroup pressToStartGroup = CreatePressToStart(canvas.transform, thaiFont);
         (CanvasGroup logoutGroup, Button logoutBtn) = CreateLogoutButton(canvas.transform, thaiFont);
 
@@ -82,12 +84,12 @@ public static class BuildFirstPageScene
 
         var intro = playersGO.AddComponent<FirstPageIntro>();
         var so = new SerializedObject(intro);
-        SetRef(so, "playerA", playerA);
-        SetRef(so, "playerB", playerB);
+        SetRef(so, "introPlayer", playerA);
+        SetRef(so, "idlePlayer", playerB);
         SetRef(so, "videoSurface", videoSurface);
+        SetRef(so, "introForwardClip", introForwardClip);
         SetRef(so, "introReverseClip", introReverseClip);
-        SetRef(so, "idleClip", idleClip);
-        SetRef(so, "idleReverseClip", idleReverseClip);
+        SetRef(so, "idleLoopClip", idleLoopClip);
         SetRef(so, "logoGroup", logoGroup);
         SetRef(so, "logoRect", logoRect);
         SetRef(so, "pressToStartGroup", pressToStartGroup);
@@ -239,11 +241,48 @@ public static class BuildFirstPageScene
         EditorUtility.SetDirty(loop);
     }
 
-    private static (CanvasGroup, RectTransform, Button, Button) CreateAuthButtons(
+    /// <summary>
+    /// Instantiates the auth-button prefab under the Canvas, keeping the prefab link so
+    /// later size/position tweaks in the Prefab editor show up here without a rebuild.
+    /// </summary>
+    private static (CanvasGroup, RectTransform, Button, Button) InstantiateAuthButtons(
         Transform canvasTransform, Sprite loginSprite, Sprite signupSprite)
     {
-        var container = new GameObject("AuthButtons", typeof(RectTransform), typeof(CanvasGroup));
-        container.transform.SetParent(canvasTransform, false);
+        GameObject prefab = EnsureAuthPrefab(loginSprite, signupSprite);
+        var root = (GameObject)PrefabUtility.InstantiatePrefab(prefab, canvasTransform);
+        root.name = prefab.name;
+        StretchToParent(root.GetComponent<RectTransform>());
+
+        Transform group = root.transform.Find(AuthChildName);
+        return (group.GetComponent<CanvasGroup>(),
+                group.GetComponent<RectTransform>(),
+                group.Find("LoginButton").GetComponent<Button>(),
+                group.Find("SignupButton").GetComponent<Button>());
+    }
+
+    /// <summary>
+    /// Creates the auth-button prefab on first run; afterwards leaves it alone so size and
+    /// position edits made in the Prefab editor survive a rebuild. Same child-not-root
+    /// layout as the logo prefab, and for the same reason (see <see cref="EnsureLogoPrefab"/>).
+    /// </summary>
+    private static GameObject EnsureAuthPrefab(Sprite loginSprite, Sprite signupSprite)
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(AuthPrefabPath);
+        if (existing != null)
+        {
+            if (existing.transform.Find(AuthChildName) == null)
+            {
+                Debug.LogError($"[FirstPage] {AuthPrefabPath} has no '{AuthChildName}' child — delete the prefab to regenerate it.");
+            }
+
+            return existing;
+        }
+
+        var root = new GameObject("FirstPageAuthButtons", typeof(RectTransform));
+        StretchToParent(root.GetComponent<RectTransform>());
+
+        var container = new GameObject(AuthChildName, typeof(RectTransform), typeof(CanvasGroup));
+        container.transform.SetParent(root.transform, false);
 
         var rt = container.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0.5f, 0f);
@@ -257,10 +296,21 @@ public static class BuildFirstPageScene
         group.interactable = false;
         group.blocksRaycasts = false;
 
-        Button loginBtn = CreateSpriteButton(container.transform, "LoginButton", loginSprite, new Vector2(-185f, 0f));
-        Button signupBtn = CreateSpriteButton(container.transform, "SignupButton", signupSprite, new Vector2(185f, 0f));
+        CreateSpriteButton(container.transform, "LoginButton", loginSprite, new Vector2(-185f, 0f));
+        CreateSpriteButton(container.transform, "SignupButton", signupSprite, new Vector2(185f, 0f));
 
-        return (group, rt, loginBtn, signupBtn);
+        GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, AuthPrefabPath);
+        Object.DestroyImmediate(root);
+        Debug.Log("[FirstPage] Created " + AuthPrefabPath);
+        return saved;
+    }
+
+    private static void StretchToParent(RectTransform rt)
+    {
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
     }
 
     private static Button CreateSpriteButton(Transform parent, string name, Sprite sprite, Vector2 pos)

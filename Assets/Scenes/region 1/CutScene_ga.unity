@@ -295,6 +295,7 @@ MonoBehaviour:
   altWord: "\u0E1B\u0E32"
   altWordId: paa
   altSceneName: Assets/Scenes/region 1/Success_ta_incorrect.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -682,6 +683,81 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 182331094}
   m_CullTransparentMesh: 1
+--- !u!1 &217762117
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 217762118}
+  - component: {fileID: 217762120}
+  - component: {fileID: 217762119}
+  m_Layer: 5
+  m_Name: sound (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &217762118
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 217762117}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 91873488}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -875.8}
+  m_SizeDelta: {x: 430.9751, y: 421.2532}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &217762119
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 217762117}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 786117082362074018, guid: d115df9101e941841946a7f09d4d08af, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &217762120
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 217762117}
+  m_CullTransparentMesh: 1
 --- !u!1 &290691725
 GameObject:
   m_ObjectHideFlags: 0
@@ -1036,6 +1112,12 @@ MonoBehaviour:
   recapGap: 0.15
   recapHoldBeforeFade: 1.2
   recapFadeDuration: 0.6
+  resultFocusScale: 1.85
+  resultRevealStartScale: 0.82
+  resultDimAlpha: 0.58
+  resultMoveDuration: 0.28
+  resultHoldDuration: 0.6
+  resultFadeOutDuration: 0.22
   audioSource: {fileID: 0}
   starEarnedSfx: {fileID: 8300000, guid: 8cd704fce5f9d84488104ed4e53ad0c5, type: 3}
   fadeOutSfx: {fileID: 0}
@@ -2234,6 +2316,7 @@ MonoBehaviour:
   audioSource: {fileID: 1128065650}
   beepClip: {fileID: 8300000, guid: a3dbedb1174d9ae49a31478abdd8de82, type: 3}
   unlockSfx: {fileID: 8300000, guid: eada9bda2071d7c48a9b73117aa29503, type: 3}
+  vibrateDeviceOnMisassembly: 1
   beepCount: 3
   beepInterval: 1
   beepAudibleSeconds: 0.4
@@ -3190,6 +3273,7 @@ MonoBehaviour:
   altWord: "\u0E1B\u0E32"
   altWordId: paa
   altSceneName: Assets/Scenes/region 1/Success_ta_incorrect.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -4208,6 +4292,7 @@ MonoBehaviour:
   altWord: "\u0E1B\u0E32"
   altWordId: paa
   altSceneName: Assets/Scenes/region 1/Success_ta_incorrect.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -4736,6 +4821,7 @@ MonoBehaviour:
   altWord: "\u0E1B\u0E32"
   altWordId: paa
   altSceneName: Assets/Scenes/region 1/Success_ta_incorrect.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -5536,81 +5622,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2070422874}
   m_CullTransparentMesh: 1
---- !u!1 &217762117
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 217762118}
-  - component: {fileID: 217762120}
-  - component: {fileID: 217762119}
-  m_Layer: 5
-  m_Name: sound (1)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &217762118
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 217762117}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 91873488}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -845}
-  m_SizeDelta: {x: 430.9751, y: 421.2532}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &217762119
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 217762117}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: ''
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 786117082362074018, guid: d115df9101e941841946a7f09d4d08af, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
---- !u!222 &217762120
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 217762117}
-  m_CullTransparentMesh: 1
 --- !u!1 &2085266207
 GameObject:
   m_ObjectHideFlags: 0
@@ -5787,6 +5798,7 @@ MonoBehaviour:
   altWord: "\u0E1B\u0E32"
   altWordId: paa
   altSceneName: Assets/Scenes/region 1/Success_ta_incorrect.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08

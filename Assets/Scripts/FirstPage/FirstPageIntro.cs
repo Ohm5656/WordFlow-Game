@@ -9,11 +9,15 @@ using WordFlow.Adventure.Net;
 
 /// <summary>
 /// first_page title screen. Sequence:
-///   1. intro_rev plays once, speed ramping 2x -> 1x; the WordFlow logo
-///      drop-bounces in partway through.
-///   2. idle/idle_rev ping-pong forever at 1x. On entering this phase the UI
-///      floats up: press-to-start + logout when a stored session exists,
-///      Login/Sign-up buttons otherwise.
+///   1. intro_forward plays once at 1x; the WordFlow logo drop-bounces in.
+///   2. intro_rev plays once, speed ramping 2x -> 1x.
+///   3. idle_loop (already baked forward+backward) loops natively at 1x. On
+///      entering this phase the UI floats up: press-to-start + logout when a
+///      stored session exists, Login/Sign-up buttons otherwise.
+///
+/// The idle ping-pong is baked into one clip rather than swapped between two
+/// players: Unity's own looping has no swap latency, and the intro player is
+/// stopped once it hands over, so only one video decoder runs from then on.
 /// Press-to-start runs a silent TryAutoLogin before entering WorldMap; on
 /// failure (expired token) the auth buttons replace the prompt.
 /// </summary>
@@ -43,12 +47,12 @@ public sealed class FirstPageIntro : MonoBehaviour
     private const float PromptMaximumScale = 1.03f;
 
     [Header("Video")]
-    [SerializeField] private VideoPlayer playerA;
-    [SerializeField] private VideoPlayer playerB;
+    [SerializeField] private VideoPlayer introPlayer;
+    [SerializeField] private VideoPlayer idlePlayer;
     [SerializeField] private RawImage videoSurface;
+    [SerializeField] private VideoClip introForwardClip;
     [SerializeField] private VideoClip introReverseClip;
-    [SerializeField] private VideoClip idleClip;
-    [SerializeField] private VideoClip idleReverseClip;
+    [SerializeField] private VideoClip idleLoopClip;
 
     [Header("Logo")]
     [SerializeField] private CanvasGroup logoGroup;
@@ -66,9 +70,9 @@ public sealed class FirstPageIntro : MonoBehaviour
     [SerializeField] private Button loginButton;
     [SerializeField] private Button signupButton;
 
-    private VideoPlayer active;
-    private VideoPlayer standby;
-    private bool ramping = true;
+    private enum IntroPhase { Forward, Reverse }
+
+    private IntroPhase introPhase;
     private bool acceptingInput;
     private bool transitioning;
     private Vector2 logoRestPosition;
@@ -77,11 +81,8 @@ public sealed class FirstPageIntro : MonoBehaviour
 
     private void Awake()
     {
-        ConfigurePlayer(playerA);
-        ConfigurePlayer(playerB);
-
-        active = playerA;
-        standby = playerB;
+        ConfigurePlayer(introPlayer, loop: false);
+        ConfigurePlayer(idlePlayer, loop: true);
 
         logoRestPosition = logoRect.anchoredPosition;
         promptRestPosition = pressToStartRect.anchoredPosition;
@@ -96,24 +97,24 @@ public sealed class FirstPageIntro : MonoBehaviour
         signupButton.onClick.AddListener(() => LeaveTo(RegisterSceneName));
         logoutButton.onClick.AddListener(OnLogout);
 
-        playerA.loopPointReached += HandleLoopPointReached;
-        playerB.loopPointReached += HandleLoopPointReached;
+        introPlayer.loopPointReached += OnIntroClipFinished;
 
-        active.clip = introReverseClip;
-        active.prepareCompleted += OnFirstClipReady;
-        active.Prepare();
+        introPhase = IntroPhase.Forward;
+        introPlayer.clip = introForwardClip;
+        introPlayer.prepareCompleted += OnForwardClipReady;
+        introPlayer.Prepare();
 
-        standby.clip = idleClip;
-        standby.Prepare();
+        idlePlayer.clip = idleLoopClip;
+        idlePlayer.Prepare();
     }
 
     private void Update()
     {
-        if (ramping)
+        if (introPhase == IntroPhase.Reverse)
         {
-            double length = active.length > 0 ? active.length : FallbackClipLength;
-            float t = Mathf.Clamp01((float)(active.time / length));
-            active.playbackSpeed = Mathf.Lerp(MaxSpeed, MinSpeed, t);
+            double length = introPlayer.length > 0 ? introPlayer.length : FallbackClipLength;
+            float t = Mathf.Clamp01((float)(introPlayer.time / length));
+            introPlayer.playbackSpeed = Mathf.Lerp(MaxSpeed, MinSpeed, t);
         }
 
         if (acceptingInput && !transitioning && EnterPressedThisFrame())
@@ -127,39 +128,45 @@ public sealed class FirstPageIntro : MonoBehaviour
         }
     }
 
-    private void OnFirstClipReady(VideoPlayer vp)
+    private void OnForwardClipReady(VideoPlayer vp)
     {
-        vp.prepareCompleted -= OnFirstClipReady;
+        vp.prepareCompleted -= OnForwardClipReady;
         videoSurface.texture = vp.targetTexture;
+        vp.playbackSpeed = MinSpeed;
         vp.Play();
         StartCoroutine(LogoEntrance());
     }
 
-    private void HandleLoopPointReached(VideoPlayer vp)
+    private void OnIntroClipFinished(VideoPlayer vp)
     {
-        if (vp != active)
+        if (introPhase == IntroPhase.Forward)
         {
+            introPhase = IntroPhase.Reverse;
+            introPlayer.Stop();
+            introPlayer.clip = introReverseClip;
+            introPlayer.playbackSpeed = MaxSpeed;
+            introPlayer.prepareCompleted += OnReverseClipReady;
+            introPlayer.Prepare();
             return;
         }
 
-        VideoClip justFinished = active.clip;
+        vp.loopPointReached -= OnIntroClipFinished;
 
-        VideoPlayer finishedPlayer = active;
-        active = standby;
-        standby = finishedPlayer;
+        // The idle player was prepared during the intro, so its first frame is already
+        // in its render texture — swapping the surface first means no black flash.
+        videoSurface.texture = idlePlayer.targetTexture;
+        idlePlayer.Play();
+        introPlayer.Stop();
 
-        videoSurface.texture = active.targetTexture;
-        active.playbackSpeed = 1f;
-        active.Play();
+        StartCoroutine(RevealUi());
+    }
 
-        standby.clip = active.clip == idleClip ? idleReverseClip : idleClip;
-        standby.Prepare();
-
-        if (justFinished == introReverseClip)
-        {
-            ramping = false;
-            StartCoroutine(RevealUi());
-        }
+    private void OnReverseClipReady(VideoPlayer vp)
+    {
+        vp.prepareCompleted -= OnReverseClipReady;
+        videoSurface.texture = vp.targetTexture;
+        vp.playbackSpeed = MaxSpeed;
+        vp.Play();
     }
 
     // ---- logo ----
@@ -364,10 +371,10 @@ public sealed class FirstPageIntro : MonoBehaviour
         group.blocksRaycasts = true;
     }
 
-    private static void ConfigurePlayer(VideoPlayer player)
+    private static void ConfigurePlayer(VideoPlayer player, bool loop)
     {
         player.playOnAwake = false;
-        player.isLooping = false;
+        player.isLooping = loop;
         player.audioOutputMode = VideoAudioOutputMode.None;
         player.renderMode = VideoRenderMode.RenderTexture;
     }

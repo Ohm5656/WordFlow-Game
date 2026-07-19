@@ -877,7 +877,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 50
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 7c945704abcc0ba4c99ae04a883097c8, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 2fc2ff89daade8345ad87d6d16e29c84, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -2420,6 +2420,17 @@ MonoBehaviour:
   playableGlowAlphaMin: 0.12
   playableGlowAlphaMax: 0.32
   playableClickBoundsPadding: 0.05
+  collectionIslandName: Island1
+  collectionBookObjectName: book_collection
+  collectionBookOpenDuration: 0.26
+  collectionBookCloseDuration: 0.18
+  collectionBookStartScale: 0.78
+  collectionBookLift: 0.24
+  collectionBookIdleScale: 0.012
+  collectionBookBackdropAlpha: 0.58
+  collectionIslandBounceDuration: 0.12
+  collectionIslandBounceScale: 0.075
+  collectionIslandBounceLift: 0.035
 --- !u!1 &2105989508
 GameObject:
   m_ObjectHideFlags: 0

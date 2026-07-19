@@ -11,9 +11,9 @@ public static class ValidateFirstPageScene
     public static void Validate()
     {
         bool ok = true;
-        ok &= CheckClipPair("Assets/Video/idle.mp4", "Assets/Video/idle_rev.mp4");
+        ok &= CheckClipExists("Assets/Video/intro_forward.mp4");
         ok &= CheckClipExists("Assets/Video/intro_rev.mp4");
-        ok &= CheckGone("Assets/Video/intro.mp4");
+        ok &= CheckClipExists("Assets/Video/idle_loop.mp4");
         ok &= CheckBuildSettings();
         ok &= CheckSceneWiring();
 
@@ -25,37 +25,6 @@ public static class ValidateFirstPageScene
         if (AssetDatabase.LoadAssetAtPath<VideoClip>(path) == null)
         {
             Debug.LogError($"[FirstPage] Missing clip: {path}");
-            return false;
-        }
-
-        return true;
-    }
-
-    private static bool CheckGone(string path)
-    {
-        if (AssetDatabase.LoadAssetAtPath<Object>(path) != null)
-        {
-            Debug.LogError($"[FirstPage] {path} should have been deleted");
-            return false;
-        }
-
-        return true;
-    }
-
-    private static bool CheckClipPair(string forwardPath, string reversePath)
-    {
-        var forward = AssetDatabase.LoadAssetAtPath<VideoClip>(forwardPath);
-        var reverse = AssetDatabase.LoadAssetAtPath<VideoClip>(reversePath);
-
-        if (forward == null || reverse == null)
-        {
-            Debug.LogError($"[FirstPage] Missing clip: {forwardPath} or {reversePath}");
-            return false;
-        }
-
-        if (forward.frameCount != reverse.frameCount)
-        {
-            Debug.LogError($"[FirstPage] Frame count mismatch: {forwardPath} ({forward.frameCount}) vs {reversePath} ({reverse.frameCount})");
             return false;
         }
 
@@ -95,8 +64,8 @@ public static class ValidateFirstPageScene
             var so = new SerializedObject(intro);
             foreach (var field in new[]
             {
-                "playerA", "playerB", "videoSurface",
-                "introReverseClip", "idleClip", "idleReverseClip",
+                "introPlayer", "idlePlayer", "videoSurface",
+                "introForwardClip", "introReverseClip", "idleLoopClip",
                 "logoGroup", "logoRect",
                 "pressToStartGroup", "pressToStartRect", "logoutGroup", "logoutButton",
                 "authButtonsGroup", "authButtonsRect", "loginButton", "signupButton",
@@ -130,9 +99,9 @@ public static class ValidateFirstPageScene
         var loop = scene.GetRootGameObjects()
             .SelectMany(go => go.GetComponentsInChildren<UISpriteLoop>(true))
             .FirstOrDefault();
-        if (loop == null || new SerializedObject(loop).FindProperty("frames").arraySize == 0)
+        if (loop == null || new SerializedObject(loop).FindProperty("frames").arraySize < 2)
         {
-            Debug.LogError("[FirstPage] UISpriteLoop has no logo frames wired");
+            Debug.LogError("[FirstPage] UISpriteLoop needs at least two logo frames");
             ok = false;
         }
         else if (PrefabUtility.GetCorrespondingObjectFromSource(loop.gameObject) == null)

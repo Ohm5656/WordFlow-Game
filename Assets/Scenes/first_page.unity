@@ -198,7 +198,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -621,12 +621,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4875925f8532d5a43a1ed0d9a499ea16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FirstPageIntro
-  playerA: {fileID: 612281464}
-  playerB: {fileID: 612281463}
+  introPlayer: {fileID: 612281464}
+  idlePlayer: {fileID: 612281463}
   videoSurface: {fileID: 1061585783}
+  introForwardClip: {fileID: 32900000, guid: cf9de48c9761b2a4ab15c8c7be7584e4, type: 3}
   introReverseClip: {fileID: 32900000, guid: 14ff990ef8ac6d64f831eb574f60ed91, type: 3}
-  idleClip: {fileID: 32900000, guid: 650c159f739e5714c92d9e265f5350b5, type: 3}
-  idleReverseClip: {fileID: 32900000, guid: f6b3ed55e3b16984a9fde14049a81b2a, type: 3}
+  idleLoopClip: {fileID: 32900000, guid: d618c036473f8e5479dc0add88581b43, type: 3}
   logoGroup: {fileID: 1179606091}
   logoRect: {fileID: 1179606090}
   pressToStartGroup: {fileID: 405737862}
@@ -931,11 +931,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1053446609687216090, guid: b9a1c58f638c54c49b5307fe2df17483, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 17
       objectReference: {fileID: 0}
     - target: {fileID: 1053446609687216090, guid: b9a1c58f638c54c49b5307fe2df17483, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: 57
       objectReference: {fileID: 0}
     - target: {fileID: 1053446609687216090, guid: b9a1c58f638c54c49b5307fe2df17483, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -952,6 +952,14 @@ PrefabInstance:
     - target: {fileID: 4776593489376908380, guid: b9a1c58f638c54c49b5307fe2df17483, type: 3}
       propertyPath: m_Name
       value: FirstPageLogo
+      objectReference: {fileID: 0}
+    - target: {fileID: 6115323323566660423, guid: b9a1c58f638c54c49b5307fe2df17483, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6115323323566660423, guid: b9a1c58f638c54c49b5307fe2df17483, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.5
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1083,14 +1091,14 @@ RectTransform:
   m_GameObject: {fileID: 1312493581}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.2687, y: 1.2687, z: 1.2687}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 694900719}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -185, y: 0}
+  m_AnchoredPosition: {x: -260, y: 0}
   m_SizeDelta: {x: 317.3077, y: 110}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1356438705
@@ -1203,14 +1211,14 @@ RectTransform:
   m_GameObject: {fileID: 1356438705}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.2687, y: 1.2687, z: 1.2687}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 694900719}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 185, y: 0}
+  m_AnchoredPosition: {x: 214, y: 0}
   m_SizeDelta: {x: 323.60855, y: 110}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1616819551
@@ -1371,7 +1379,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -1531,7 +1539,7 @@ Canvas:
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
   m_UseReflectionProbes: 0
-  m_AdditionalShaderChannelsFlag: 0
+  m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
