@@ -11,12 +11,35 @@ public static class ValidateFirstPageScene
     public static void Validate()
     {
         bool ok = true;
-        ok &= CheckClipPair("Assets/Video/intro.mp4", "Assets/Video/intro_rev.mp4");
         ok &= CheckClipPair("Assets/Video/idle.mp4", "Assets/Video/idle_rev.mp4");
+        ok &= CheckClipExists("Assets/Video/intro_rev.mp4");
+        ok &= CheckGone("Assets/Video/intro.mp4");
         ok &= CheckBuildSettings();
         ok &= CheckSceneWiring();
 
         Debug.Log(ok ? "[FirstPage] Validate: ALL CHECKS PASSED" : "[FirstPage] Validate: FAILED — see errors above");
+    }
+
+    private static bool CheckClipExists(string path)
+    {
+        if (AssetDatabase.LoadAssetAtPath<VideoClip>(path) == null)
+        {
+            Debug.LogError($"[FirstPage] Missing clip: {path}");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool CheckGone(string path)
+    {
+        if (AssetDatabase.LoadAssetAtPath<Object>(path) != null)
+        {
+            Debug.LogError($"[FirstPage] {path} should have been deleted");
+            return false;
+        }
+
+        return true;
     }
 
     private static bool CheckClipPair(string forwardPath, string reversePath)
@@ -70,7 +93,14 @@ public static class ValidateFirstPageScene
         else
         {
             var so = new SerializedObject(intro);
-            foreach (var field in new[] { "playerA", "playerB", "videoSurface", "pressToStartGroup", "introClip", "introReverseClip", "idleClip", "idleReverseClip" })
+            foreach (var field in new[]
+            {
+                "playerA", "playerB", "videoSurface",
+                "introReverseClip", "idleClip", "idleReverseClip",
+                "logoGroup", "logoRect",
+                "pressToStartGroup", "pressToStartRect", "logoutGroup", "logoutButton",
+                "authButtonsGroup", "authButtonsRect", "loginButton", "signupButton",
+            })
             {
                 var p = so.FindProperty(field);
                 if (p == null || p.objectReferenceValue == null)
@@ -79,6 +109,31 @@ public static class ValidateFirstPageScene
                     ok = false;
                 }
             }
+        }
+
+        bool hasEventSystem = scene.GetRootGameObjects()
+            .Any(go => go.GetComponentInChildren<UnityEngine.EventSystems.EventSystem>(true) != null);
+        if (!hasEventSystem)
+        {
+            Debug.LogError("[FirstPage] No EventSystem in first_page scene — UI buttons will not click");
+            ok = false;
+        }
+
+        bool hasAuth = scene.GetRootGameObjects()
+            .Any(go => go.GetComponentInChildren<WordFlow.Adventure.Net.AuthSession>(true) != null);
+        if (!hasAuth)
+        {
+            Debug.LogError("[FirstPage] No AuthSession in first_page scene — auto-login cannot run");
+            ok = false;
+        }
+
+        bool logoFramesWired = scene.GetRootGameObjects()
+            .SelectMany(go => go.GetComponentsInChildren<UISpriteLoop>(true))
+            .Any(loop => new SerializedObject(loop).FindProperty("frames").arraySize > 0);
+        if (!logoFramesWired)
+        {
+            Debug.LogError("[FirstPage] UISpriteLoop has no logo frames wired");
+            ok = false;
         }
 
         if (!wasOpen)
