@@ -1,50 +1,79 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.Video;
+using WordFlow.Adventure.Net;
 
 /// <summary>
-/// first_page title screen: plays the intro forward then backward with a
-/// 1x-2x-1x speed ramp, then loops the idle clip forward/backward forever at
-/// normal speed until the player presses any key/click/tap, at which point it
-/// fades to black and loads WorldMap.
+/// first_page title screen. Sequence:
+///   1. intro_rev plays once, speed ramping 2x -> 1x; the WordFlow logo
+///      drop-bounces in partway through.
+///   2. idle/idle_rev ping-pong forever at 1x. On entering this phase the UI
+///      floats up: press-to-start + logout when a stored session exists,
+///      Login/Sign-up buttons otherwise.
+/// Press-to-start runs a silent TryAutoLogin before entering WorldMap; on
+/// failure (expired token) the auth buttons replace the prompt.
 /// </summary>
 public sealed class FirstPageIntro : MonoBehaviour
 {
     private const string WorldMapSceneName = "WorldMap";
+    private const string LoginSceneName = "Login";
+    private const string RegisterSceneName = "Register";
+
     private const float MinSpeed = 1f;
     private const float MaxSpeed = 2f;
-    private const float TextFadeDuration = 0.6f;
+    private const float SceneFadeDuration = 0.6f;
+    private const double FallbackClipLength = 5.0417; // seconds, matches the baked source clips
+
+    private const float LogoEntranceDelay = 0.6f;  // seconds into the intro leg
+    private const float LogoDropDuration = 1.1f;
+    private const float LogoDropHeight = 420f;     // px the logo falls from
+    private const float LogoFadePortion = 0.35f;   // fraction of the drop spent fading in
+
+    private const float UiFloatDuration = 0.55f;
+    private const float UiFloatDistance = 160f;
+    private const float UiSwapFadeDuration = 0.25f;
+
     private const float PromptPulsePeriod = 1.15f;
     private const float PromptMinimumAlpha = 0.55f;
     private const float PromptMinimumScale = 0.97f;
     private const float PromptMaximumScale = 1.03f;
-    private const float SceneFadeDuration = 0.6f;
-    private const double FallbackClipLength = 5.0417; // seconds, matches the baked source clips
 
+    [Header("Video")]
     [SerializeField] private VideoPlayer playerA;
     [SerializeField] private VideoPlayer playerB;
     [SerializeField] private RawImage videoSurface;
-    [SerializeField] private CanvasGroup pressToStartGroup;
-    [SerializeField] private VideoClip introClip;
     [SerializeField] private VideoClip introReverseClip;
     [SerializeField] private VideoClip idleClip;
     [SerializeField] private VideoClip idleReverseClip;
 
-    private enum RampPhase
-    {
-        Forward,
-        Reverse,
-        None,
-    }
+    [Header("Logo")]
+    [SerializeField] private CanvasGroup logoGroup;
+    [SerializeField] private RectTransform logoRect;
+
+    [Header("Session UI")]
+    [SerializeField] private CanvasGroup pressToStartGroup;
+    [SerializeField] private RectTransform pressToStartRect;
+    [SerializeField] private CanvasGroup logoutGroup;
+    [SerializeField] private Button logoutButton;
+
+    [Header("Auth UI")]
+    [SerializeField] private CanvasGroup authButtonsGroup;
+    [SerializeField] private RectTransform authButtonsRect;
+    [SerializeField] private Button loginButton;
+    [SerializeField] private Button signupButton;
 
     private VideoPlayer active;
     private VideoPlayer standby;
-    private RampPhase ramp = RampPhase.Forward;
+    private bool ramping = true;
     private bool acceptingInput;
     private bool transitioning;
+    private Vector2 logoRestPosition;
+    private Vector2 promptRestPosition;
+    private Vector2 authRestPosition;
 
     private void Awake()
     {
@@ -54,34 +83,42 @@ public sealed class FirstPageIntro : MonoBehaviour
         active = playerA;
         standby = playerB;
 
-        pressToStartGroup.alpha = 0f;
+        logoRestPosition = logoRect.anchoredPosition;
+        promptRestPosition = pressToStartRect.anchoredPosition;
+        authRestPosition = authButtonsRect.anchoredPosition;
+
+        HideGroup(logoGroup);
+        HideGroup(pressToStartGroup);
+        HideGroup(logoutGroup);
+        HideGroup(authButtonsGroup);
+
+        loginButton.onClick.AddListener(() => LeaveTo(LoginSceneName));
+        signupButton.onClick.AddListener(() => LeaveTo(RegisterSceneName));
+        logoutButton.onClick.AddListener(OnLogout);
 
         playerA.loopPointReached += HandleLoopPointReached;
         playerB.loopPointReached += HandleLoopPointReached;
 
-        active.clip = introClip;
+        active.clip = introReverseClip;
         active.prepareCompleted += OnFirstClipReady;
         active.Prepare();
 
-        standby.clip = introReverseClip;
+        standby.clip = idleClip;
         standby.Prepare();
     }
 
     private void Update()
     {
-        if (ramp != RampPhase.None)
+        if (ramping)
         {
             double length = active.length > 0 ? active.length : FallbackClipLength;
             float t = Mathf.Clamp01((float)(active.time / length));
-            active.playbackSpeed = ramp == RampPhase.Forward
-                ? Mathf.Lerp(MinSpeed, MaxSpeed, t)
-                : Mathf.Lerp(MaxSpeed, MinSpeed, t);
+            active.playbackSpeed = Mathf.Lerp(MaxSpeed, MinSpeed, t);
         }
 
-        if (acceptingInput && !transitioning && InputPressedThisFrame())
+        if (acceptingInput && !transitioning && EnterPressedThisFrame())
         {
-            transitioning = true;
-            StartCoroutine(GoToWorldMap());
+            OnPressToStart();
         }
 
         if (acceptingInput && !transitioning)
@@ -95,6 +132,7 @@ public sealed class FirstPageIntro : MonoBehaviour
         vp.prepareCompleted -= OnFirstClipReady;
         videoSurface.texture = vp.targetTexture;
         vp.Play();
+        StartCoroutine(LogoEntrance());
     }
 
     private void HandleLoopPointReached(VideoPlayer vp)
@@ -111,45 +149,169 @@ public sealed class FirstPageIntro : MonoBehaviour
         standby = finishedPlayer;
 
         videoSurface.texture = active.targetTexture;
+        active.playbackSpeed = 1f;
         active.Play();
 
-        standby.clip = NextIdleClipFor(justFinished);
+        standby.clip = active.clip == idleClip ? idleReverseClip : idleClip;
         standby.Prepare();
 
-        if (justFinished == introClip)
+        if (justFinished == introReverseClip)
         {
-            ramp = RampPhase.Reverse;
-        }
-        else if (justFinished == introReverseClip)
-        {
-            ramp = RampPhase.None;
-            active.playbackSpeed = 1f;
-            StartCoroutine(FadeInPressToStart());
+            ramping = false;
+            StartCoroutine(RevealUi());
         }
     }
 
-    private VideoClip NextIdleClipFor(VideoClip justFinished)
-    {
-        bool wasReverseLeg = justFinished == introReverseClip || justFinished == idleReverseClip;
-        return wasReverseLeg ? idleReverseClip : idleClip;
-    }
+    // ---- logo ----
 
-    private IEnumerator FadeInPressToStart()
+    private IEnumerator LogoEntrance()
     {
-        for (float t = 0f; t < TextFadeDuration; t += Time.unscaledDeltaTime)
+        yield return new WaitForSeconds(LogoEntranceDelay);
+
+        for (float t = 0f; t < LogoDropDuration; t += Time.deltaTime)
         {
-            pressToStartGroup.alpha = Mathf.Clamp01(t / TextFadeDuration);
+            float p = t / LogoDropDuration;
+            logoGroup.alpha = Mathf.Clamp01(p / LogoFadePortion);
+            logoRect.anchoredPosition = logoRestPosition + Vector2.up * (LogoDropHeight * (1f - EaseOutBounce(p)));
             yield return null;
         }
 
-        pressToStartGroup.alpha = 1f;
-        acceptingInput = true;
+        logoGroup.alpha = 1f;
+        logoRect.anchoredPosition = logoRestPosition;
     }
 
-    /// <summary>
-    /// A subtle, familiar title-screen pulse: the prompt gently brightens and
-    /// scales while the idle video is waiting for input.
-    /// </summary>
+    private static float EaseOutBounce(float t)
+    {
+        const float n1 = 7.5625f, d1 = 2.75f;
+        if (t < 1f / d1) return n1 * t * t;
+        if (t < 2f / d1) { t -= 1.5f / d1; return n1 * t * t + 0.75f; }
+        if (t < 2.5f / d1) { t -= 2.25f / d1; return n1 * t * t + 0.9375f; }
+        t -= 2.625f / d1; return n1 * t * t + 0.984375f;
+    }
+
+    // ---- UI reveal ----
+
+    private IEnumerator RevealUi()
+    {
+        bool hasSession = AuthSession.Instance != null && AuthSession.Instance.HasStoredSession;
+        if (hasSession)
+        {
+            StartCoroutine(FadeIn(logoutGroup, UiFloatDuration));
+            yield return FloatUp(pressToStartGroup, pressToStartRect, promptRestPosition);
+            EnableGroup(logoutGroup);
+            acceptingInput = true;
+        }
+        else
+        {
+            yield return FloatUp(authButtonsGroup, authButtonsRect, authRestPosition);
+            EnableGroup(authButtonsGroup);
+        }
+    }
+
+    private IEnumerator FloatUp(CanvasGroup group, RectTransform rect, Vector2 rest)
+    {
+        for (float t = 0f; t < UiFloatDuration; t += Time.deltaTime)
+        {
+            float p = t / UiFloatDuration;
+            float eased = 1f - Mathf.Pow(1f - p, 3f); // ease-out cubic
+            group.alpha = p;
+            rect.anchoredPosition = rest + Vector2.down * (UiFloatDistance * (1f - eased));
+            yield return null;
+        }
+
+        group.alpha = 1f;
+        rect.anchoredPosition = rest;
+    }
+
+    private static IEnumerator FadeIn(CanvasGroup group, float duration)
+    {
+        for (float t = 0f; t < duration; t += Time.deltaTime)
+        {
+            group.alpha = t / duration;
+            yield return null;
+        }
+
+        group.alpha = 1f;
+    }
+
+    private static IEnumerator FadeOut(CanvasGroup group, float duration)
+    {
+        float start = group.alpha;
+        for (float t = 0f; t < duration; t += Time.deltaTime)
+        {
+            group.alpha = Mathf.Lerp(start, 0f, t / duration);
+            yield return null;
+        }
+
+        group.alpha = 0f;
+    }
+
+    private IEnumerator SwapPromptForAuthButtons()
+    {
+        // Kill interaction immediately; the fades below are cosmetic.
+        logoutGroup.interactable = false;
+        logoutGroup.blocksRaycasts = false;
+        pressToStartGroup.interactable = false;
+        pressToStartGroup.blocksRaycasts = false;
+
+        StartCoroutine(FadeOut(logoutGroup, UiSwapFadeDuration));
+        yield return FadeOut(pressToStartGroup, UiSwapFadeDuration);
+        yield return FloatUp(authButtonsGroup, authButtonsRect, authRestPosition);
+        EnableGroup(authButtonsGroup);
+    }
+
+    // ---- actions ----
+
+    private void OnPressToStart()
+    {
+        transitioning = true;
+        AuthSession.Instance.TryAutoLogin(ok =>
+        {
+            if (ok)
+            {
+                StartCoroutine(LoadAfterFade(WorldMapSceneName));
+            }
+            else
+            {
+                transitioning = false;
+                acceptingInput = false;
+                StartCoroutine(SwapPromptForAuthButtons());
+            }
+        });
+    }
+
+    private void OnLogout()
+    {
+        if (transitioning)
+        {
+            return;
+        }
+
+        AuthSession.Instance?.Logout();
+        acceptingInput = false;
+        StartCoroutine(SwapPromptForAuthButtons());
+    }
+
+    private void LeaveTo(string sceneName)
+    {
+        if (transitioning)
+        {
+            return;
+        }
+
+        transitioning = true;
+        authButtonsGroup.interactable = false;
+        StartCoroutine(LoadAfterFade(sceneName));
+    }
+
+    private IEnumerator LoadAfterFade(string sceneName)
+    {
+        yield return StartCoroutine(SceneFadeController.Cover(SceneFadeDuration));
+        SceneManager.LoadScene(sceneName);
+    }
+
+    // ---- prompt pulse ----
+
     private void AnimatePressToStart()
     {
         float phase = (Mathf.Sin(Time.unscaledTime * Mathf.PI * 2f / PromptPulsePeriod) + 1f) * 0.5f;
@@ -159,17 +321,19 @@ public sealed class FirstPageIntro : MonoBehaviour
         pressToStartGroup.transform.localScale = Vector3.one * scale;
     }
 
-    private IEnumerator GoToWorldMap()
-    {
-        yield return StartCoroutine(SceneFadeController.Cover(SceneFadeDuration));
-        SceneManager.LoadScene(WorldMapSceneName);
-    }
+    // ---- input ----
 
-    private static bool InputPressedThisFrame()
+    private static bool EnterPressedThisFrame()
     {
         if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)
         {
             return true;
+        }
+
+        bool pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+        if (pointerOverUi)
+        {
+            return false;
         }
 
         if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
@@ -183,6 +347,21 @@ public sealed class FirstPageIntro : MonoBehaviour
         }
 
         return false;
+    }
+
+    // ---- helpers ----
+
+    private static void HideGroup(CanvasGroup group)
+    {
+        group.alpha = 0f;
+        group.interactable = false;
+        group.blocksRaycasts = false;
+    }
+
+    private static void EnableGroup(CanvasGroup group)
+    {
+        group.interactable = true;
+        group.blocksRaycasts = true;
     }
 
     private static void ConfigurePlayer(VideoPlayer player)

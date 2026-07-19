@@ -6,9 +6,8 @@ using WordFlow.Adventure.Net;
 namespace WordFlow.Adventure.UI
 {
     /// <summary>
-    /// Login scene (build index 0). Email + password → AuthSession.Login. On Start it tries a
-    /// silent auto-login from a stored session and skips the form on success. Links to the
-    /// Register and ForgotPassword scenes.
+    /// Login scene. Email + password → AuthSession.Login. Auto-login now lives in first_page.
+    /// Links to the Register and ForgotPassword scenes.
     /// </summary>
     public sealed class LoginController : AuthControllerBase
     {
@@ -37,18 +36,6 @@ namespace WordFlow.Adventure.UI
             if (AuthSession.Instance == null)
             {
                 ShowStatus("ระบบล็อกอินยังไม่พร้อม (ไม่พบ AuthSession ในซีน)");
-                return;
-            }
-            // Returning player: restore the stored session silently and skip the form.
-            if (AuthSession.Instance.HasStoredSession)
-            {
-                SetBusy(true);
-                ShowStatus("กำลังเข้าสู่ระบบ…");
-                AuthSession.Instance.TryAutoLogin(ok =>
-                {
-                    if (ok) GoToScene(nextSceneName);
-                    else { SetBusy(false); ShowStatus(""); }   // stored token invalid → show the form
-                });
             }
         }
 
