@@ -15,12 +15,67 @@
 3. The forward intro leg (1x→2x) is cut entirely. The game opens directly on `intro_rev` at 2x easing to 1x (~3.5 s). `Assets/Video/intro.mp4` is deleted.
 4. After the drop-bounce, the logo's 39-frame sparkle animation loops forever.
 
-## Status
+## Status — all tasks DONE (2026-07-19)
 
-- [ ] Task 1 — crop art assets (Python one-off)
-- [ ] Task 2 — runtime code: `UISpriteLoop`, `FirstPageIntro` rewrite, `LoginController` auto-login removal, delete `DevLogoutButton`, delete `intro.mp4`
-- [ ] Task 3 — scene builder + validator update, rebuild scene
-- [ ] Task 4 — Play Mode verification
+- [x] Task 1 (`4d5d66dc5`) — crop art assets
+- [x] Task 2 (`1a8cf6739`) — runtime code
+- [x] Task 3 (`68b809a5b`) — scene builder + validator, scene rebuilt, `Tools/FirstPage/Validate` passes
+- [x] Task 4 — Play Mode verified, both session branches
+
+### Deviation from Task 1: alpha threshold instead of plain bbox
+
+The planned `getbbox()` crop was useless — it returned nearly the full 1920x1080 frame
+because both the logo frames and the button art carry near-invisible glow/sparkle dust
+out to the edges. Cropping now thresholds alpha at 32 (12% opacity) before taking the
+bounding box, which drops only dust that cannot be seen:
+
+- logo union bbox `(276, 246, 1728, 800)` → **1452x554** per frame, 39 frames
+- `login_btn.png` → 975x338, `signup_btn.png` → 962x327
+
+Verified the buttons keep clean edges by compositing over a sky-blue background — no grey
+halo. (Viewing the raw PNG is misleading: transparent pixels carry grey RGB, so a viewer
+that flattens alpha shows a grey box that does not exist once composited.)
+
+### Play Mode evidence
+
+MCP reads race the play-mode transition (instance IDs and component values come back
+edit-mode until the transition settles, and the resource layer reports
+`playmode_transition` inconsistently), so verification used temporary `[VERIFY]`
+`Debug.Log` lines at the phase transitions instead — console output is timing-independent.
+The logs were removed after the run; `FirstPageIntro.cs` has no net diff from them.
+
+Fresh player (no stored session):
+
+```
+[VERIFY] intro leg done, endSpeed=1.000 logoAlpha=1.00 logoY=-235.0 hasSession=False
+[VERIFY] fresh branch: auth=1.00 interactable=True prompt=0.00 logout=0.00
+```
+
+Returning player (stored session restored):
+
+```
+[VERIFY] intro leg done, endSpeed=1.000 logoAlpha=1.00 logoY=-235.0 hasSession=True
+[VERIFY] session branch: prompt=1.00 logout=1.00 auth=0.00 acceptingInput=True
+```
+
+That confirms: the 2x→1x ramp lands exactly on 1.000; the logo faded to alpha 1 and the
+drop-bounce settled on its rest Y of -235; and each branch reveals only its own UI.
+Separately confirmed from live component reads: `Logo` Image cycling mid-sequence
+(`0288.png`) with all 39 frames wired at 24 fps, and the idle ping-pong running
+(`idle_rev.mp4` prepared on standby while `idle.mp4` plays).
+
+**Note for future test runs:** a stray click in the Game View while the logout button is
+visible calls `AuthSession.Logout()` and wipes the real stored session. It happened during
+this run; the token was restored from a `reg export` backup of
+`HKCU\Software\Unity\UnityEditor\NSC\WordFlow`. Back that key up before Play Mode testing.
+
+### Still unverified — needs the user (no MCP tool can click the Game View)
+
+- Login button → fade → Login scene, form shows immediately (no auto-login).
+- Sign-up button → Register scene.
+- With session: press any key → TryAutoLogin → WorldMap.
+- Logout button → session UI swaps to Login/Sign-up in place.
+- WorldMap: the red "Logout (dev)" IMGUI button is gone.
 
 ## Global Constraints
 
