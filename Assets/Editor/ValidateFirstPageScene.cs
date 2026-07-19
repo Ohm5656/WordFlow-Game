@@ -127,12 +127,18 @@ public static class ValidateFirstPageScene
             ok = false;
         }
 
-        bool logoFramesWired = scene.GetRootGameObjects()
+        var loop = scene.GetRootGameObjects()
             .SelectMany(go => go.GetComponentsInChildren<UISpriteLoop>(true))
-            .Any(loop => new SerializedObject(loop).FindProperty("frames").arraySize > 0);
-        if (!logoFramesWired)
+            .FirstOrDefault();
+        if (loop == null || new SerializedObject(loop).FindProperty("frames").arraySize == 0)
         {
             Debug.LogError("[FirstPage] UISpriteLoop has no logo frames wired");
+            ok = false;
+        }
+        else if (PrefabUtility.GetCorrespondingObjectFromSource(loop.gameObject) == null)
+        {
+            // Without the link, size/position edits made in the Prefab editor never reach the scene.
+            Debug.LogError("[FirstPage] Logo is not a prefab instance — prefab edits will not propagate");
             ok = false;
         }
 

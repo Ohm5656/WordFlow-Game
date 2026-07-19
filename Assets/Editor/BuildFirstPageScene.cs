@@ -21,6 +21,8 @@ public static class BuildFirstPageScene
     private const string ScenePath = "Assets/Scenes/first_page.unity";
     private const string ThaiFontPath = "Assets/Fonts/LeelawUI SDF.asset";
     private const string LogoFramesDir = "Assets/Art/login/WordFlow_logo_cropped";
+    private const string LogoPrefabPath = "Assets/Prefabs/FirstPageLogo.prefab";
+    private const string LogoChildName = "Logo";
     private const string LoginBtnPath = "Assets/Art/login/login_btn.png";
     private const string SignupBtnPath = "Assets/Art/login/signup_btn.png";
 
@@ -57,8 +59,7 @@ public static class BuildFirstPageScene
         scaler.matchWidthOrHeight = 0.5f;
 
         RawImage videoSurface = CreateVideoSurface(canvas.transform);
-        (CanvasGroup logoGroup, RectTransform logoRect, UISpriteLoop spriteLoop, Image logoImage) =
-            CreateLogo(canvas.transform, logoFrames[0]);
+        (CanvasGroup logoGroup, RectTransform logoRect) = InstantiateLogo(canvas.transform, logoFrames);
         (CanvasGroup authGroup, RectTransform authRect, Button loginBtn, Button signupBtn) =
             CreateAuthButtons(canvas.transform, loginSprite, signupSprite);
         CanvasGroup pressToStartGroup = CreatePressToStart(canvas.transform, thaiFont);
@@ -99,16 +100,6 @@ public static class BuildFirstPageScene
         SetRef(so, "signupButton", signupBtn);
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        var loopSo = new SerializedObject(spriteLoop);
-        SetRef(loopSo, "target", logoImage);
-        var framesProp = loopSo.FindProperty("frames");
-        framesProp.arraySize = logoFrames.Length;
-        for (int i = 0; i < logoFrames.Length; i++)
-        {
-            framesProp.GetArrayElementAtIndex(i).objectReferenceValue = logoFrames[i];
-        }
-        loopSo.ApplyModifiedPropertiesWithoutUndo();
-
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), ScenePath);
 
         // TMP resets a freshly AddComponent-ed text back to the default font when it
@@ -145,32 +136,107 @@ public static class BuildFirstPageScene
         return image;
     }
 
-    private static (CanvasGroup, RectTransform, UISpriteLoop, Image) CreateLogo(Transform canvasTransform, Sprite firstFrame)
+    /// <summary>
+    /// Instantiates the logo prefab under the Canvas, keeping the prefab link so later
+    /// size/position tweaks made in the Prefab editor show up here without a rebuild.
+    /// </summary>
+    private static (CanvasGroup, RectTransform) InstantiateLogo(Transform canvasTransform, Sprite[] frames)
     {
-        var go = new GameObject("Logo", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(UISpriteLoop));
-        go.transform.SetParent(canvasTransform, false);
+        GameObject prefab = EnsureLogoPrefab(frames);
+        var root = (GameObject)PrefabUtility.InstantiatePrefab(prefab, canvasTransform);
+        root.name = prefab.name;
 
-        float aspect = firstFrame.rect.width / firstFrame.rect.height;
+        var rootRect = root.GetComponent<RectTransform>();
+        rootRect.anchorMin = Vector2.zero;
+        rootRect.anchorMax = Vector2.one;
+        rootRect.offsetMin = Vector2.zero;
+        rootRect.offsetMax = Vector2.zero;
+
+        Transform logo = root.transform.Find(LogoChildName);
+        return (logo.GetComponent<CanvasGroup>(), logo.GetComponent<RectTransform>());
+    }
+
+    /// <summary>
+    /// Creates the logo prefab on first run; afterwards only refreshes its frame list, so
+    /// size and position edits made in the Prefab editor survive a rebuild.
+    ///
+    /// The visual lives on a child rather than the prefab root because Unity always treats a
+    /// prefab instance root's position as an instance override — editing the root in the
+    /// Prefab editor would never reach the scene. Child transforms propagate normally.
+    /// </summary>
+    private static GameObject EnsureLogoPrefab(Sprite[] frames)
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(LogoPrefabPath);
+        if (existing != null)
+        {
+            Transform child = existing.transform.Find(LogoChildName);
+            if (child == null)
+            {
+                Debug.LogError($"[FirstPage] {LogoPrefabPath} has no '{LogoChildName}' child — delete the prefab to regenerate it.");
+                return existing;
+            }
+
+            WireFrames(child.GetComponent<UISpriteLoop>(), frames);
+            AssetDatabase.SaveAssets();
+            return AssetDatabase.LoadAssetAtPath<GameObject>(LogoPrefabPath);
+        }
+
+        var root = new GameObject("FirstPageLogo", typeof(RectTransform));
+        var rootRt = root.GetComponent<RectTransform>();
+        rootRt.anchorMin = Vector2.zero;
+        rootRt.anchorMax = Vector2.one;
+        rootRt.offsetMin = Vector2.zero;
+        rootRt.offsetMax = Vector2.zero;
+
+        var logoGO = new GameObject(LogoChildName, typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(UISpriteLoop));
+        logoGO.transform.SetParent(root.transform, false);
+
+        float aspect = frames[0].rect.width / frames[0].rect.height;
         const float width = 780f;
 
-        var rt = go.GetComponent<RectTransform>();
+        var rt = logoGO.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0.5f, 1f);
         rt.anchorMax = new Vector2(0.5f, 1f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = new Vector2(0f, -235f);
         rt.sizeDelta = new Vector2(width, width / aspect);
 
-        var image = go.GetComponent<Image>();
-        image.sprite = firstFrame;
+        var image = logoGO.GetComponent<Image>();
+        image.sprite = frames[0];
         image.preserveAspect = true;
         image.raycastTarget = false;
 
-        var group = go.GetComponent<CanvasGroup>();
+        var group = logoGO.GetComponent<CanvasGroup>();
         group.alpha = 0f;
         group.interactable = false;
         group.blocksRaycasts = false;
 
-        return (group, rt, go.GetComponent<UISpriteLoop>(), image);
+        WireFrames(logoGO.GetComponent<UISpriteLoop>(), frames);
+
+        if (!AssetDatabase.IsValidFolder("Assets/Prefabs"))
+        {
+            AssetDatabase.CreateFolder("Assets", "Prefabs");
+        }
+
+        GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, LogoPrefabPath);
+        Object.DestroyImmediate(root);
+        Debug.Log("[FirstPage] Created " + LogoPrefabPath);
+        return saved;
+    }
+
+    private static void WireFrames(UISpriteLoop loop, Sprite[] frames)
+    {
+        var so = new SerializedObject(loop);
+        SetRef(so, "target", loop.GetComponent<Image>());
+        var framesProp = so.FindProperty("frames");
+        framesProp.arraySize = frames.Length;
+        for (int i = 0; i < frames.Length; i++)
+        {
+            framesProp.GetArrayElementAtIndex(i).objectReferenceValue = frames[i];
+        }
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(loop);
     }
 
     private static (CanvasGroup, RectTransform, Button, Button) CreateAuthButtons(
