@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3010955859242115394}
   - component: {fileID: 1087534932316050071}
+  - component: {fileID: 9126381601490312029}
   m_Layer: 5
   m_Name: book_craft_ga
   m_TagString: Untagged
@@ -36,8 +37,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -40, y: 52.57849}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: -21.092041, y: -40.26416}
+  m_SizeDelta: {x: 2931.5393, y: 1873.8362}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1087534932316050071
 MonoBehaviour:
@@ -163,6 +164,42 @@ MonoBehaviour:
   recordingSuccessEndScale: 1
   playSuccessShakeAndFlash: 1
   transitionDelayAfterSuccess: 0.08
+--- !u!114 &9126381601490312029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 398081434976233232}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c4a1561a863d9041adde69900b3abba, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::WordAssemblyResizeHandle
+  referenceSize: {x: 2931.5393, y: 1873.8362}
+  childReferences:
+  - target: {fileID: 3255807126265896460}
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: -0.000045776367, y: -0.000045776367}
+    sizeDelta: {x: 2931.5393, y: 1873.8362}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+  - target: {fileID: 635941360186616710}
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 501.09204, y: -0.00035095215}
+    sizeDelta: {x: 431.099, y: 404.624}
+    pivot: {x: 0.5, y: 0.4999999}
+    localScale: {x: 1, y: 1, z: 1}
+  - target: {fileID: 8389800288604005357}
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: -323.90796, y: 30.842651}
+    sizeDelta: {x: 1391.6034, y: 1188.8566}
+    pivot: {x: 0.49999997, y: 0.4729905}
+    localScale: {x: 1, y: 1, z: 1}
+  lastAppliedSize: {x: 2931.5393, y: 1873.8362}
 --- !u!1 &1272268784160319242
 GameObject:
   m_ObjectHideFlags: 0
@@ -267,7 +304,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 31, y: -120}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 2962.8933, y: 1932.8585}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5534687178249842339
@@ -342,7 +379,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 520, y: -92.843}
+  m_AnchoredPosition: {x: 501.09204, y: -0.00035095215}
   m_SizeDelta: {x: 431.099, y: 404.624}
   m_Pivot: {x: 0.5, y: 0.4999999}
 --- !u!222 &7411598941602833965
@@ -417,7 +454,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 18.907913, y: -92.8427}
+  m_AnchoredPosition: {x: -0.000045776367, y: -0.000045776367}
   m_SizeDelta: {x: 2931.5393, y: 1873.8362}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6005483444650453532
@@ -492,7 +529,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 18.907913, y: -92.8427}
+  m_AnchoredPosition: {x: -0.000045776367, y: -0.000045776367}
   m_SizeDelta: {x: 2931.5393, y: 1873.8362}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1667491969415649353
@@ -567,7 +604,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 39.99182, y: -449.99}
+  m_AnchoredPosition: {x: 10.044006, y: 0}
   m_SizeDelta: {x: 500, y: 979}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7520894709023578808
@@ -642,7 +679,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -305, y: -62}
+  m_AnchoredPosition: {x: -323.90796, y: 30.842651}
   m_SizeDelta: {x: 1391.6034, y: 1188.8566}
   m_Pivot: {x: 0.49999997, y: 0.4729905}
 --- !u!222 &599222722505524696
@@ -693,6 +730,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1128161211953789162}
   - component: {fileID: 847362125494731453}
+  - component: {fileID: 1198082873351642017}
   m_Layer: 5
   m_Name: magic_stone
   m_TagString: Untagged
@@ -719,8 +757,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -40, y: 52.57849}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: -10.052185, y: -397.4115}
+  m_SizeDelta: {x: 1678.1042, y: 342.90198}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &847362125494731453
 MonoBehaviour:
@@ -846,6 +884,42 @@ MonoBehaviour:
   recordingSuccessEndScale: 1
   playSuccessShakeAndFlash: 1
   transitionDelayAfterSuccess: 0.08
+--- !u!114 &1198082873351642017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4731774303335798848}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c4a1561a863d9041adde69900b3abba, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::WordAssemblyResizeHandle
+  referenceSize: {x: 1678.1042, y: 342.90198}
+  childReferences:
+  - target: {fileID: 6271682913850322967}
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: -663.9478, y: 0}
+    sizeDelta: {x: 500.298, y: 979.72}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 0.7, y: 0.35, z: 1}
+  - target: {fileID: 1326508645484653385}
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 10.044006, y: 0}
+    sizeDelta: {x: 500, y: 979}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 0.7, y: 0.35, z: 1}
+  - target: {fileID: 4959258137597273939}
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 664.0522, y: 0}
+    sizeDelta: {x: 500, y: 979}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 0.7, y: 0.35, z: 1}
+  lastAppliedSize: {x: 1678.1042, y: 342.90198}
 --- !u!1 &4734940509927346350
 GameObject:
   m_ObjectHideFlags: 0
@@ -880,7 +954,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 503, y: -69}
+  m_AnchoredPosition: {x: 484.09204, y: 23.842651}
   m_SizeDelta: {x: 431, y: 404}
   m_Pivot: {x: 0.5, y: 0.4999999}
 --- !u!222 &3110089626807034146
@@ -955,7 +1029,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -488, y: -69}
+  m_AnchoredPosition: {x: -506.90796, y: 23.842651}
   m_SizeDelta: {x: 1391.6034, y: 1060.4152}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &631415023070131424
@@ -1030,7 +1104,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 694, y: -449.99}
+  m_AnchoredPosition: {x: 664.0522, y: 0}
   m_SizeDelta: {x: 500, y: 979}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8301062676703629118
@@ -1105,7 +1179,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -634, y: -449.99}
+  m_AnchoredPosition: {x: -663.9478, y: 0}
   m_SizeDelta: {x: 500.298, y: 979.72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1047334166240604871
@@ -1264,6 +1338,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6631411067661300589}
   - component: {fileID: 1599650960574828728}
+  - component: {fileID: 2316606408650695791}
   m_Layer: 5
   m_Name: book_craft_pa
   m_TagString: Untagged
@@ -1290,8 +1365,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -40, y: 52.57849}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: -21.092041, y: -40.26416}
+  m_SizeDelta: {x: 2931.5393, y: 1873.8362}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1599650960574828728
 MonoBehaviour:
@@ -1417,6 +1492,42 @@ MonoBehaviour:
   recordingSuccessEndScale: 1
   playSuccessShakeAndFlash: 1
   transitionDelayAfterSuccess: 0.08
+--- !u!114 &2316606408650695791
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7109061995456877688}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c4a1561a863d9041adde69900b3abba, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::WordAssemblyResizeHandle
+  referenceSize: {x: 2931.5393, y: 1873.8362}
+  childReferences:
+  - target: {fileID: 4707721823832183180}
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: -0.000045776367, y: -0.000045776367}
+    sizeDelta: {x: 2931.5393, y: 1873.8362}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+  - target: {fileID: 5041830559109117561}
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 484.09204, y: 23.842651}
+    sizeDelta: {x: 431, y: 404}
+    pivot: {x: 0.5, y: 0.4999999}
+    localScale: {x: 1, y: 1, z: 1}
+  - target: {fileID: 2882534386785589943}
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: -506.90796, y: 23.842651}
+    sizeDelta: {x: 1391.6034, y: 1060.4152}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+  lastAppliedSize: {x: 2931.5393, y: 1873.8362}
 --- !u!1 &7617995998360338796
 GameObject:
   m_ObjectHideFlags: 0
@@ -1427,6 +1538,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2171914590143946546}
   - component: {fileID: 5901467289885758602}
+  - component: {fileID: 3895065522956853877}
   m_Layer: 5
   m_Name: book_craft
   m_TagString: Untagged
@@ -1451,8 +1563,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -40, y: 52.57849}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: -9, y: -67.42151}
+  m_SizeDelta: {x: 2962.8933, y: 1932.8584}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5901467289885758602
 MonoBehaviour:
@@ -1578,3 +1690,25 @@ MonoBehaviour:
   recordingSuccessEndScale: 1
   playSuccessShakeAndFlash: 1
   transitionDelayAfterSuccess: 0.08
+--- !u!114 &3895065522956853877
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7617995998360338796}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c4a1561a863d9041adde69900b3abba, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::WordAssemblyResizeHandle
+  referenceSize: {x: 2962.8933, y: 1932.8584}
+  childReferences:
+  - target: {fileID: 2039438530867495822}
+    anchorMin: {x: 0.5, y: 0.5}
+    anchorMax: {x: 0.5, y: 0.5}
+    anchoredPosition: {x: 0, y: 0}
+    sizeDelta: {x: 2962.8933, y: 1932.8585}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+  lastAppliedSize: {x: 2962.8933, y: 1932.8584}
