@@ -102,6 +102,7 @@ MonoBehaviour:
   altWord: "\u0E01\u0E32"
   altWordId: kaa
   altSceneName: Assets/Scenes/region 1/Success_ga.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -342,7 +343,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 520, y: -92.843}
-  m_SizeDelta: {x: 988.5045, y: 638.8161}
+  m_SizeDelta: {x: 431.099, y: 404.624}
   m_Pivot: {x: 0.5, y: 0.4999999}
 --- !u!222 &7411598941602833965
 CanvasRenderer:
@@ -372,7 +373,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: fa95fd3fc2e0f16428049e6e3260d713, type: 3}
+  m_Sprite: {fileID: 2684087349741533242, guid: b465d0b5c1997f848b920e62baac591b, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -559,7 +560,7 @@ RectTransform:
   m_GameObject: {fileID: 4237302180396340982}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.7, y: 0.35, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1128161211953789162}
@@ -567,7 +568,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 39.99182, y: -449.99}
-  m_SizeDelta: {x: 457.1794, y: 899.9839}
+  m_SizeDelta: {x: 500, y: 979}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7520894709023578808
 CanvasRenderer:
@@ -597,7 +598,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -7867402966719221576, guid: f1af0387c546d6147937c47b67fe1c9d, type: 3}
+  m_Sprite: {fileID: -8877904513128440925, guid: 11d6b9e85cd2dee41bb50c2c1f87acb1, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -784,6 +785,7 @@ MonoBehaviour:
   altWord: "\u0E01\u0E32"
   altWordId: kaa
   altSceneName: Assets/Scenes/region 1/Success_ga.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -879,7 +881,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 503, y: -69}
-  m_SizeDelta: {x: 906.0201, y: 610.6534}
+  m_SizeDelta: {x: 431, y: 404}
   m_Pivot: {x: 0.5, y: 0.4999999}
 --- !u!222 &3110089626807034146
 CanvasRenderer:
@@ -909,7 +911,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f2097643332a23943af28c7d4dbcd973, type: 3}
+  m_Sprite: {fileID: -856714013644274890, guid: 2057103545dd27440a84eaddfb78a56a, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1021,7 +1023,7 @@ RectTransform:
   m_GameObject: {fileID: 5598193605662385848}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.7, y: 0.35, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1128161211953789162}
@@ -1029,7 +1031,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 694, y: -449.99}
-  m_SizeDelta: {x: 472.1557, y: 899.9839}
+  m_SizeDelta: {x: 500, y: 979}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8301062676703629118
 CanvasRenderer:
@@ -1059,7 +1061,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -3480174512281879912, guid: f1af0387c546d6147937c47b67fe1c9d, type: 3}
+  m_Sprite: {fileID: -7032150645464476754, guid: ab8c0138f1c015d4c95eb1159c8cfa11, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1096,7 +1098,7 @@ RectTransform:
   m_GameObject: {fileID: 6420178136136767582}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.7, y: 0.35, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1128161211953789162}
@@ -1104,7 +1106,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -634, y: -449.99}
-  m_SizeDelta: {x: 472.1557, y: 899.9839}
+  m_SizeDelta: {x: 500.298, y: 979.72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1047334166240604871
 CanvasRenderer:
@@ -1134,7 +1136,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -2714947130423497534, guid: f1af0387c546d6147937c47b67fe1c9d, type: 3}
+  m_Sprite: {fileID: 1740539771578665868, guid: 7fc96e6b2e6cf2b4b9847dca74bc82eb, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1354,6 +1356,7 @@ MonoBehaviour:
   altWord: "\u0E01\u0E32"
   altWordId: kaa
   altSceneName: Assets/Scenes/region 1/Success_ga.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08
@@ -1514,6 +1517,7 @@ MonoBehaviour:
   altWord: "\u0E01\u0E32"
   altWordId: kaa
   altSceneName: Assets/Scenes/region 1/Success_ga.unity
+  assemblySoundButtonRoot: {fileID: 0}
   soundButtonRoot: {fileID: 0}
   micButtonRoot: {fileID: 0}
   craftResultDelay: 0.08

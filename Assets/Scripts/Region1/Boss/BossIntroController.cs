@@ -15,6 +15,9 @@ using UnityEngine.Tilemaps;
 public sealed class BossIntroController : MonoBehaviour
 {
     private const string BossSceneName = "Boss";
+    // The minimal video-backed boss scene deliberately has no legacy world presentation.
+    // Keeping the old entrance opt-in prevents this runtime bootstrap from recreating it there.
+    private const string LegacyIntroMarkerName = "BossLegacyIntro";
     private const int OverlaySortingOrder = 31980;
     private const int StatueSortingOrder = 32000;
 
@@ -92,12 +95,23 @@ public sealed class BossIntroController : MonoBehaviour
         }
 
         GameObject[] roots = scene.GetRootGameObjects();
+        bool hasLegacyIntroMarker = false;
         for (int i = 0; i < roots.Length; i++)
         {
+            if (roots[i].name == LegacyIntroMarkerName)
+            {
+                hasLegacyIntroMarker = true;
+            }
+
             if (roots[i].GetComponentInChildren<BossIntroController>(true) != null)
             {
                 return;
             }
+        }
+
+        if (!hasLegacyIntroMarker)
+        {
+            return;
         }
 
         GameObject host = new GameObject("Boss Intro Controller");
