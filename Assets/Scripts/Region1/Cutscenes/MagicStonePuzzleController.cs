@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using WordFlow.Adventure.Core;
 using WordFlow.Adventure.Net;
 
-public sealed class MagicStonePuzzleController : MonoBehaviour
+public sealed class MagicStonePuzzleController : MonoBehaviour, IStonePuzzleOwner
 {
     // Times the build (stones interactive -> word assembled), like word_build_paa_polished,
     // so /grade gets a real buildLatencyMs instead of 0.

@@ -27,6 +27,7 @@ public sealed class SceneFadeController : MonoBehaviour
     {
         ReferenceForestSceneName,
         "word_build_paa_polished",
+        "practice_night",
     };
 
     private const string CoverObjectName = "Scene Fade Cover";

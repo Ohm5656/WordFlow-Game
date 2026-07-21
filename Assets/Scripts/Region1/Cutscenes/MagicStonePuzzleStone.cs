@@ -3,9 +3,20 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+/// <summary>
+/// The minimal contract MagicStonePuzzleStone needs from whatever orchestrates it. Extracted so
+/// PracticeWordAssembly (practice_night) can reuse the stone's drag/reveal/snap behaviour without
+/// depending on the much larger, quest-specific MagicStonePuzzleController.
+/// </summary>
+public interface IStonePuzzleOwner
+{
+    bool CanInteract { get; }
+    void HandleStoneClicked(MagicStonePuzzleStone stone);
+}
+
 public sealed class MagicStonePuzzleStone : MonoBehaviour, IPointerClickHandler
 {
-    private MagicStonePuzzleController controller;
+    private IStonePuzzleOwner controller;
     private RectTransform rectTransform;
     private CanvasGroup canvasGroup;
     private Image image;
@@ -22,7 +33,7 @@ public sealed class MagicStonePuzzleStone : MonoBehaviour, IPointerClickHandler
     // The glyph this stone represents (e.g. "ก", "ป", "า"). Used to assemble the word.
     public string Letter { get; private set; } = "";
 
-    public void Initialize(MagicStonePuzzleController owner)
+    public void Initialize(IStonePuzzleOwner owner)
     {
         controller = owner;
         rectTransform = transform as RectTransform;
