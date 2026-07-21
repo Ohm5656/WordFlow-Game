@@ -18,6 +18,7 @@ public static class CreateBossSpritePrefab
     private const string ControllerPath = "Assets/Prefabs/Boss/BossSprite.controller";
     private const string PrefabPath = "Assets/Prefabs/Boss/BossSprite.prefab";
     private const float FrameRate = 12f;
+    private const int AndroidMaxTextureSize = 1024;
 
     [MenuItem("Tools/Boss/Create Sprite Boss Prefab")]
     public static void Execute()
@@ -50,6 +51,15 @@ public static class CreateBossSpritePrefab
         Debug.Log($"[CreateBossSpritePrefab] Created {PrefabPath} with {attackFrames.Count} attack frames and {idleFrames.Count} idle frames.");
     }
 
+    [MenuItem("Tools/Boss/Optimize Sprite Frames for Mobile")]
+    public static void OptimizeSpriteFramesForMobile()
+    {
+        int changedCount = OptimizeFrameImporters(AttackFramesPath) + OptimizeFrameImporters(IdleFramesPath);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"[CreateBossSpritePrefab] Optimized {changedCount} boss sprite frames for Android.");
+    }
+
     private static List<Sprite> LoadFrames(string framesFolder)
     {
         string absoluteFolder = Path.GetFullPath(framesFolder);
@@ -71,15 +81,8 @@ public static class CreateBossSpritePrefab
                 throw new InvalidOperationException($"Texture importer is unavailable for {assetPath}.");
             }
 
-            if (importer.textureType != TextureImporterType.Sprite ||
-                importer.spriteImportMode != SpriteImportMode.Single ||
-                !importer.alphaIsTransparency ||
-                importer.mipmapEnabled)
+            if (ConfigureFrameImporter(importer))
             {
-                importer.textureType = TextureImporterType.Sprite;
-                importer.spriteImportMode = SpriteImportMode.Single;
-                importer.alphaIsTransparency = true;
-                importer.mipmapEnabled = false;
                 importer.SaveAndReimport();
             }
 
@@ -93,6 +96,73 @@ public static class CreateBossSpritePrefab
         }
 
         return frames;
+    }
+
+    private static int OptimizeFrameImporters(string framesFolder)
+    {
+        string absoluteFolder = Path.GetFullPath(framesFolder);
+        string[] frameFiles = Directory.GetFiles(absoluteFolder, "*.png", SearchOption.TopDirectoryOnly);
+        int changedCount = 0;
+
+        for (int index = 0; index < frameFiles.Length; index++)
+        {
+            string assetPath = framesFolder + "/" + Path.GetFileName(frameFiles[index]);
+            TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+            if (importer != null && ConfigureFrameImporter(importer))
+            {
+                importer.SaveAndReimport();
+                changedCount++;
+            }
+        }
+
+        return changedCount;
+    }
+
+    private static bool ConfigureFrameImporter(TextureImporter importer)
+    {
+        bool requiresReimport =
+            importer.textureType != TextureImporterType.Sprite ||
+            importer.spriteImportMode != SpriteImportMode.Single ||
+            !importer.alphaIsTransparency ||
+            importer.mipmapEnabled ||
+            importer.isReadable ||
+            importer.streamingMipmaps ||
+            importer.filterMode != FilterMode.Bilinear ||
+            importer.wrapMode != TextureWrapMode.Clamp ||
+            importer.textureCompression != TextureImporterCompression.Compressed ||
+            importer.compressionQuality != 50;
+
+        importer.textureType = TextureImporterType.Sprite;
+        importer.spriteImportMode = SpriteImportMode.Single;
+        importer.alphaIsTransparency = true;
+        importer.mipmapEnabled = false;
+        importer.isReadable = false;
+        importer.streamingMipmaps = false;
+        importer.filterMode = FilterMode.Bilinear;
+        importer.wrapMode = TextureWrapMode.Clamp;
+        importer.textureCompression = TextureImporterCompression.Compressed;
+        importer.compressionQuality = 50;
+
+        TextureImporterPlatformSettings androidSettings = importer.GetPlatformTextureSettings("Android");
+        if (!androidSettings.overridden ||
+            androidSettings.maxTextureSize != AndroidMaxTextureSize ||
+            androidSettings.format != TextureImporterFormat.Automatic ||
+            androidSettings.textureCompression != TextureImporterCompression.Compressed ||
+            androidSettings.compressionQuality != 50 ||
+            androidSettings.crunchedCompression)
+        {
+            androidSettings.name = "Android";
+            androidSettings.overridden = true;
+            androidSettings.maxTextureSize = AndroidMaxTextureSize;
+            androidSettings.format = TextureImporterFormat.Automatic;
+            androidSettings.textureCompression = TextureImporterCompression.Compressed;
+            androidSettings.compressionQuality = 50;
+            androidSettings.crunchedCompression = false;
+            importer.SetPlatformTextureSettings(androidSettings);
+            requiresReimport = true;
+        }
+
+        return requiresReimport;
     }
 
     private static AnimationClip CreateSpriteClip(string clipPath, List<Sprite> frames, bool shouldLoop)
@@ -167,6 +237,7 @@ public static class CreateBossSpritePrefab
             typeof(RectTransform),
             typeof(Canvas),
             typeof(CanvasScaler),
+            typeof(CanvasGroup),
             typeof(Animator),
             typeof(BossSpriteIntro));
 
@@ -180,6 +251,10 @@ public static class CreateBossSpritePrefab
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
+
+        CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
 
         Animator animator = root.GetComponent<Animator>();
         animator.runtimeAnimatorController = controller;

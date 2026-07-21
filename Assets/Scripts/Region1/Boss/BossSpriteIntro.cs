@@ -9,24 +9,66 @@ public sealed class BossSpriteIntro : MonoBehaviour
     [SerializeField] private string wordAssemblyObjectName = "WordAssembly";
     [SerializeField] private string bookObjectName = "book_craft";
 
+    [Header("Boss entrance")]
+    [SerializeField, Min(0f)] private float backgroundPreviewDelay = 0.35f;
+    [SerializeField, Min(0.01f)] private float bossFadeInDuration = 0.35f;
+    [SerializeField, Min(0.1f)] private float attackPlaybackSpeed = 1.25f;
+    [SerializeField, Min(0.1f)] private float idlePlaybackSpeed = 1f;
+
     [Header("Book reveal")]
     [SerializeField, Min(0f)] private float idleBeforeBookDelay = 1f;
     [SerializeField, Min(0f)] private float bookRevealDelay = 0.1f;
     [SerializeField, Range(0.01f, 1f)] private float bookStartScale = 0.08f;
     [SerializeField, Min(0.01f)] private float bookRevealDuration = 0.65f;
 
+    private static readonly int BossAttackState = Animator.StringToHash("Base Layer.BossAttack");
+
+    private Animator bossAnimator;
+    private CanvasGroup bossCanvasGroup;
     private GameObject wordAssembly;
     private MagicStonePuzzleController puzzle;
     private RectTransform bookRoot;
     private CanvasGroup bookCanvasGroup;
     private Vector2 bookTargetPosition;
     private Vector3 bookTargetScale;
+    private Coroutine entranceRoutine;
     private Coroutine revealRoutine;
     private bool revealStarted;
 
     private void Awake()
     {
+        bossAnimator = GetComponent<Animator>();
+        bossCanvasGroup = GetComponent<CanvasGroup>();
+        if (bossCanvasGroup == null)
+        {
+            bossCanvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+
+        bossCanvasGroup.alpha = 0f;
+        bossCanvasGroup.blocksRaycasts = false;
+        bossCanvasGroup.interactable = false;
+        bossAnimator.enabled = false;
         PrepareWordAssembly();
+    }
+
+    private void Start()
+    {
+        entranceRoutine = StartCoroutine(PlayBossEntrance());
+    }
+
+    private void OnDisable()
+    {
+        if (entranceRoutine != null)
+        {
+            StopCoroutine(entranceRoutine);
+            entranceRoutine = null;
+        }
+
+        if (revealRoutine != null)
+        {
+            StopCoroutine(revealRoutine);
+            revealRoutine = null;
+        }
     }
 
     // Called by the final frame of the non-looping BossAttack clip.
@@ -38,7 +80,31 @@ public sealed class BossSpriteIntro : MonoBehaviour
         }
 
         revealStarted = true;
+        bossAnimator.speed = idlePlaybackSpeed;
         revealRoutine = StartCoroutine(RevealBookRoutine());
+    }
+
+    private IEnumerator PlayBossEntrance()
+    {
+        yield return new WaitUntil(() => SceneFadeController.RevealComplete);
+
+        if (backgroundPreviewDelay > 0f)
+        {
+            yield return new WaitForSecondsRealtime(backgroundPreviewDelay);
+        }
+
+        float duration = Mathf.Max(0.01f, bossFadeInDuration);
+        for (float elapsed = 0f; elapsed < duration; elapsed += Time.unscaledDeltaTime)
+        {
+            bossCanvasGroup.alpha = SmoothStep(elapsed / duration);
+            yield return null;
+        }
+
+        bossCanvasGroup.alpha = 1f;
+        bossAnimator.speed = attackPlaybackSpeed;
+        bossAnimator.enabled = true;
+        bossAnimator.Play(BossAttackState, 0, 0f);
+        entranceRoutine = null;
     }
 
     private void PrepareWordAssembly()
