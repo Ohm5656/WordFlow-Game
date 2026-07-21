@@ -9,11 +9,12 @@ using WordFlow.Adventure.Net;
 
 /// <summary>
 /// first_page title screen. Sequence:
-///   1. intro_forward plays once at 1x; the WordFlow logo drop-bounces in.
-///   2. intro_rev plays once, speed ramping 2x -> 1x.
-///   3. idle_loop (already baked forward+backward) loops natively at 1x. On
-///      entering this phase the UI floats up: press-to-start + logout when a
-///      stored session exists, Login/Sign-up buttons otherwise.
+///   1. intro_rev plays once, speed ramping 2x -> 1x; the WordFlow logo drop-bounces in.
+///   2. idle_loop (already baked forward+backward) loops natively at 1x. On
+///      entering this phase the press-to-start prompt floats up (plus a logout
+///      button when a stored session exists). Pressing runs a silent
+///      TryAutoLogin: a live session enters WorldMap, no/expired session swaps
+///      the prompt for the Login/Sign-up buttons.
 ///
 /// The idle ping-pong is baked into one clip rather than swapped between two
 /// players: Unity's own looping has no swap latency, and the intro player is
@@ -70,9 +71,7 @@ public sealed class FirstPageIntro : MonoBehaviour
     [SerializeField] private Button loginButton;
     [SerializeField] private Button signupButton;
 
-    private enum IntroPhase { Forward, Reverse }
-
-    private IntroPhase introPhase;
+    private bool enteredIdle;
     private bool acceptingInput;
     private bool transitioning;
     private Vector2 logoRestPosition;
@@ -99,9 +98,9 @@ public sealed class FirstPageIntro : MonoBehaviour
 
         introPlayer.loopPointReached += OnIntroClipFinished;
 
-        introPhase = IntroPhase.Forward;
-        introPlayer.clip = introForwardClip;
-        introPlayer.prepareCompleted += OnForwardClipReady;
+        // Only the reverse leg plays: intro_rev at 2x ramping to 1x, then it hands off to the idle loop.
+        introPlayer.clip = introReverseClip;
+        introPlayer.prepareCompleted += OnReverseClipReady;
         introPlayer.Prepare();
 
         idlePlayer.clip = idleLoopClip;
@@ -110,11 +109,19 @@ public sealed class FirstPageIntro : MonoBehaviour
 
     private void Update()
     {
-        if (introPhase == IntroPhase.Reverse)
+        if (!enteredIdle)
         {
             double length = introPlayer.length > 0 ? introPlayer.length : FallbackClipLength;
             float t = Mathf.Clamp01((float)(introPlayer.time / length));
             introPlayer.playbackSpeed = Mathf.Lerp(MaxSpeed, MinSpeed, t);
+
+            // loopPointReached is unreliable on a non-looping clip whose playbackSpeed is being ramped
+            // every frame, so hand off to the idle loop the moment the reverse clip hits its last frame
+            // rather than waiting on the event. The last reverse frame matches idle_loop's first frame.
+            if (introPlayer.frameCount > 0 && introPlayer.frame >= (long)introPlayer.frameCount - 1)
+            {
+                EnterIdleLoop();
+            }
         }
 
         if (acceptingInput && !transitioning && EnterPressedThisFrame())
@@ -128,29 +135,19 @@ public sealed class FirstPageIntro : MonoBehaviour
         }
     }
 
-    private void OnForwardClipReady(VideoPlayer vp)
-    {
-        vp.prepareCompleted -= OnForwardClipReady;
-        videoSurface.texture = vp.targetTexture;
-        vp.playbackSpeed = MinSpeed;
-        vp.Play();
-        StartCoroutine(LogoEntrance());
-    }
-
     private void OnIntroClipFinished(VideoPlayer vp)
     {
-        if (introPhase == IntroPhase.Forward)
-        {
-            introPhase = IntroPhase.Reverse;
-            introPlayer.Stop();
-            introPlayer.clip = introReverseClip;
-            introPlayer.playbackSpeed = MaxSpeed;
-            introPlayer.prepareCompleted += OnReverseClipReady;
-            introPlayer.Prepare();
-            return;
-        }
+        EnterIdleLoop();
+    }
 
-        vp.loopPointReached -= OnIntroClipFinished;
+    /// Swap to the looping idle clip and float the UI up. Runs once; both loopPointReached and the
+    /// Update frame-check can call it, whichever wins.
+    private void EnterIdleLoop()
+    {
+        if (enteredIdle) return;
+        enteredIdle = true;
+
+        introPlayer.loopPointReached -= OnIntroClipFinished;
 
         // The idle player was prepared during the intro, so its first frame is already
         // in its render texture — swapping the surface first means no black flash.
@@ -167,6 +164,7 @@ public sealed class FirstPageIntro : MonoBehaviour
         videoSurface.texture = vp.targetTexture;
         vp.playbackSpeed = MaxSpeed;
         vp.Play();
+        StartCoroutine(LogoEntrance());
     }
 
     // ---- logo ----
@@ -200,19 +198,14 @@ public sealed class FirstPageIntro : MonoBehaviour
 
     private IEnumerator RevealUi()
     {
+        // Always float up press-to-start first. On press, OnPressToStart runs TryAutoLogin: a live
+        // session enters WorldMap, no/expired session swaps in the Login/Sign-up buttons. Logout only
+        // makes sense when a stored session exists, so it rides in alongside the prompt in that case.
         bool hasSession = AuthSession.Instance != null && AuthSession.Instance.HasStoredSession;
-        if (hasSession)
-        {
-            StartCoroutine(FadeIn(logoutGroup, UiFloatDuration));
-            yield return FloatUp(pressToStartGroup, pressToStartRect, promptRestPosition);
-            EnableGroup(logoutGroup);
-            acceptingInput = true;
-        }
-        else
-        {
-            yield return FloatUp(authButtonsGroup, authButtonsRect, authRestPosition);
-            EnableGroup(authButtonsGroup);
-        }
+        if (hasSession) StartCoroutine(FadeIn(logoutGroup, UiFloatDuration));
+        yield return FloatUp(pressToStartGroup, pressToStartRect, promptRestPosition);
+        if (hasSession) EnableGroup(logoutGroup);
+        acceptingInput = true;
     }
 
     private IEnumerator FloatUp(CanvasGroup group, RectTransform rect, Vector2 rest)

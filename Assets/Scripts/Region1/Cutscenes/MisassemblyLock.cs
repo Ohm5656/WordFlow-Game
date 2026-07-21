@@ -140,10 +140,12 @@ public sealed class MisassemblyLock : MonoBehaviour
     {
         IsLocked = true;
 
+#if UNITY_ANDROID || UNITY_IOS
         if (vibrateDeviceOnMisassembly && Application.isMobilePlatform)
         {
             Handheld.Vibrate();
         }
+#endif
 
         // raycastTarget on the full-screen vignette eats every tap on its own, belt-and-braces with
         // the CanInteract gate in MagicStonePuzzleController.
