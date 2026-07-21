@@ -70,6 +70,7 @@ public sealed class PracticeNightController : MonoBehaviour
 
     private Vector2 crowRestPosition;
     private Canvas crowCanvas;
+    private Vector3 bookNaturalScale = Vector3.one;
 
     private void Awake()
     {
@@ -83,6 +84,13 @@ public sealed class PracticeNightController : MonoBehaviour
         if (scarecrowRenderer != null)
         {
             Color c = scarecrowRenderer.color; c.a = 0f; scarecrowRenderer.color = c;
+        }
+
+        if (bookPopRoot != null)
+        {
+            bookNaturalScale = bookPopRoot.localScale;
+            bookPopRoot.localScale = bookNaturalScale * Mathf.Max(0.01f, bookPopStartScale);
+            bookPopRoot.gameObject.SetActive(false);
         }
     }
 
@@ -100,6 +108,12 @@ public sealed class PracticeNightController : MonoBehaviour
         if (active == null)
         {
             Debug.LogWarning("[PracticeNight] no event configured");
+            yield break;
+        }
+
+        if (wordAssembly == null || crowAnimator == null || crowRect == null || owl == null)
+        {
+            Debug.LogWarning("[PracticeNight] essential references not wired; aborting Run()");
             yield break;
         }
 
@@ -134,7 +148,7 @@ public sealed class PracticeNightController : MonoBehaviour
     private IEnumerator PopInBook()
     {
         if (bookPopRoot == null) yield break;
-        Vector3 target = bookPopRoot.localScale;
+        Vector3 target = bookNaturalScale;
         Vector3 start = target * Mathf.Max(0.01f, bookPopStartScale);
         bookPopRoot.gameObject.SetActive(true);
         bookPopRoot.localScale = start;
