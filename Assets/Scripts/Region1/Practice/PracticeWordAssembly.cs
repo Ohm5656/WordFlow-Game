@@ -46,8 +46,17 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     [SerializeField] private float resultRevealDuration = 0.38f;
     [SerializeField] private float resultStartScale = 0.96f;
 
+    [Header("Result: slide the whole book+stones UI off-screen")]
+    [Tooltip("Root to slide out. Empty = this GameObject's parent (the WordAssembly canvas child holding book_craft/magic_stone/slots).")]
+    [SerializeField] private RectTransform assemblyUiRoot;
+    [SerializeField] private Vector2 slideOutOffset = new Vector2(0f, -1600f);
+    [SerializeField] private float slideOutDuration = 0.5f;
+
     [Header("Audio")]
     [SerializeField] private AudioSource wordAudioSource;
+
+    [Header("Assembly sound hint (plays the target word while assembling)")]
+    [SerializeField] private UnityEngine.UI.Button assemblySoundButton;
 
     private readonly List<MagicStonePuzzleStone> stones = new List<MagicStonePuzzleStone>();
     private readonly MagicStonePuzzleStone[] slotOccupants = new MagicStonePuzzleStone[2];
@@ -76,6 +85,8 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
             stones[i].SetCurrentSlot(-1);
             stones[i].PrepareHidden(new Vector2(0f, revealYOffset), Mathf.Max(0.01f, revealStartScale));
         }
+
+        if (assemblyUiRoot == null) assemblyUiRoot = transform.parent as RectTransform;
     }
 
     /// Sets the round's target word, result page and echo clip, and wires the success callback.
@@ -86,6 +97,21 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         resultPage = resultPageRoot;
         wordClip = resultWordClip;
         onSuccess = onSuccessCallback;
+
+        if (assemblySoundButton != null)
+        {
+            assemblySoundButton.onClick.RemoveAllListeners();
+            assemblySoundButton.onClick.AddListener(PlayAssemblyHint);
+        }
+    }
+
+    private void PlayAssemblyHint()
+    {
+        if (!CanInteract || wordClip == null || wordAudioSource == null) return;
+        GameAudio.PlayClick();
+        wordAudioSource.Stop();
+        wordAudioSource.clip = wordClip;
+        wordAudioSource.Play();
     }
 
     public IEnumerator PlayReveal()
@@ -190,61 +216,27 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
             yield return new WaitForSeconds(resultRevealDelay);
         }
 
-        CanvasGroup bookGroup = EnsureCanvasGroup(bookCraftRoot);
-        CanvasGroup resultGroup = EnsureCanvasGroup(resultPage);
-        CanvasGroup stoneRootGroup = EnsureCanvasGroup(DragParent);
-
-        Vector3 resultTargetScale = resultPage != null ? resultPage.localScale : Vector3.one;
-        Vector3 resultStartScaleVector = resultTargetScale * Mathf.Max(0.01f, resultStartScale);
-
-        if (resultPage != null)
-        {
-            resultPage.gameObject.SetActive(true);
-            resultPage.localScale = resultStartScaleVector;
-            SetGroup(resultGroup, 0f);
-        }
-
-        SetGroup(stoneRootGroup, 1f);
-
-        float duration = Mathf.Max(0.01f, resultRevealDuration);
-        for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
-        {
-            float t = Mathf.Clamp01(elapsed / duration);
-            float smooth = SmoothStep(t);
-            float pop = EaseOutBack(t);
-
-            SetGroup(bookGroup, 1f - smooth);
-            SetGroup(resultGroup, smooth);
-            SetGroup(stoneRootGroup, 1f - smooth);
-
-            if (resultPage != null)
-            {
-                resultPage.localScale = Vector3.LerpUnclamped(resultStartScaleVector, resultTargetScale, pop);
-            }
-
-            yield return null;
-        }
-
-        SetGroup(bookGroup, 0f);
-        SetGroup(resultGroup, 1f);
-        SetGroup(stoneRootGroup, 0f);
-
-        if (bookCraftRoot != null)
-        {
-            bookCraftRoot.gameObject.SetActive(false);
-        }
-
-        if (resultPage != null)
-        {
-            resultPage.localScale = resultTargetScale;
-        }
-
+        // Voice the assembled target word once (listen-only — no mic, no backend).
         if (wordClip != null && wordAudioSource != null)
         {
             wordAudioSource.Stop();
             wordAudioSource.clip = wordClip;
             wordAudioSource.Play();
             yield return new WaitForSeconds(wordClip.length);
+        }
+
+        // Slide the whole book+stones UI off-screen; the in-world resolution plays next (controller).
+        if (assemblyUiRoot != null && slideOutDuration > 0f)
+        {
+            Vector2 from = assemblyUiRoot.anchoredPosition;
+            Vector2 to = from + slideOutOffset;
+            float safe = Mathf.Max(0.01f, slideOutDuration);
+            for (float t = 0f; t < safe; t += Time.deltaTime)
+            {
+                assemblyUiRoot.anchoredPosition = Vector2.LerpUnclamped(from, to, SmoothStep(Mathf.Clamp01(t / safe)));
+                yield return null;
+            }
+            assemblyUiRoot.anchoredPosition = to;
         }
 
         onSuccess?.Invoke();
@@ -334,32 +326,10 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         if (bookCraftRoot == null) bookCraftRoot = transform.parent.Find("book_craft") as RectTransform;
     }
 
-    private static CanvasGroup EnsureCanvasGroup(RectTransform target)
-    {
-        if (target == null) return null;
-        CanvasGroup group = target.GetComponent<CanvasGroup>();
-        if (group == null) group = target.gameObject.AddComponent<CanvasGroup>();
-        return group;
-    }
-
-    private static void SetGroup(CanvasGroup group, float alpha)
-    {
-        if (group == null) return;
-        group.alpha = Mathf.Clamp01(alpha);
-    }
-
     private static float SmoothStep(float value)
     {
         value = Mathf.Clamp01(value);
         return value * value * (3f - 2f * value);
-    }
-
-    private static float EaseOutBack(float value)
-    {
-        value = Mathf.Clamp01(value);
-        const float overshoot = 1.15f;
-        float shifted = value - 1f;
-        return 1f + shifted * shifted * ((overshoot + 1f) * shifted + overshoot);
     }
 
 #if UNITY_EDITOR
