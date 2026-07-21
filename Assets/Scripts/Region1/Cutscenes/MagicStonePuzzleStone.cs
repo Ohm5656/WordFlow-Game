@@ -11,6 +11,7 @@ using UnityEngine.UI;
 public interface IStonePuzzleOwner
 {
     bool CanInteract { get; }
+    float ReturnDuration { get; }
     void HandleStoneClicked(MagicStonePuzzleStone stone);
 }
 
