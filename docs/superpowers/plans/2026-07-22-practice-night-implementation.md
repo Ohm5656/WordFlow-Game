@@ -32,6 +32,33 @@ inspection/edits and play-mode verification.
   concrete implementation choices differ from that spec (see "Deviations" below), this plan wins —
   they were found while reading the actual shared components.
 
+## Revision R2 (2026-07-22, boss feedback) — READ THIS, it overrides parts of the tasks below
+
+The boss adjusted the design mid-execution. These points **override** the original task text where
+they conflict. Each affected task also carries an "R2 amendment" block at its end with the concrete
+deltas.
+
+1. **Result reveal is IN-SCENE, not in-book.** On a correct build, after the target word is voiced,
+   the **whole book+stones UI slides off-screen**, and the event resolution animation plays **in the
+   world, next to the scarecrow/crow** (the crow reverting & flying away, or being shooed). The
+   in-book result-page crossfade (`book_craft_ga`/`book_craft_pa`) that the original Task 2 code
+   block showed is **removed** — those pages are not used as the result. (Amends Task 2 + Task 3.)
+2. **Assembly-page target-word sound button** — while the stones are interactive, a sound button
+   lets the child hear the target word, exactly like CutScene_bear's assembly hint. (Amends Task 2.)
+3. **Crow is a flying actor** (fly-in + petrify for Event A, circle the scarecrow for Event B),
+   confirmed — this matches the original Task 3 plan. No change from the boss here.
+4. **Intro order:** night is applied immediately on entry (no day→night fade — the scene reveals
+   from black already night). Then: **scarecrow fades in → crow actor flies in → book bounces up →
+   stones reveal**, with the owl one-liner before the stones become interactive. (Amends Task 3.)
+5. **A hero character stands idle facing the camera** (no walking, no quest-walk logic). Add/enable
+   an idle hero in the scene. (Amends Task 4.)
+6. **Entry point is done by the boss** — a WorldMap (night) UI button on the left, separate from the
+   2★→3★ redo button, already loads this scene. Do **not** build the button. Task 4 only ensures
+   `practice_night` and `WorldMap` are both in Build Settings so the load/return works. (Amends Task 4.)
+7. **"อัดเสียง" = listen-only.** The boss's phrasing "ประกอบอัดเสียงเสร็จ" is interpreted as *after the
+   word is voiced/heard* — **no mic capture, no backend** (consistent with two prior explicit
+   decisions). If the boss later wants an actual mic-record beat, that is a new change, not this plan.
+
 ## Deviations from the design spec (found while reading the code)
 
 1. **`MagicStonePuzzleStone.Initialize()` takes the concrete `sealed class MagicStonePuzzleController`**,
@@ -651,6 +678,137 @@ and MisassemblyLock as-is; no smoke clock, no backend, no mic."
 
 ---
 
+#### R2 amendment (boss feedback 2026-07-22) — MODIFIES the code above
+
+Task 2's base version is already committed at `0d7b698f1`. Apply these deltas to
+`Assets/Scripts/Region1/Practice/PracticeWordAssembly.cs` on top of that commit — do NOT rewrite
+from scratch, and keep the existing reveal/snap/word-check/`MisassemblyRoutine` logic and the
+`Tools/Practice/Verify Word Classification` self-check unchanged.
+
+**Delta A — add the assembly-page target-word sound button (like CutScene_bear's assembly hint).**
+While the stones are interactive (`CanInteract`), tapping this button plays the round's target-word
+clip so the child can hear what to build. Add these serialized fields:
+
+```csharp
+    [Header("Assembly sound hint (plays the target word while assembling)")]
+    [SerializeField] private UnityEngine.UI.Button assemblySoundButton;
+```
+
+In `Configure(...)`, after storing `wordClip`, wire the button (idempotent — clear listeners first):
+
+```csharp
+        if (assemblySoundButton != null)
+        {
+            assemblySoundButton.onClick.RemoveAllListeners();
+            assemblySoundButton.onClick.AddListener(PlayAssemblyHint);
+        }
+```
+
+Add the handler (uses the same `wordAudioSource` as the result echo; gated on `CanInteract` so it
+is dead during the lock and after success):
+
+```csharp
+    private void PlayAssemblyHint()
+    {
+        if (!CanInteract || wordClip == null || wordAudioSource == null) return;
+        GameAudio.PlayClick();
+        wordAudioSource.Stop();
+        wordAudioSource.clip = wordClip;
+        wordAudioSource.Play();
+    }
+```
+
+If `assemblySoundButton` is left unassigned the feature is simply inert — Task 4 wiring may leave it
+null on first pass if no assembly-hint button object exists yet; that is acceptable and must be
+noted, not faked.
+
+**Delta B — replace the in-book result reveal with a book slide-out.** The result no longer shows
+`book_craft_ga`/`book_craft_pa` in-book; instead the whole assembly UI slides off-screen and the
+controller plays the in-world resolution. Change `SuccessRoutine()` so that, after the target word
+is voiced, it slides the assembly UI root off-screen, then invokes `onSuccess` — delete the
+`book_craft` → result-page crossfade/pop block. Add these fields:
+
+```csharp
+    [Header("Result: slide the whole book+stones UI off-screen")]
+    [Tooltip("Root to slide out. Empty = this GameObject's parent (the WordAssembly canvas child holding book_craft/magic_stone/slots).")]
+    [SerializeField] private RectTransform assemblyUiRoot;
+    [SerializeField] private Vector2 slideOutOffset = new Vector2(0f, -1600f);
+    [SerializeField] private float slideOutDuration = 0.5f;
+```
+
+Resolve `assemblyUiRoot` in `Awake` (fallback to `transform.parent`):
+
+```csharp
+        if (assemblyUiRoot == null) assemblyUiRoot = transform.parent as RectTransform;
+```
+
+New `SuccessRoutine()` body (replaces the old one entirely):
+
+```csharp
+    private IEnumerator SuccessRoutine()
+    {
+        resultShown = true;
+
+        for (int i = 0; i < stones.Count; i++)
+        {
+            stones[i].SetInteractable(false);
+        }
+
+        if (resultRevealDelay > 0f)
+        {
+            yield return new WaitForSeconds(resultRevealDelay);
+        }
+
+        // Voice the assembled target word once (listen-only — no mic, no backend).
+        if (wordClip != null && wordAudioSource != null)
+        {
+            wordAudioSource.Stop();
+            wordAudioSource.clip = wordClip;
+            wordAudioSource.Play();
+            yield return new WaitForSeconds(wordClip.length);
+        }
+
+        // Slide the whole book+stones UI off-screen; the in-world resolution plays next (controller).
+        if (assemblyUiRoot != null && slideOutDuration > 0f)
+        {
+            Vector2 from = assemblyUiRoot.anchoredPosition;
+            Vector2 to = from + slideOutOffset;
+            float safe = Mathf.Max(0.01f, slideOutDuration);
+            for (float t = 0f; t < safe; t += Time.deltaTime)
+            {
+                assemblyUiRoot.anchoredPosition = Vector2.LerpUnclamped(from, to, SmoothStep(Mathf.Clamp01(t / safe)));
+                yield return null;
+            }
+            assemblyUiRoot.anchoredPosition = to;
+        }
+
+        onSuccess?.Invoke();
+    }
+```
+
+The `resultPage`, `resultRevealDuration`, `resultStartScale`, and `bookCraftRoot` fields become
+unused by the success path. Leave `bookCraftRoot` (still used for the assembly page visibility if
+referenced elsewhere) but you may delete the now-unused `resultPage`/`resultRevealDuration`/
+`resultStartScale` fields and drop `resultPageRoot` from `Configure`'s signature — if you do, update
+Task 3's `wordAssembly.Configure(...)` call accordingly and say so in your report. Simplest
+non-breaking option: keep `Configure`'s signature as-is and just ignore `resultPage`. Pick one and
+state it.
+
+**Re-verify after the deltas:** recompile (0 errors) and re-run `Tools/Practice/Verify Word
+Classification` (still 6/6). Commit as a new commit:
+
+```bash
+git add Assets/Scripts/Region1/Practice/PracticeWordAssembly.cs
+git commit -m "feat: practice_night result = book slide-out + assembly sound hint (boss R2)
+
+On a correct build the book+stones UI slides off-screen (the in-world crow
+resolution plays next, driven by PracticeNightController) instead of showing
+an in-book result page. Adds an assembly-page target-word sound button like
+CutScene_bear's hint. Listen-only — no mic, no backend."
+```
+
+---
+
 ### Task 3: `PracticeNightController` — event pick, crow/owl intro, resolution, exit
 
 **Files:**
@@ -934,6 +1092,119 @@ resolution, and fades to WorldMap on success."
 
 ---
 
+#### R2 amendment (boss feedback 2026-07-22) — MODIFIES the code above
+
+Two changes to `Assets/Scripts/Region1/Practice/PracticeNightController.cs`. Keep everything else
+(event pick, crow fly-in/petrify/circle intro, owl line, `OnWordSuccess` resolution + fade) as
+written.
+
+**Delta A — intro order: fade the scarecrow in, and pop the book in, at the right points.** The
+required on-entry sequence is: night already applied → **scarecrow fades in → crow flies in → book
+bounces up → owl one-liner → stones reveal**. Add serialized fields:
+
+```csharp
+    [Header("Scarecrow + book intro")]
+    [SerializeField] private SpriteRenderer scarecrowRenderer; // dummy_idle_DOWN_0
+    [SerializeField] private float scarecrowFadeDuration = 0.6f;
+    [SerializeField] private RectTransform bookPopRoot; // the WordAssembly book_craft (or its parent) to pop in
+    [SerializeField] private float bookPopDuration = 0.5f;
+    [SerializeField] private float bookPopStartScale = 0.08f;
+```
+
+In `Awake`, hide the scarecrow (alpha 0) and pre-shrink the book so they can animate in:
+
+```csharp
+        if (scarecrowRenderer != null)
+        {
+            Color c = scarecrowRenderer.color; c.a = 0f; scarecrowRenderer.color = c;
+        }
+```
+
+Rewrite the top of `Run()` so the sequence is explicit (this replaces the existing
+`PlayIntro`→`PlayOwlLine`→`Configure`+`PlayReveal` ordering with the scarecrow/book beats inserted):
+
+```csharp
+    private IEnumerator Run()
+    {
+        yield return new WaitUntil(() => SceneFadeController.RevealComplete);
+
+        PracticeEvent active = PickEvent();
+        if (active == null)
+        {
+            Debug.LogWarning("[PracticeNight] no event configured");
+            yield break;
+        }
+
+        yield return FadeInScarecrow();
+        yield return PlayIntro(active);      // crow flies in (petrify for A / circle for B)
+        yield return PopInBook();
+        yield return PlayOwlLine(active);
+
+        wordAssembly.Configure(active.targetWord, active.resultPage, active.wordClip, () => StartCoroutine(OnWordSuccess(active)));
+        yield return wordAssembly.PlayReveal();
+    }
+
+    private IEnumerator FadeInScarecrow()
+    {
+        if (scarecrowRenderer == null) yield break;
+        float safe = Mathf.Max(0.01f, scarecrowFadeDuration);
+        Color c = scarecrowRenderer.color;
+        for (float t = 0f; t < safe; t += Time.deltaTime)
+        {
+            c.a = SmoothStep(Mathf.Clamp01(t / safe)); scarecrowRenderer.color = c;
+            yield return null;
+        }
+        c.a = 1f; scarecrowRenderer.color = c;
+    }
+
+    private IEnumerator PopInBook()
+    {
+        if (bookPopRoot == null) yield break;
+        Vector3 target = bookPopRoot.localScale;
+        Vector3 start = target * Mathf.Max(0.01f, bookPopStartScale);
+        bookPopRoot.gameObject.SetActive(true);
+        bookPopRoot.localScale = start;
+        float safe = Mathf.Max(0.01f, bookPopDuration);
+        for (float t = 0f; t < safe; t += Time.deltaTime)
+        {
+            bookPopRoot.localScale = Vector3.LerpUnclamped(start, target, EaseOutBack(Mathf.Clamp01(t / safe)));
+            yield return null;
+        }
+        bookPopRoot.localScale = target;
+    }
+
+    private static float EaseOutBack(float value)
+    {
+        value = Mathf.Clamp01(value);
+        const float overshoot = 1.15f;
+        float s = value - 1f;
+        return 1f + s * s * ((overshoot + 1f) * s + overshoot);
+    }
+```
+
+If Task 2 kept `Configure`'s signature unchanged, the `wordAssembly.Configure(...)` call above is
+fine as-is (the `resultPage` arg is ignored by the R2 Task 2 success path). If Task 2 dropped the
+`resultPage` parameter, remove `active.resultPage` from this call to match. Read the Task 2 report
+before writing this line and match whichever signature it committed.
+
+**Delta B — no separate result page.** `OnWordSuccess` already plays the in-world crow resolution
+(`ga_set_free` / shoo) and fades to WorldMap — correct and unchanged. The `PracticeEvent.resultPage`
+field is now only a book-pop reference at most; the boss wants the resolution in-world, which
+`OnWordSuccess` already does. No code change beyond Delta A.
+
+Recompile (0 errors) and commit as a new commit:
+
+```bash
+git add Assets/Scripts/Region1/Practice/PracticeNightController.cs
+git commit -m "feat: practice_night intro order — scarecrow fade + book pop (boss R2)
+
+Sequence on entry: scarecrow fades in, crow flies in, book bounces up, owl
+one-liner, then stones reveal. Result resolution stays in-world (crow set-free
+/ shoo) and fades to WorldMap."
+```
+
+---
+
 ### Task 4: Scene setup — Editor script, cleanup, wiring
 
 **Files:**
@@ -1184,6 +1455,67 @@ removes BearIntro*/BossUI/quest-path leftovers from the Boss.unity clone,
 strips the stray MagicStonePuzzleController instances the WordAssembly
 prefab carries over, and wires PracticeWordAssembly + PracticeNightController
 with the Crow and OwlGuide actors for the two practice events."
+```
+
+---
+
+#### R2 amendment (boss feedback 2026-07-22) — EXTENDS the Editor setup above
+
+Extend `Assets/Editor/PracticeNightSetup.cs` (and its `Tools/Practice/Setup Practice Night` run) so
+the R2 fields from Tasks 2 & 3 get wired, plus a hero idle and Build Settings. Keep all existing
+cleanup/wiring.
+
+**Delta A — wire the new serialized fields.** In `WireController` (or a sibling helper), after the
+existing wiring, add:
+
+- `PracticeWordAssembly.assemblyUiRoot` → the `WordAssembly` canvas child that holds
+  `book_craft`/`magic_stone`/slots (this is `magic_stone`'s parent — i.e. the same object the book
+  and stones live under; in this scene that is the `WordAssembly` root's relevant child). Set it to
+  the `RectTransform` whose `anchoredPosition` moving down slides book+stones together. If unsure,
+  set it to `magic_stone.parent` and note it for the play-mode check.
+- `PracticeWordAssembly.assemblySoundButton` → if an assembly-hint sound button object exists under
+  the book (e.g. a child named `sound` or `sound (1)` under `book_craft`), find it, ensure it has a
+  `Button` (add if missing), and assign. If none exists, leave null and note it — the feature is
+  inert until an art button is added; do NOT fabricate one.
+- `PracticeNightController.scarecrowRenderer` → `GameObject.Find("dummy_idle_DOWN_0")`'s
+  `SpriteRenderer`.
+- `PracticeNightController.bookPopRoot` → the `book_craft` `RectTransform` under `WordAssembly`.
+
+Use `SerializedObject`/`FindProperty` exactly as the existing `WireController` does. Field names are
+verbatim: `assemblyUiRoot`, `assemblySoundButton`, `scarecrowRenderer`, `bookPopRoot`.
+
+**Delta B — hero idle character facing the camera.** The scene has an `Objects/character` group
+(childCount 1) and an empty `Objects/L6_Characters`. Inspect `Objects/character`'s child: if it is a
+usable hero sprite/prefab, ensure it is active, positioned in view, and showing an idle-facing-down
+(toward camera) sprite/animation with NO walk/movement/quest component enabled (disable any
+`QuestAutoWalker`/`PatrolWalk`/walk input components on it). If `Objects/character` has no usable
+hero, instantiate the project's known character prefab (search `Assets` for the hero used in
+`reference_forest`/`quest_map1`, e.g. a `CharacterAppearance` or Super_Retro character prefab) as a
+child of `Objects`, place it in view, and set it to idle-down. In the Editor script, do the minimal
+reliable thing: locate the existing character, disable movement components, and log its path; leave
+final visual placement as a noted manual nudge (like the Crow/OwlGuide positioning already is).
+
+**Delta C — Build Settings.** Ensure both `Assets/Scenes/region 1/practice_night.unity` and the
+WorldMap scene are in the Editor Build Settings scene list (so the boss's WorldMap button can
+`LoadScene("practice_night")` and `OnWordSuccess` can `LoadScene("WorldMap")`). Add whichever is
+missing via `EditorBuildSettings.scenes`. Do this in the setup menu item or a second menu item
+`Tools/Practice/Ensure Build Scenes`; log the resulting scene list.
+
+**Delta D — do NOT build the WorldMap entry button.** The boss already added it. This task only
+guarantees the scenes are in Build Settings so it works.
+
+After extending, re-run `Tools/Practice/Setup Practice Night` (+ the build-scenes step) on an open
+`practice_night`, confirm no errors, save the scene, and commit (amend the Task 4 commit message to
+mention the R2 wiring, or make a follow-up commit):
+
+```bash
+git add Assets/Editor/PracticeNightSetup.cs "Assets/Scenes/region 1/practice_night.unity"
+git commit -m "feat: practice_night R2 wiring — hero idle, book/scarecrow refs, build scenes
+
+Wires the assembly slide-out root, assembly sound-hint button, scarecrow
+SpriteRenderer and book-pop root; sets a hero character to idle-facing-camera
+with movement disabled; ensures practice_night + WorldMap are in Build
+Settings so the boss's WorldMap entry button and the WorldMap return work."
 ```
 
 ---
