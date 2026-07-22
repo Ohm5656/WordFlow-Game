@@ -40,6 +40,8 @@ public sealed class PracticeNightController : MonoBehaviour
     [SerializeField] private RuntimeAnimatorController crowFlyController;     // CrowController: ga_fly, ga_stone
     [SerializeField] private RuntimeAnimatorController crowSetFreeController; // GaSetFreeController: ga_set_free, ga_set_free2
     [SerializeField] private Transform scarecrowWorldTarget;                  // dummy_idle_DOWN_0
+    [SerializeField] private Vector2 crowRestOffsetFromScarecrow = new Vector2(210f, -35f);
+    [SerializeField, Range(0.1f, 1f)] private float crowScale = 0.65f;
 
     [Header("Owl")]
     [SerializeField] private OwlGuideAnimator owl;
@@ -59,12 +61,13 @@ public sealed class PracticeNightController : MonoBehaviour
     [Header("Owl pacing")]
     [SerializeField] private float owlTalkSecondsFallback = 2.2f;
 
-    [Header("Scarecrow + book intro")]
-    [SerializeField] private SpriteRenderer scarecrowRenderer; // dummy_idle_DOWN_0
-    [SerializeField] private float scarecrowFadeDuration = 0.6f;
+    [Header("Book intro")]
     [SerializeField] private RectTransform bookPopRoot; // the WordAssembly book_craft (or its parent) to pop in
     [SerializeField] private float bookPopDuration = 0.5f;
     [SerializeField] private float bookPopStartScale = 0.08f;
+
+    [Header("Scene fade gate")]
+    [SerializeField] private float revealGateFallbackSeconds = 2f;
 
     [Header("Resolution / exit")]
     [SerializeField] private float resolutionHoldSeconds = 0.4f;
@@ -73,6 +76,7 @@ public sealed class PracticeNightController : MonoBehaviour
 
     private Vector2 crowRestPosition;
     private Canvas crowCanvas;
+    private Vector3 crowNaturalScale = Vector3.one;
     private Vector3 bookNaturalScale = Vector3.one;
 
     private void Awake()
@@ -86,13 +90,10 @@ public sealed class PracticeNightController : MonoBehaviour
         if (crowRect != null)
         {
             crowRestPosition = crowRect.anchoredPosition;
+            crowNaturalScale = crowRect.localScale;
+            crowRect.localScale = crowNaturalScale * Mathf.Clamp(crowScale, 0.1f, 1f);
             crowCanvas = crowRect.GetComponentInParent<Canvas>();
             crowRect.gameObject.SetActive(false);
-        }
-
-        if (scarecrowRenderer != null)
-        {
-            Color c = scarecrowRenderer.color; c.a = 0f; scarecrowRenderer.color = c;
         }
 
         if (bookPopRoot != null)
@@ -111,7 +112,7 @@ public sealed class PracticeNightController : MonoBehaviour
 
     private IEnumerator Run()
     {
-        yield return new WaitUntil(() => SceneFadeController.RevealComplete);
+        yield return WaitForSceneReveal();
 
         PracticeEvent active = PickEvent();
         if (active == null)
@@ -126,7 +127,6 @@ public sealed class PracticeNightController : MonoBehaviour
             yield break;
         }
 
-        yield return FadeInScarecrow();
         yield return PlayIntro(active);      // crow flies in (petrify for A / circle for B)
         yield return PopInBook();
         yield return PlayOwlLine(active);
@@ -135,23 +135,21 @@ public sealed class PracticeNightController : MonoBehaviour
         yield return wordAssembly.PlayReveal();
     }
 
+    private IEnumerator WaitForSceneReveal()
+    {
+        if (SceneFadeController.RevealComplete) yield break;
+
+        float deadline = Time.unscaledTime + Mathf.Max(0.1f, revealGateFallbackSeconds);
+        while (!SceneFadeController.RevealComplete && Time.unscaledTime < deadline)
+        {
+            yield return null;
+        }
+    }
+
     private PracticeEvent PickEvent()
     {
         if (events == null || events.Length == 0) return null;
         return events[UnityEngine.Random.Range(0, events.Length)];
-    }
-
-    private IEnumerator FadeInScarecrow()
-    {
-        if (scarecrowRenderer == null) yield break;
-        float safe = Mathf.Max(0.01f, scarecrowFadeDuration);
-        Color c = scarecrowRenderer.color;
-        for (float t = 0f; t < safe; t += Time.deltaTime)
-        {
-            c.a = SmoothStep(Mathf.Clamp01(t / safe)); scarecrowRenderer.color = c;
-            yield return null;
-        }
-        c.a = 1f; scarecrowRenderer.color = c;
     }
 
     private IEnumerator PopInBook()
@@ -172,6 +170,8 @@ public sealed class PracticeNightController : MonoBehaviour
 
     private IEnumerator PlayIntro(PracticeEvent activeEvent)
     {
+        crowRestPosition = ResolveCrowRestPosition();
+        crowRect.localScale = crowNaturalScale * Mathf.Clamp(crowScale, 0.1f, 1f);
         crowRect.gameObject.SetActive(true);
         crowRect.anchoredPosition = crowRestPosition + crowEntryOffset;
         crowAnimator.runtimeAnimatorController = crowFlyController;
@@ -237,6 +237,16 @@ public sealed class PracticeNightController : MonoBehaviour
         }
 
         return crowRestPosition;
+    }
+
+    private Vector2 ResolveCrowRestPosition()
+    {
+        if (scarecrowWorldTarget == null || crowCanvas == null)
+        {
+            return crowRestPosition;
+        }
+
+        return ResolveScarecrowAnchoredPosition() + crowRestOffsetFromScarecrow;
     }
 
     private IEnumerator MoveCrowTo(Vector2 from, Vector2 to, float duration)

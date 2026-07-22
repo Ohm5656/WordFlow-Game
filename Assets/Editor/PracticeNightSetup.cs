@@ -3,7 +3,6 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 /// <summary>
 /// One-shot scene setup for practice_night: removes clone leftovers (BearIntro*, BossUI, the
@@ -11,8 +10,9 @@ using TMPro;
 /// the WordAssembly prefab carries over from Boss.unity, wires a PracticeWordAssembly onto
 /// magic_stone, and instantiates + wires the Crow and OwlGuide actors onto a new
 /// PracticeNightController. Also (R2) sets the hero to an idle facing-camera pose with movement
-/// disabled, wires the R2 fields (assemblyUiRoot/assemblySoundButton/scarecrowRenderer/
-/// bookPopRoot), and ensures practice_night + WorldMap are in Build Settings.
+/// disabled, wires the assembly/book intro fields, applies the existing listen/record icon art
+/// to the result books, and ensures
+/// practice_night + WorldMap are in Build Settings.
 ///
 /// Open practice_night first, then run Tools/Practice/Setup Practice Night, nudge
 /// Crow/OwlGuide/hero positions to taste, and save.
@@ -28,7 +28,10 @@ public static class PracticeNightSetup
     private const string PaaWordClipPath = "Assets/Audio/Adventure/paa_word.wav";
     private const string KaaOwlClipPath = "Assets/Audio/Adventure/kaa_sound_out.wav";
     private const string PaaOwlClipPath = "Assets/Audio/Adventure/paa_sound_out.wav";
-    private const string ThaiFontPath = "Assets/Fonts/LeelawUI SDF.asset";
+    private const string ActionIconSheetPath =
+        "Assets/Art/visaul_novel/quest/ChatGPT Image Jun 3, 2026, 03_33_58 PM.png";
+    private const string SoundIconSpriteName = "ChatGPT Image Jun 3, 2026, 03_33_58 PM_8";
+    private const string MicIconSpriteName = "ChatGPT Image Jun 3, 2026, 03_33_58 PM_9";
     private const string PracticeNightScenePath = "Assets/Scenes/region 1/practice_night.unity";
     private const string WorldMapScenePath = "Assets/Scenes/WorldMap.unity";
 
@@ -269,14 +272,13 @@ public static class PracticeNightSetup
             AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(CrowFlyControllerPath);
         so.FindProperty("crowSetFreeController").objectReferenceValue =
             AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(CrowSetFreeControllerPath);
+        so.FindProperty("crowRestOffsetFromScarecrow").vector2Value = new Vector2(210f, -35f);
+        so.FindProperty("crowScale").floatValue = 0.65f;
 
         GameObject scarecrowGo = GameObject.Find("dummy_idle_DOWN_0");
         Transform scarecrowTransform = scarecrowGo != null ? scarecrowGo.transform : null;
         so.FindProperty("scarecrowWorldTarget").objectReferenceValue = scarecrowTransform;
 
-        // R2: scarecrow SpriteRenderer (fade-in) and the book_craft RectTransform (pop-in).
-        so.FindProperty("scarecrowRenderer").objectReferenceValue =
-            scarecrowGo != null ? scarecrowGo.GetComponent<SpriteRenderer>() : null;
         so.FindProperty("bookPopRoot").objectReferenceValue = wordAssemblyRoot.Find("book_craft") as RectTransform;
 
         if (owl != null)
@@ -312,13 +314,24 @@ public static class PracticeNightSetup
         so.ApplyModifiedProperties();
     }
 
-    // R2 Delta A: assemblyUiRoot (slide-out root) + assemblySoundButton (hint button, if art exists).
+    // Assembly UI: only book_craft, magic stones and the two slots show while building. The result
+    // books remain hidden until a word is completed, then expose their own listen/record controls.
     private static void WireWordAssembly(PracticeWordAssembly wordAssemblyComponent, Transform wordAssemblyRoot, RectTransform magicStoneRect)
     {
         SerializedObject so = new SerializedObject(wordAssemblyComponent);
 
         RectTransform uiRoot = magicStoneRect.parent as RectTransform;
         so.FindProperty("assemblyUiRoot").objectReferenceValue = uiRoot;
+        so.FindProperty("bookCraftRoot").objectReferenceValue = wordAssemblyRoot.Find("book_craft") as RectTransform;
+        so.FindProperty("inputSlot1").objectReferenceValue = wordAssemblyRoot.Find("inputSlot1") as RectTransform;
+        so.FindProperty("inputSlot2").objectReferenceValue = wordAssemblyRoot.Find("inputSlot2") as RectTransform;
+        so.FindProperty("slideOutDuration").floatValue = 0.25f;
+
+        AudioSource wordAudio = magicStoneRect.GetComponent<AudioSource>();
+        if (wordAudio == null) wordAudio = magicStoneRect.gameObject.AddComponent<AudioSource>();
+        wordAudio.playOnAwake = false;
+        wordAudio.spatialBlend = 0f;
+        so.FindProperty("wordAudioSource").objectReferenceValue = wordAudio;
 
         Transform bookCraft = wordAssemblyRoot.Find("book_craft");
         Button soundButton = null;
@@ -326,9 +339,12 @@ public static class PracticeNightSetup
         {
             Transform soundChild = bookCraft.Find("sound");
             if (soundChild == null) soundChild = bookCraft.Find("sound (1)");
-            soundButton = soundChild != null
-                ? soundChild.GetComponent<Button>() ?? soundChild.gameObject.AddComponent<Button>()
-                : CreateAssemblySoundButton(bookCraft);
+            soundButton = CreateIconButton(
+                bookCraft,
+                soundChild != null ? soundChild.name : "sound",
+                LoadActionIcon(SoundIconSpriteName),
+                new Vector2(0f, -896f),
+                new Vector2(430.9751f, 421.2532f));
         }
         so.FindProperty("assemblySoundButton").objectReferenceValue = soundButton;
         if (soundButton == null)
@@ -337,40 +353,78 @@ public static class PracticeNightSetup
                 "assemblySoundButton left null (feature inert until an art button exists).");
         }
 
+        CreateResultControls(wordAssemblyRoot.Find("book_craft_pa"));
+        CreateResultControls(wordAssemblyRoot.Find("book_craft_ga"));
+
         so.ApplyModifiedProperties();
     }
 
-    private static Button CreateAssemblySoundButton(Transform bookCraft)
+    private static void CreateResultControls(Transform resultPage)
     {
-        GameObject buttonObject = new GameObject("sound", typeof(RectTransform), typeof(Button));
-        buttonObject.transform.SetParent(bookCraft, false);
+        if (resultPage == null) return;
+
+        CreateIconButton(
+            resultPage,
+            "result_sound",
+            LoadActionIcon(SoundIconSpriteName),
+            new Vector2(-259.6886f, -859.2484f),
+            new Vector2(430.9751f, 421.2532f));
+        CreateIconButton(
+            resultPage,
+            "result_mic",
+            LoadActionIcon(MicIconSpriteName),
+            new Vector2(302.8691f, -859.25f),
+            new Vector2(431.4417f, 421.25f));
+    }
+
+    private static Button CreateIconButton(
+        Transform parent,
+        string buttonName,
+        Sprite icon,
+        Vector2 anchoredPosition,
+        Vector2 size)
+    {
+        Transform existing = parent.Find(buttonName);
+        GameObject buttonObject = existing != null
+            ? existing.gameObject
+            : new GameObject(buttonName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+
+        if (existing == null) buttonObject.transform.SetParent(parent, false);
+        buttonObject.layer = parent.gameObject.layer;
 
         RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
-        buttonRect.anchorMin = new Vector2(0.84f, 0.86f);
-        buttonRect.anchorMax = new Vector2(0.84f, 0.86f);
+        buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
+        buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
         buttonRect.pivot = new Vector2(0.5f, 0.5f);
-        buttonRect.sizeDelta = new Vector2(360f, 150f);
+        buttonRect.anchoredPosition = anchoredPosition;
+        buttonRect.sizeDelta = size;
 
-        GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-        labelObject.transform.SetParent(buttonObject.transform, false);
+        Transform labelTransform = buttonObject.transform.Find("Label");
+        if (labelTransform != null) Object.DestroyImmediate(labelTransform.gameObject);
 
-        RectTransform labelRect = labelObject.GetComponent<RectTransform>();
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = Vector2.zero;
-        labelRect.offsetMax = Vector2.zero;
-
-        TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
-        label.font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(ThaiFontPath);
-        label.text = "ฟังเสียง";
-        label.fontSize = 86f;
-        label.alignment = TextAlignmentOptions.Center;
-        label.color = new Color(0.12f, 0.28f, 0.68f, 1f);
-        label.raycastTarget = true;
+        Image image = buttonObject.GetComponent<Image>();
+        if (image == null) image = buttonObject.AddComponent<Image>();
+        image.sprite = icon;
+        image.color = Color.white;
+        image.raycastTarget = true;
+        image.preserveAspect = false;
 
         Button button = buttonObject.GetComponent<Button>();
-        button.targetGraphic = label;
+        if (button == null) button = buttonObject.AddComponent<Button>();
+        button.targetGraphic = image;
         return button;
+    }
+
+    private static Sprite LoadActionIcon(string spriteName)
+    {
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath(ActionIconSheetPath);
+        for (int i = 0; i < assets.Length; i++)
+        {
+            if (assets[i] is Sprite sprite && sprite.name == spriteName) return sprite;
+        }
+
+        Debug.LogError($"[PracticeNightSetup] Could not find icon sprite '{spriteName}' in {ActionIconSheetPath}.");
+        return null;
     }
 
     // R2 Delta B: idle hero, movement disabled. Objects/character has one child in this scene

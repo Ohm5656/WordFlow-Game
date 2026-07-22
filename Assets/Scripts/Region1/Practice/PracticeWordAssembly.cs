@@ -7,8 +7,8 @@ using UnityEngine.UI;
 /// <summary>
 /// Lightweight word-assembly mechanic for practice_night: reveals the ก/ป/า stones, accepts
 /// stone-to-slot placement, and resolves against a single target word supplied by
-/// PracticeNightController.Configure. No smoke clock, no backend, no mic — just the
-/// reveal/snap/lock feel MagicStonePuzzleController uses, trimmed to what one practice round needs.
+/// PracticeNightController.Configure. The child can replay the target word while assembling,
+/// then listens and records it from the matching result page before the resolution cutscene.
 ///
 /// Sits on the WordAssembly/magic_stone GameObject (stone1/stone2/stone3 are its children;
 /// inputSlot1/inputSlot2/book_craft are siblings under the parent WordAssembly canvas) — the same
@@ -24,8 +24,6 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     [Header("Slots (siblings under the parent WordAssembly canvas)")]
     [SerializeField] private RectTransform inputSlot1;
     [SerializeField] private RectTransform inputSlot2;
-    [SerializeField] private Vector2 firstSlotPosition = new Vector2(-395f, 150f);
-    [SerializeField] private Vector2 secondSlotPosition = new Vector2(395f, 150f);
 
     [Header("Assembly page (sibling under the parent WordAssembly canvas)")]
     [SerializeField] private RectTransform bookCraftRoot;
@@ -46,11 +44,16 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     [SerializeField] private float resultRevealDuration = 0.38f;
     [SerializeField] private float resultStartScale = 0.96f;
 
+    [Header("Result recording")]
+    [SerializeField] private float maxRecordingSeconds = 5f;
+    [SerializeField] private float recordingPulseScale = 1.1f;
+    [SerializeField] private float recordingPulseSpeed = 5f;
+
     [Header("Result: slide the whole book+stones UI off-screen")]
     [Tooltip("Root to slide out. Empty = this GameObject's parent (the WordAssembly canvas child holding book_craft/magic_stone/slots).")]
     [SerializeField] private RectTransform assemblyUiRoot;
     [SerializeField] private Vector2 slideOutOffset = new Vector2(0f, -1600f);
-    [SerializeField] private float slideOutDuration = 0.5f;
+    [SerializeField] private float slideOutDuration = 0.25f;
 
     [Header("Audio")]
     [SerializeField] private AudioSource wordAudioSource;
@@ -59,6 +62,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     [SerializeField] private UnityEngine.UI.Button assemblySoundButton;
 
     private readonly List<MagicStonePuzzleStone> stones = new List<MagicStonePuzzleStone>();
+    private readonly List<RectTransform> resultPages = new List<RectTransform>();
     private readonly MagicStonePuzzleStone[] slotOccupants = new MagicStonePuzzleStone[2];
 
     private string targetWord = "";
@@ -69,6 +73,14 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     private bool revealFinished;
     private bool resultShown;
     private Coroutine misassemblyRoutine;
+    private Coroutine recordingRoutine;
+    private Button resultSoundButton;
+    private Button resultMicButton;
+    private Vector3 resultNaturalScale = Vector3.one;
+    private Vector3 resultMicNaturalScale = Vector3.one;
+    private bool recordStopRequested;
+    private bool isRecording;
+    private string recordingDevice;
 
     public RectTransform DragParent => transform as RectTransform;
     public float ReturnDuration => returnDuration;
@@ -78,6 +90,8 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     {
         ResolveStones();
         ResolveSlots();
+        ResolveResultPages();
+        EnsureWordAudioSource();
 
         for (int i = 0; i < stones.Count; i++)
         {
@@ -87,6 +101,12 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         }
 
         if (assemblyUiRoot == null) assemblyUiRoot = transform.parent as RectTransform;
+        HideAllResultPages();
+    }
+
+    private void OnDisable()
+    {
+        StopRecording();
     }
 
     /// Sets the round's target word, result page and echo clip, and wires the success callback.
@@ -97,6 +117,13 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         resultPage = resultPageRoot;
         wordClip = resultWordClip;
         onSuccess = onSuccessCallback;
+        if (resultPage != null)
+        {
+            AddResultPage(resultPage);
+            resultNaturalScale = resultPage.localScale;
+        }
+        HideAllResultPages();
+        ResolveResultControls();
 
         if (assemblySoundButton != null)
         {
@@ -109,9 +136,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     {
         if (!CanInteract || wordClip == null || wordAudioSource == null) return;
         GameAudio.PlayClick();
-        wordAudioSource.Stop();
-        wordAudioSource.clip = wordClip;
-        wordAudioSource.Play();
+        PlayWordClip();
     }
 
     public IEnumerator PlayReveal()
@@ -169,6 +194,12 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 
     private void SnapStoneToSlot(MagicStonePuzzleStone stone, int slotIndex)
     {
+        if (!TryGetSlotPosition(slotIndex, out Vector2 slotPosition))
+        {
+            Debug.LogWarning("[PracticeWordAssembly] Input slot reference is missing; keeping the stone at its authored position.");
+            return;
+        }
+
         MagicStonePuzzleStone existing = slotOccupants[slotIndex];
         if (existing != null && existing != stone)
         {
@@ -178,7 +209,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 
         slotOccupants[slotIndex] = stone;
         stone.SetCurrentSlot(slotIndex);
-        stone.MoveTo(GetSlotPosition(slotIndex), stone.HomeScale * Mathf.Max(0.01f, snappedScaleMultiplier), snapDuration, true);
+        stone.MoveTo(slotPosition, stone.HomeScale * Mathf.Max(0.01f, snappedScaleMultiplier), snapDuration, true);
 
         TryComplete();
     }
@@ -216,30 +247,240 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
             yield return new WaitForSeconds(resultRevealDelay);
         }
 
-        // Voice the assembled target word once (listen-only — no mic, no backend).
-        if (wordClip != null && wordAudioSource != null)
+        yield return ShowResultPage();
+    }
+
+    private IEnumerator ShowResultPage()
+    {
+        HideAssemblyForResult();
+        if (resultPage == null)
         {
-            wordAudioSource.Stop();
-            wordAudioSource.clip = wordClip;
-            wordAudioSource.Play();
+            yield return SlideOutAssembly();
+            onSuccess?.Invoke();
+            yield break;
+        }
+
+        resultPage.gameObject.SetActive(true);
+        resultPage.localScale = resultNaturalScale * Mathf.Max(0.01f, resultStartScale);
+        SetResultControlsInteractable(false);
+
+        float safeDuration = Mathf.Max(0.01f, resultRevealDuration);
+        Vector3 start = resultPage.localScale;
+        for (float t = 0f; t < safeDuration; t += Time.deltaTime)
+        {
+            resultPage.localScale = Vector3.LerpUnclamped(
+                start,
+                resultNaturalScale,
+                EaseOutBack(Mathf.Clamp01(t / safeDuration)));
+            yield return null;
+        }
+        resultPage.localScale = resultNaturalScale;
+
+        PlayWordClip();
+        if (wordClip != null)
+        {
             yield return new WaitForSeconds(wordClip.length);
         }
 
-        // Slide the whole book+stones UI off-screen; the in-world resolution plays next (controller).
-        if (assemblyUiRoot != null && slideOutDuration > 0f)
+        SetResultControlsInteractable(true);
+    }
+
+    private void HandleResultSoundClicked()
+    {
+        if (!resultShown || isRecording) return;
+        GameAudio.PlayClick();
+        PlayWordClip();
+    }
+
+    private void HandleResultMicClicked()
+    {
+        if (!resultShown) return;
+
+        if (isRecording)
         {
-            Vector2 from = assemblyUiRoot.anchoredPosition;
-            Vector2 to = from + slideOutOffset;
-            float safe = Mathf.Max(0.01f, slideOutDuration);
-            for (float t = 0f; t < safe; t += Time.deltaTime)
-            {
-                assemblyUiRoot.anchoredPosition = Vector2.LerpUnclamped(from, to, SmoothStep(Mathf.Clamp01(t / safe)));
-                yield return null;
-            }
-            assemblyUiRoot.anchoredPosition = to;
+            recordStopRequested = true;
+            return;
         }
 
+        if (recordingRoutine != null) return;
+
+        GameAudio.PlayClick();
+        recordingRoutine = StartCoroutine(RecordThenResolve());
+    }
+
+    private IEnumerator RecordThenResolve()
+    {
+        isRecording = true;
+        recordStopRequested = false;
+        if (wordAudioSource != null) wordAudioSource.Stop();
+        SetResultControlsInteractable(false);
+        if (resultMicButton != null) resultMicButton.interactable = true;
+
+        bool microphoneStarted = false;
+#if UNITY_IOS || UNITY_ANDROID || UNITY_WEBGL
+        yield return Application.RequestUserAuthorization(UserAuthorization.Microphone);
+        if (Application.HasUserAuthorization(UserAuthorization.Microphone))
+#endif
+        {
+            string[] devices = Microphone.devices;
+            if (devices != null && devices.Length > 0)
+            {
+                recordingDevice = devices[0];
+                try
+                {
+                    microphoneStarted = Microphone.Start(
+                        recordingDevice,
+                        false,
+                        Mathf.CeilToInt(Mathf.Max(1f, maxRecordingSeconds)) + 1,
+                        16000) != null;
+                }
+                catch (System.Exception exception)
+                {
+                    Debug.LogWarning($"[PracticeWordAssembly] Could not start microphone recording: {exception.Message}");
+                    recordingDevice = null;
+                }
+            }
+        }
+
+        float duration = microphoneStarted ? Mathf.Max(1f, maxRecordingSeconds) : 0.15f;
+        float endTime = Time.realtimeSinceStartup + duration;
+        while (!recordStopRequested && Time.realtimeSinceStartup < endTime)
+        {
+            PulseRecordingButton();
+            yield return null;
+        }
+
+        StopRecording();
+        SetResultControlsInteractable(false);
+        yield return SlideOutAssembly();
         onSuccess?.Invoke();
+        recordingRoutine = null;
+    }
+
+    private IEnumerator SlideOutAssembly()
+    {
+        if (assemblyUiRoot == null || slideOutDuration <= 0f) yield break;
+
+        Vector2 from = assemblyUiRoot.anchoredPosition;
+        Vector2 to = from + slideOutOffset;
+        float safe = Mathf.Max(0.01f, slideOutDuration);
+        for (float t = 0f; t < safe; t += Time.deltaTime)
+        {
+            assemblyUiRoot.anchoredPosition = Vector2.LerpUnclamped(from, to, SmoothStep(Mathf.Clamp01(t / safe)));
+            yield return null;
+        }
+        assemblyUiRoot.anchoredPosition = to;
+    }
+
+    private void HideAssemblyForResult()
+    {
+        if (bookCraftRoot != null) bookCraftRoot.gameObject.SetActive(false);
+        if (inputSlot1 != null) inputSlot1.gameObject.SetActive(false);
+        if (inputSlot2 != null) inputSlot2.gameObject.SetActive(false);
+
+        for (int i = 0; i < stones.Count; i++)
+        {
+            stones[i].SetInteractable(false);
+            stones[i].gameObject.SetActive(false);
+        }
+    }
+
+    private void ResolveResultPages()
+    {
+        resultPages.Clear();
+        if (transform.parent == null) return;
+
+        AddResultPage(transform.parent.Find("book_craft_pa") as RectTransform);
+        AddResultPage(transform.parent.Find("book_craft_ga") as RectTransform);
+    }
+
+    private void AddResultPage(RectTransform page)
+    {
+        if (page != null && !resultPages.Contains(page)) resultPages.Add(page);
+    }
+
+    private void HideAllResultPages()
+    {
+        for (int i = 0; i < resultPages.Count; i++)
+        {
+            RectTransform page = resultPages[i];
+            if (page != null) page.gameObject.SetActive(false);
+        }
+    }
+
+    private void ResolveResultControls()
+    {
+        resultSoundButton = FindButton(resultPage, "result_sound");
+        resultMicButton = FindButton(resultPage, "result_mic");
+
+        if (resultSoundButton != null)
+        {
+            resultSoundButton.onClick.RemoveAllListeners();
+            resultSoundButton.onClick.AddListener(HandleResultSoundClicked);
+        }
+
+        if (resultMicButton != null)
+        {
+            resultMicButton.onClick.RemoveAllListeners();
+            resultMicButton.onClick.AddListener(HandleResultMicClicked);
+            resultMicNaturalScale = resultMicButton.transform.localScale;
+        }
+    }
+
+    private static Button FindButton(RectTransform page, string childName)
+    {
+        if (page == null) return null;
+        Transform child = page.Find(childName);
+        return child != null ? child.GetComponent<Button>() : null;
+    }
+
+    private void SetResultControlsInteractable(bool value)
+    {
+        if (resultSoundButton != null) resultSoundButton.interactable = value;
+        if (resultMicButton != null) resultMicButton.interactable = value;
+    }
+
+    private void PulseRecordingButton()
+    {
+        if (resultMicButton == null) return;
+        float pulse = 1f + (Mathf.Sin(Time.realtimeSinceStartup * recordingPulseSpeed) + 1f) * 0.5f
+            * Mathf.Max(0f, recordingPulseScale - 1f);
+        resultMicButton.transform.localScale = resultMicNaturalScale * pulse;
+    }
+
+    private void EnsureWordAudioSource()
+    {
+        if (wordAudioSource == null) wordAudioSource = GetComponent<AudioSource>();
+        if (wordAudioSource == null) wordAudioSource = gameObject.AddComponent<AudioSource>();
+        wordAudioSource.playOnAwake = false;
+        wordAudioSource.spatialBlend = 0f;
+    }
+
+    private void PlayWordClip()
+    {
+        if (wordClip == null || wordAudioSource == null) return;
+        wordAudioSource.Stop();
+        wordAudioSource.clip = wordClip;
+        wordAudioSource.Play();
+    }
+
+    private void StopRecording()
+    {
+        if (!string.IsNullOrEmpty(recordingDevice))
+        {
+            try
+            {
+                if (Microphone.IsRecording(recordingDevice)) Microphone.End(recordingDevice);
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogWarning($"[PracticeWordAssembly] Could not stop microphone recording: {exception.Message}");
+            }
+        }
+
+        recordingDevice = null;
+        isRecording = false;
+        if (resultMicButton != null) resultMicButton.transform.localScale = resultMicNaturalScale;
     }
 
     /// Two stones, no match (the other real word or garbage): freeze the board, red-flash via
@@ -275,14 +516,17 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 
     private static bool IsValidSlot(int index) => index >= 0 && index < 2;
 
-    private Vector2 GetSlotPosition(int index)
+    private bool TryGetSlotPosition(int index, out Vector2 slotPosition)
     {
         RectTransform slot = index == 0 ? inputSlot1 : inputSlot2;
         if (slot != null)
         {
-            return slot.anchoredPosition;
+            slotPosition = slot.anchoredPosition;
+            return true;
         }
-        return index == 0 ? firstSlotPosition : secondSlotPosition;
+
+        slotPosition = default;
+        return false;
     }
 
     private void ResolveStones()
@@ -330,6 +574,14 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     {
         value = Mathf.Clamp01(value);
         return value * value * (3f - 2f * value);
+    }
+
+    private static float EaseOutBack(float value)
+    {
+        value = Mathf.Clamp01(value);
+        const float overshoot = 1.15f;
+        float shifted = value - 1f;
+        return 1f + shifted * shifted * ((overshoot + 1f) * shifted + overshoot);
     }
 
 #if UNITY_EDITOR
