@@ -23475,8 +23475,8 @@ MonoBehaviour:
   crowFlyController: {fileID: 9100000, guid: ca3e5818c67ee374cbd849409bae9008, type: 2}
   crowSetFreeController: {fileID: 9100000, guid: 68727b412e554f441bfacb05e81171ba, type: 2}
   scarecrowWorldTarget: {fileID: 1572872577}
-  crowRestOffsetFromScarecrow: {x: 210, y: -35}
-  crowScale: 0.65
+  crowRestOffsetFromScarecrow: {x: 320, y: 180}
+  crowScale: 0.48
   crowCanvasPadding: {x: 120, y: 120}
   owl: {fileID: 1118660937}
   owlAudioSource: {fileID: 1118660936}
@@ -23495,7 +23495,7 @@ MonoBehaviour:
   maxCrowEntryDistance: 280
   crowEntryDuration: 1.1
   crowCircleDuration: 2.4
-  crowCircleRadius: 220
+  crowCircleRadius: 130
   crowShooOffset: {x: 900, y: 500}
   crowShooDuration: 0.6
   owlTalkSecondsFallback: 2.2

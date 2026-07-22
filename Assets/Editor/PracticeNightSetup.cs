@@ -174,6 +174,7 @@ public static class PracticeNightSetup
         if (existing != null)
         {
             existing.SetParent(parent, false);
+            ConfigureCrowImage(existing.gameObject);
             return existing.gameObject;
         }
 
@@ -188,8 +189,22 @@ public static class PracticeNightSetup
         CrowEntranceCutscene entrance = crow.GetComponent<CrowEntranceCutscene>();
         if (entrance != null) entrance.enabled = false; // PracticeNightController drives the Animator directly
 
+        ConfigureCrowImage(crow);
         crow.SetActive(false);
         return crow;
+    }
+
+    private static void ConfigureCrowImage(GameObject crow)
+    {
+        Image image = crow != null ? crow.GetComponent<Image>() : null;
+        if (image == null)
+        {
+            return;
+        }
+
+        image.raycastTarget = false;
+        image.preserveAspect = true;
+        image.color = Color.white;
     }
 
     private static GameObject InstantiateOwl(Transform parent, Transform wordAssembly)
@@ -276,22 +291,25 @@ public static class PracticeNightSetup
             AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(CrowFlyControllerPath);
         so.FindProperty("crowSetFreeController").objectReferenceValue =
             AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(CrowSetFreeControllerPath);
-        so.FindProperty("crowRestOffsetFromScarecrow").vector2Value = new Vector2(210f, -35f);
-        so.FindProperty("crowScale").floatValue = 0.65f;
+        so.FindProperty("crowRestOffsetFromScarecrow").vector2Value = new Vector2(320f, 180f);
+        so.FindProperty("crowScale").floatValue = 0.48f;
+        so.FindProperty("crowCircleRadius").floatValue = 130f;
 
         so.FindProperty("scarecrowWorldTarget").objectReferenceValue = scarecrowTransform;
 
         so.FindProperty("bookPopRoot").objectReferenceValue = wordAssemblyRoot.Find("book_craft") as RectTransform;
 
-        if (owl != null)
+        SerializedProperty owlProperty = so.FindProperty("owl");
+        SerializedProperty owlAudioProperty = so.FindProperty("owlAudioSource");
+        if (owl != null && (owlProperty != null || owlAudioProperty != null))
         {
-            so.FindProperty("owl").objectReferenceValue = owl.GetComponent<OwlGuideAnimator>();
+            if (owlProperty != null) owlProperty.objectReferenceValue = owl.GetComponent<OwlGuideAnimator>();
             AudioSource owlAudio = owl.GetComponent<AudioSource>();
             if (owlAudio == null) owlAudio = owl.AddComponent<AudioSource>();
             owlAudio.playOnAwake = false;
-            so.FindProperty("owlAudioSource").objectReferenceValue = owlAudio;
+            if (owlAudioProperty != null) owlAudioProperty.objectReferenceValue = owlAudio;
         }
-        else
+        else if (owl == null && (owlProperty != null || owlAudioProperty != null))
         {
             Debug.LogWarning("[PracticeNightSetup] OwlGuide failed to instantiate — controller.owl/owlAudioSource left unwired. Re-run the setup after fixing the OwlGuide.prefab load (see error above).");
         }
@@ -304,16 +322,25 @@ public static class PracticeNightSetup
         eventA.FindPropertyRelative("targetWord").stringValue = "กา";
         eventA.FindPropertyRelative("resultPage").objectReferenceValue = wordAssemblyRoot.Find("book_craft_ga") as RectTransform;
         eventA.FindPropertyRelative("wordClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(KaaWordClipPath);
-        eventA.FindPropertyRelative("owlLineClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(KaaOwlClipPath);
+        SetOptionalRelativeObject(eventA, "owlLineClip", AssetDatabase.LoadAssetAtPath<AudioClip>(KaaOwlClipPath));
 
         SerializedProperty eventB = events.GetArrayElementAtIndex(1);
         eventB.FindPropertyRelative("kind").enumValueIndex = 1; // CrowCircling
         eventB.FindPropertyRelative("targetWord").stringValue = "ปา";
         eventB.FindPropertyRelative("resultPage").objectReferenceValue = wordAssemblyRoot.Find("book_craft_pa") as RectTransform;
         eventB.FindPropertyRelative("wordClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(PaaWordClipPath);
-        eventB.FindPropertyRelative("owlLineClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(PaaOwlClipPath);
+        SetOptionalRelativeObject(eventB, "owlLineClip", AssetDatabase.LoadAssetAtPath<AudioClip>(PaaOwlClipPath));
 
         so.ApplyModifiedProperties();
+    }
+
+    private static void SetOptionalRelativeObject(SerializedProperty parent, string propertyName, Object value)
+    {
+        SerializedProperty property = parent.FindPropertyRelative(propertyName);
+        if (property != null)
+        {
+            property.objectReferenceValue = value;
+        }
     }
 
     // Assembly UI: only book_craft, magic stones and the two slots show while building. The result

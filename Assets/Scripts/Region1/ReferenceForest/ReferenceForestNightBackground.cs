@@ -30,6 +30,11 @@ public sealed class ReferenceForestNightBackground : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float warmLightRetention = 0.32f;
 
+    [Header("Practice night focus")]
+    [Tooltip("Extra color lift for the authored practice scarecrow so it stays readable over the baked night map.")]
+    [SerializeField] private Color practiceScarecrowNightBoost = new Color(1.45f, 1.28f, 1f, 1f);
+    [SerializeField] private int practiceScarecrowSortingOrder = 6200;
+
     private readonly List<TilemapRenderer> dayTilemapRenderers = new List<TilemapRenderer>();
     private readonly List<RendererState> staticSceneRenderers = new List<RendererState>();
     private readonly List<RendererState> movingRenderers = new List<RendererState>();
@@ -268,6 +273,13 @@ public sealed class ReferenceForestNightBackground : MonoBehaviour
                 return true;
             }
 
+            // practice_night places this authored prefab over the map at runtime. It is not baked
+            // into the static night painting, so keep drawing it above the painted background.
+            if (current.name == "PracticeScarecrow")
+            {
+                return true;
+            }
+
             // All quest actors that still need to move/fade are children of this controller.
             // Their existing behaviour continues untouched; only their draw order is calibrated.
             if (current.GetComponent<QuestPathSequence>() != null)
@@ -308,21 +320,53 @@ public sealed class ReferenceForestNightBackground : MonoBehaviour
             }
 
             state.Renderer.enabled = state.OriginalEnabled;
+            bool practiceScarecrow = IsPracticeScarecrowRenderer(state.Renderer);
             // The static night painting sits at 100. Most living actors were authored at order
             // zero, so lift only those lower-order actors just above it; their relative order and
             // all existing movement/patrol logic remain unchanged.
             state.Renderer.sortingOrder = amount > 0.0001f
-                ? Mathf.Max(state.OriginalSortingOrder, backgroundSortingOrder + 1)
+                ? Mathf.Max(state.OriginalSortingOrder, practiceScarecrow
+                    ? practiceScarecrowSortingOrder
+                    : backgroundSortingOrder + 1)
                 : state.OriginalSortingOrder;
 
             // Keep the alpha currently owned by the actor's existing fade/animation routine;
             // only grade RGB so quest reveals and sprite swaps continue to work unchanged.
             Color current = state.Renderer.color;
-            Color moonlit = GradeForMoonlight(state.OriginalColor);
+            Color moonlit = practiceScarecrow
+                ? GradePracticeScarecrow(state.OriginalColor)
+                : GradeForMoonlight(state.OriginalColor);
             Color color = Color.Lerp(state.OriginalColor, moonlit, amount);
             color.a = current.a;
             state.Renderer.color = color;
         }
+    }
+
+    private static bool IsPracticeScarecrowRenderer(SpriteRenderer renderer)
+    {
+        if (renderer == null)
+        {
+            return false;
+        }
+
+        for (Transform current = renderer.transform; current != null; current = current.parent)
+        {
+            if (current.name == "PracticeScarecrow")
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private Color GradePracticeScarecrow(Color source)
+    {
+        return new Color(
+            source.r * practiceScarecrowNightBoost.r,
+            source.g * practiceScarecrowNightBoost.g,
+            source.b * practiceScarecrowNightBoost.b,
+            source.a);
     }
 
     private Color GradeForMoonlight(Color source)

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 /// <summary>
 /// Orchestrates one practice_night round: picks one of the two Quest-1-flavoured events at
@@ -40,8 +41,8 @@ public sealed class PracticeNightController : MonoBehaviour
     [SerializeField] private RuntimeAnimatorController crowFlyController;     // CrowController: ga_fly, ga_stone
     [SerializeField] private RuntimeAnimatorController crowSetFreeController; // GaSetFreeController: ga_set_free, ga_set_free2
     [SerializeField] private Transform scarecrowWorldTarget;                  // dummy_idle_DOWN_0
-    [SerializeField] private Vector2 crowRestOffsetFromScarecrow = new Vector2(210f, -35f);
-    [SerializeField, Range(0.1f, 1f)] private float crowScale = 0.65f;
+    [SerializeField] private Vector2 crowRestOffsetFromScarecrow = new Vector2(320f, 180f);
+    [SerializeField, Range(0.1f, 1f)] private float crowScale = 0.48f;
     [SerializeField] private Vector2 crowCanvasPadding = new Vector2(120f, 120f);
 
     [Header("Owl")]
@@ -56,7 +57,7 @@ public sealed class PracticeNightController : MonoBehaviour
     [SerializeField] private float maxCrowEntryDistance = 280f;
     [SerializeField] private float crowEntryDuration = 1.1f;
     [SerializeField] private float crowCircleDuration = 2.4f;
-    [SerializeField] private float crowCircleRadius = 220f;
+    [SerializeField] private float crowCircleRadius = 130f;
     [SerializeField] private Vector2 crowShooOffset = new Vector2(900f, 500f);
     [SerializeField] private float crowShooDuration = 0.6f;
 
@@ -95,6 +96,7 @@ public sealed class PracticeNightController : MonoBehaviour
             crowNaturalScale = crowRect.localScale;
             crowRect.localScale = crowNaturalScale * Mathf.Clamp(crowScale, 0.1f, 1f);
             crowCanvas = crowRect.GetComponentInParent<Canvas>();
+            ConfigureCrowImage();
             crowRect.gameObject.SetActive(false);
         }
 
@@ -206,7 +208,7 @@ public sealed class PracticeNightController : MonoBehaviour
 
     private IEnumerator CircleScarecrow(float duration)
     {
-        Vector2 center = ClampCrowToCanvas(ResolveScarecrowAnchoredPosition());
+        Vector2 center = crowRestPosition;
         float safeDuration = Mathf.Max(0.1f, duration);
 
         for (float t = 0f; t < safeDuration; t += Time.deltaTime)
@@ -240,6 +242,19 @@ public sealed class PracticeNightController : MonoBehaviour
         }
 
         return crowRestPosition;
+    }
+
+    private void ConfigureCrowImage()
+    {
+        Image crowImage = crowRect.GetComponent<Image>();
+        if (crowImage == null)
+        {
+            return;
+        }
+
+        crowImage.preserveAspect = true;
+        crowImage.raycastTarget = false;
+        crowImage.color = Color.white;
     }
 
     private Vector2 ResolveCrowRestPosition()
