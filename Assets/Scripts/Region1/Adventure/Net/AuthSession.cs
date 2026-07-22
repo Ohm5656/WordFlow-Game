@@ -122,7 +122,8 @@ namespace WordFlow.Adventure.Net
                 var b = JsonUtility.FromJson<BootstrapBrief>(req.downloadHandler.text);
                 ChildId = b.childId;
                 IsNewProfile = b.isNewProfile;
-                Debug.Log($"[Auth] logged in uid={Uid} child={ChildId} new={IsNewProfile}");
+                bool resetLocalProgress = global::LocalProgressProfile.ApplyAuthenticatedChild(ChildId, IsNewProfile);
+                Debug.Log($"[Auth] logged in uid={Uid} child={ChildId} new={IsNewProfile} resetLocalProgress={resetLocalProgress}");
                 onDone?.Invoke(true, null);
             }
         }
