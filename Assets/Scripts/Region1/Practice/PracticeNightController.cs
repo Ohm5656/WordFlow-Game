@@ -5,11 +5,9 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// Orchestrates one practice_night round: picks one of the two Quest-1-flavoured events at
-/// random, plays a short crow intro + a one-line owl comment, hands control to
-/// PracticeWordAssembly for the stone build, then plays the event's resolution and fades to
-/// WorldMap. No smoke clock, no backend, no stars — see
-/// docs/superpowers/specs/2026-07-21-practice-night-design.md.
+/// Orchestrates the practice_night redo as one continuous night-context sequence:
+/// crow enters and petrifies, the child frees it by building/saying "กา", then builds/says
+/// "ปา" to play the throw result and send the crow away.
 /// </summary>
 public sealed class PracticeNightController : MonoBehaviour
 {
@@ -25,9 +23,10 @@ public sealed class PracticeNightController : MonoBehaviour
         public RectTransform resultPage;
         [Tooltip("Echo clip played once the target word is built.")]
         public AudioClip wordClip;
-        [Tooltip("Owl's one-line comment for this event.")]
-        public AudioClip owlLineClip;
     }
+
+    private const string GaWord = "\u0E01\u0E32";
+    private const string PaWord = "\u0E1B\u0E32";
 
     [Header("Word assembly")]
     [SerializeField] private PracticeWordAssembly wordAssembly;
@@ -40,29 +39,45 @@ public sealed class PracticeNightController : MonoBehaviour
     [SerializeField] private RectTransform crowRect;
     [SerializeField] private RuntimeAnimatorController crowFlyController;     // CrowController: ga_fly, ga_stone
     [SerializeField] private RuntimeAnimatorController crowSetFreeController; // GaSetFreeController: ga_set_free, ga_set_free2
-    [SerializeField] private Transform scarecrowWorldTarget;                  // dummy_idle_DOWN_0
-    [SerializeField] private Vector2 crowRestOffsetFromScarecrow = new Vector2(320f, 180f);
+    [SerializeField] private Transform scarecrowWorldTarget;                  // legacy scene hook; kept for existing serialized data
+    [SerializeField] private Transform crowWaypointPath;
+    [SerializeField] private string[] crowIntroWaypoints = { "wp_0", "wp_1", "wp_2" };
     [SerializeField, Range(0.1f, 1f)] private float crowScale = 0.48f;
-    [SerializeField] private Vector2 crowCanvasPadding = new Vector2(120f, 120f);
+    [SerializeField] private float crowFadeInDuration = 0.4f;
+    [SerializeField] private float crowWaypointLegDuration = 1.35f;
+    [SerializeField] private float crowStoneEdgeCropPixels = 4f;
+    [SerializeField] private float crowHoverAmplitude = 24f;
+    [SerializeField] private float crowHoverFrequency = 1.3f;
 
-    [Header("Owl")]
-    [SerializeField] private OwlGuideAnimator owl;
-    [SerializeField] private AudioSource owlAudioSource;
-
-    [Header("Events (fill both — one is picked at random)")]
+    [Header("Events (กา then ปา)")]
     [SerializeField] private PracticeEvent[] events = new PracticeEvent[2];
 
-    [Header("Crow pacing")]
-    [SerializeField] private Vector2 crowEntryOffset = new Vector2(-500f, 220f);
-    [SerializeField] private float maxCrowEntryDistance = 280f;
-    [SerializeField] private float crowEntryDuration = 1.1f;
-    [SerializeField] private float crowCircleDuration = 2.4f;
-    [SerializeField] private float crowCircleRadius = 130f;
+    [Header("Crow escape after ปา")]
     [SerializeField] private Vector2 crowShooOffset = new Vector2(900f, 500f);
     [SerializeField] private float crowShooDuration = 0.6f;
 
-    [Header("Owl pacing")]
-    [SerializeField] private float owlTalkSecondsFallback = 2.2f;
+    [Header("Set-free result")]
+    [SerializeField] private float setFreeFadeOutDuration = 0f;
+    [SerializeField] private float setFree2FadeInDuration = 0.35f;
+    [SerializeField] private string setFreeState = "ga_set_free";
+    [SerializeField] private string setFree2State = "ga_set_free2";
+    [SerializeField] private int setFreeExpandStartFrame = 37;
+    [SerializeField] private float setFreeClipFps = 30f;
+    [Tooltip("Base scale for the shatter clip before its bloom. Keep separate from crowScale so the white/pink burst can leave the frame cleanly.")]
+    [SerializeField, Min(0.01f)] private float setFreeShatterBaseScale = 1f;
+    [SerializeField, Min(0.01f)] private float setFreeExpandStartScale = 1f;
+    [SerializeField, Min(0.01f)] private float setFreeExpandEndScale = 3.5f;
+
+    [Header("Throw result")]
+    [SerializeField] private RuntimeAnimatorController throwController;
+    [SerializeField] private RectTransform throwVisualRoot;
+    [Tooltip("If Throw Visual Root is assigned to a scene object, keep its authored position and size so it can be resized visually.")]
+    [SerializeField] private bool useAuthoredThrowTransform = true;
+    [SerializeField] private Vector2 throwVisualAnchoredPosition = Vector2.zero;
+    [SerializeField] private Vector2 throwVisualSize = new Vector2(1920f, 1080f);
+    [SerializeField, Min(0.01f)] private float throwVisualScale = 1f;
+    [SerializeField] private string throwStateName = "Thow";
+    [SerializeField] private float throwFadeOutDuration = 0.25f;
 
     [Header("Book intro")]
     [SerializeField] private RectTransform bookPopRoot; // the WordAssembly book_craft (or its parent) to pop in
@@ -77,10 +92,16 @@ public sealed class PracticeNightController : MonoBehaviour
     [SerializeField] private float sceneFadeDuration = 0.6f;
     [SerializeField] private string returnSceneName = "WorldMap";
 
-    private Vector2 crowRestPosition;
     private Canvas crowCanvas;
+    private CanvasGroup crowFade;
     private Vector3 crowNaturalScale = Vector3.one;
     private Vector3 bookNaturalScale = Vector3.one;
+    private Coroutine crowHoverRoutine;
+    private Animator throwAnimator;
+    private CanvasGroup throwFade;
+    private Vector3 throwVisualNaturalScale = Vector3.one;
+    private bool throwVisualNaturalScaleCaptured;
+    private bool throwVisualCreatedAtRuntime;
 
     private void Awake()
     {
@@ -90,12 +111,14 @@ public sealed class PracticeNightController : MonoBehaviour
             heroAnimator.SetFloat("speed", 0f);
         }
 
+        ResolveWaypointPath();
+
         if (crowRect != null)
         {
-            crowRestPosition = crowRect.anchoredPosition;
             crowNaturalScale = crowRect.localScale;
-            crowRect.localScale = crowNaturalScale * Mathf.Clamp(crowScale, 0.1f, 1f);
             crowCanvas = crowRect.GetComponentInParent<Canvas>();
+            crowFade = EnsureCanvasGroup(crowRect.gameObject);
+            crowFade.alpha = 0f;
             ConfigureCrowImage();
             crowRect.gameObject.SetActive(false);
         }
@@ -106,6 +129,12 @@ public sealed class PracticeNightController : MonoBehaviour
             bookPopRoot.localScale = bookNaturalScale * Mathf.Max(0.01f, bookPopStartScale);
             bookPopRoot.gameObject.SetActive(false);
         }
+
+        if (throwVisualRoot != null)
+        {
+            CaptureThrowVisualNaturalScale();
+            throwVisualRoot.gameObject.SetActive(false);
+        }
     }
 
     private void Start()
@@ -114,29 +143,38 @@ public sealed class PracticeNightController : MonoBehaviour
         StartCoroutine(Run());
     }
 
+    private void OnDisable()
+    {
+        StopCrowHover();
+        GameAudio.StopSfxLoop();
+    }
+
     private IEnumerator Run()
     {
         yield return WaitForSceneReveal();
 
-        PracticeEvent active = PickEvent();
-        if (active == null)
+        PracticeEvent gaEvent = FindEvent(GaWord);
+        PracticeEvent paEvent = FindEvent(PaWord);
+        if (gaEvent == null || paEvent == null)
         {
-            Debug.LogWarning("[PracticeNight] no event configured");
+            Debug.LogWarning("[PracticeNight] expected both กา and ปา events to be configured.");
             yield break;
         }
 
-        if (wordAssembly == null || crowAnimator == null || crowRect == null || owl == null)
+        if (wordAssembly == null || crowAnimator == null || crowRect == null)
         {
-            Debug.LogWarning("[PracticeNight] essential references not wired; aborting Run()");
+            Debug.LogWarning("[PracticeNight] essential references not wired; aborting Run().");
             yield break;
         }
 
-        yield return PlayIntro(active);      // crow flies in (petrify for A / circle for B)
-        yield return PopInBook();
-        yield return PlayOwlLine(active);
+        yield return PlayCrowWaypointIntro();
+        yield return PlayWordRound(gaEvent);
+        yield return PlayCrowSetFreeThenHover();
+        yield return PlayWordRound(paEvent);
+        yield return PlayThrowAndCrowEscape();
 
-        wordAssembly.Configure(active.targetWord, active.resultPage, active.wordClip, () => StartCoroutine(OnWordSuccess(active)));
-        yield return wordAssembly.PlayReveal();
+        yield return StartCoroutine(SceneFadeController.Cover(sceneFadeDuration));
+        SceneManager.LoadScene(returnSceneName);
     }
 
     private IEnumerator WaitForSceneReveal()
@@ -150,10 +188,43 @@ public sealed class PracticeNightController : MonoBehaviour
         }
     }
 
-    private PracticeEvent PickEvent()
+    private PracticeEvent FindEvent(string word)
     {
-        if (events == null || events.Length == 0) return null;
-        return events[UnityEngine.Random.Range(0, events.Length)];
+        if (events == null) return null;
+
+        for (int i = 0; i < events.Length; i++)
+        {
+            PracticeEvent practiceEvent = events[i];
+            if (practiceEvent != null && string.Equals(practiceEvent.targetWord, word, StringComparison.Ordinal))
+            {
+                return practiceEvent;
+            }
+        }
+
+        return null;
+    }
+
+    private IEnumerator PlayWordRound(PracticeEvent practiceEvent)
+    {
+        bool roundComplete = false;
+        wordAssembly.Configure(
+            practiceEvent.targetWord,
+            practiceEvent.resultPage,
+            practiceEvent.wordClip,
+            () => roundComplete = true);
+
+        yield return PopInBook();
+        yield return wordAssembly.PlayReveal();
+
+        while (!roundComplete)
+        {
+            yield return null;
+        }
+
+        if (resolutionHoldSeconds > 0f)
+        {
+            yield return new WaitForSeconds(resolutionHoldSeconds);
+        }
     }
 
     private IEnumerator PopInBook()
@@ -172,76 +243,273 @@ public sealed class PracticeNightController : MonoBehaviour
         bookPopRoot.localScale = target;
     }
 
-    private IEnumerator PlayIntro(PracticeEvent activeEvent)
+    private IEnumerator PlayCrowWaypointIntro()
     {
-        crowRestPosition = ClampCrowToCanvas(ResolveCrowRestPosition());
-        crowRect.localScale = crowNaturalScale * Mathf.Clamp(crowScale, 0.1f, 1f);
+        ResolveWaypointPath();
+
         crowRect.gameObject.SetActive(true);
-        crowRect.anchoredPosition = ResolveCrowEntryPosition();
+        crowRect.localScale = crowNaturalScale * Mathf.Clamp(crowScale, 0.1f, 1f);
+        crowRect.position = WaypointPosition(GetCrowWaypointName(0), crowRect.position);
+
+        crowFade = EnsureCanvasGroup(crowRect.gameObject);
+        crowFade.alpha = 0f;
+
         crowAnimator.runtimeAnimatorController = crowFlyController;
+        crowAnimator.speed = 1f;
         crowAnimator.Play("ga_fly", 0, 0f);
         GameAudio.PlayCrowLoop();
 
-        yield return MoveCrowTo(crowRect.anchoredPosition, crowRestPosition, crowEntryDuration);
+        yield return FadeCanvasGroup(crowFade, 1f, crowFadeInDuration);
 
-        if (activeEvent.kind == PracticeEventKind.CrowPetrified)
+        int waypointCount = crowIntroWaypoints != null ? crowIntroWaypoints.Length : 0;
+        for (int i = 1; i < waypointCount; i++)
         {
-            yield return null; // let the state register so normalizedTime reads correctly
-            while (crowAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime % 1f < 0.98f)
-            {
-                yield return null;
-            }
+            yield return MoveCrowToWorld(WaypointPosition(GetCrowWaypointName(i), crowRect.position), crowWaypointLegDuration);
+        }
 
-            crowAnimator.Play("ga_stone", 0, 0f);
-            GameAudio.StopSfxLoop();
+        yield return WaitForCrowFlyLoopBoundary();
+        crowAnimator.Play("ga_stone", 0, 0f);
+        GameAudio.StopSfxLoop();
+        yield return WaitForCurrentAnimatorState(crowAnimator);
+    }
+
+    private IEnumerator PlayCrowSetFreeThenHover()
+    {
+        StopCrowHover();
+        crowRect.gameObject.SetActive(true);
+        crowFade = EnsureCanvasGroup(crowRect.gameObject);
+        crowFade.alpha = 1f;
+
+        Vector3 flyScale = crowNaturalScale * Mathf.Clamp(crowScale, 0.1f, 1f);
+        Vector3 shatterBaseScale = crowNaturalScale * Mathf.Max(0.01f, setFreeShatterBaseScale);
+        crowRect.localScale = shatterBaseScale * Mathf.Max(0.01f, setFreeExpandStartScale);
+
+        crowAnimator.runtimeAnimatorController = crowSetFreeController;
+        crowAnimator.speed = 1f;
+        crowAnimator.Play(setFreeState, 0, 0f);
+        GameAudio.PlayRockBreak();
+        yield return null;
+
+        float clipLength = Mathf.Max(0.01f, crowAnimator.GetCurrentAnimatorStateInfo(0).length);
+        float expandStart = setFreeExpandStartFrame / Mathf.Max(1f, setFreeClipFps);
+        float guard = 0f;
+        while (guard < clipLength + 1f)
+        {
+            AnimatorStateInfo info = crowAnimator.GetCurrentAnimatorStateInfo(0);
+            if (info.normalizedTime >= 1f) break;
+
+            float clipSeconds = info.normalizedTime * clipLength;
+            float expandT = Mathf.InverseLerp(expandStart, clipLength, clipSeconds);
+            crowRect.localScale = shatterBaseScale * Mathf.Lerp(
+                Mathf.Max(0.01f, setFreeExpandStartScale),
+                Mathf.Max(0.01f, setFreeExpandEndScale),
+                EaseOut(expandT));
+
+            guard += Time.deltaTime;
             yield return null;
+        }
 
-            float stoneLength = crowAnimator.GetCurrentAnimatorStateInfo(0).length;
-            if (stoneLength > 0f) yield return new WaitForSeconds(stoneLength);
+        crowRect.localScale = shatterBaseScale * Mathf.Max(0.01f, setFreeExpandEndScale);
+        if (setFreeFadeOutDuration > 0f)
+        {
+            yield return FadeCanvasGroup(crowFade, 0f, setFreeFadeOutDuration);
         }
         else
         {
-            yield return CircleScarecrow(crowCircleDuration);
-            GameAudio.StopSfxLoop();
+            crowFade.alpha = 0f;
         }
+
+        crowRect.localScale = flyScale;
+        crowAnimator.Play(setFree2State, 0, 0f);
+        GameAudio.PlayCrowLoop();
+        yield return null;
+
+        float clip2Length = Mathf.Max(0.01f, crowAnimator.GetCurrentAnimatorStateInfo(0).length);
+        yield return FadeCanvasGroup(crowFade, 1f, setFree2FadeInDuration);
+        float remain = clip2Length - Mathf.Max(0f, setFree2FadeInDuration);
+        if (remain > 0f)
+        {
+            yield return new WaitForSeconds(remain);
+        }
+
+        crowAnimator.runtimeAnimatorController = crowFlyController;
+        crowAnimator.Play("ga_fly", 0, 0f);
+        StartCrowHover();
     }
 
-    private IEnumerator CircleScarecrow(float duration)
+    private IEnumerator PlayThrowAndCrowEscape()
     {
-        Vector2 center = crowRestPosition;
-        float safeDuration = Mathf.Max(0.1f, duration);
+        StopCrowHover();
 
-        for (float t = 0f; t < safeDuration; t += Time.deltaTime)
+        crowRect.gameObject.SetActive(true);
+        crowFade = EnsureCanvasGroup(crowRect.gameObject);
+        crowFade.alpha = 1f;
+        crowAnimator.runtimeAnimatorController = crowFlyController;
+        crowAnimator.Play("ga_fly", 0, 0f);
+        GameAudio.PlayCrowLoop();
+        GameAudio.PlayPaaThrow();
+
+        Coroutine throwRoutine = StartCoroutine(PlayThrowVisual());
+        yield return MoveCrowAwayAndFade();
+
+        if (throwRoutine != null)
         {
-            float angle = (t / safeDuration) * Mathf.PI * 2f;
-            Vector2 position = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle) * 0.5f) * crowCircleRadius;
-            crowRect.anchoredPosition = ClampCrowToCanvas(position);
+            yield return throwRoutine;
+        }
+
+        GameAudio.StopSfxLoop();
+        crowRect.gameObject.SetActive(false);
+    }
+
+    private IEnumerator PlayThrowVisual()
+    {
+        if (throwController == null)
+        {
+            Debug.LogWarning("[PracticeNight] throwController is not assigned; playing audio/crow escape only.");
+            yield break;
+        }
+
+        ResolveThrowVisual();
+        if (throwVisualRoot == null || throwAnimator == null || throwFade == null)
+        {
+            yield break;
+        }
+
+        throwVisualRoot.gameObject.SetActive(true);
+        throwVisualRoot.SetAsLastSibling();
+        if (throwVisualCreatedAtRuntime || !useAuthoredThrowTransform)
+        {
+            throwVisualRoot.anchoredPosition = throwVisualAnchoredPosition;
+            throwVisualRoot.sizeDelta = throwVisualSize;
+        }
+        throwVisualRoot.localScale = throwVisualNaturalScale * Mathf.Max(0.01f, throwVisualScale);
+        throwFade.alpha = 1f;
+        throwAnimator.runtimeAnimatorController = throwController;
+        throwAnimator.speed = 1f;
+        throwAnimator.Play(throwStateName, 0, 0f);
+        yield return WaitForCurrentAnimatorState(throwAnimator);
+        yield return FadeCanvasGroup(throwFade, 0f, throwFadeOutDuration);
+        throwVisualRoot.gameObject.SetActive(false);
+    }
+
+    private IEnumerator MoveCrowAwayAndFade()
+    {
+        Vector2 startPosition = crowRect.anchoredPosition;
+        Vector2 targetPosition = startPosition + crowShooOffset;
+        float safeDuration = Mathf.Max(0.01f, crowShooDuration);
+
+        for (float elapsed = 0f; elapsed < safeDuration; elapsed += Time.deltaTime)
+        {
+            float t = Mathf.Clamp01(elapsed / safeDuration);
+            float smooth = SmoothStep(t);
+            crowRect.anchoredPosition = Vector2.LerpUnclamped(startPosition, targetPosition, smooth);
+            if (crowFade != null)
+            {
+                crowFade.alpha = Mathf.Lerp(1f, 0f, smooth);
+            }
             yield return null;
         }
 
-        crowRect.anchoredPosition = crowRestPosition;
+        crowRect.anchoredPosition = targetPosition;
+        if (crowFade != null) crowFade.alpha = 0f;
     }
 
-    private Vector2 ResolveScarecrowAnchoredPosition()
+    private void StartCrowHover()
     {
-        if (scarecrowWorldTarget == null || crowCanvas == null)
+        StopCrowHover();
+        crowHoverRoutine = StartCoroutine(CrowHoverRoutine(crowRect.anchoredPosition));
+    }
+
+    private void StopCrowHover()
+    {
+        if (crowHoverRoutine != null)
         {
-            return crowRestPosition;
+            StopCoroutine(crowHoverRoutine);
+            crowHoverRoutine = null;
+        }
+    }
+
+    private IEnumerator CrowHoverRoutine(Vector2 origin)
+    {
+        float frequency = Mathf.Max(0.01f, crowHoverFrequency);
+        while (true)
+        {
+            Vector2 position = origin;
+            position.y += Mathf.Sin(Time.time * frequency * Mathf.PI * 2f) * Mathf.Max(0f, crowHoverAmplitude);
+            crowRect.anchoredPosition = position;
+            yield return null;
+        }
+    }
+
+    private IEnumerator MoveCrowToWorld(Vector3 target, float duration)
+    {
+        Vector3 start = crowRect.position;
+        float safeDuration = Mathf.Max(0.01f, duration);
+        for (float elapsed = 0f; elapsed < safeDuration; elapsed += Time.deltaTime)
+        {
+            crowRect.position = Vector3.LerpUnclamped(start, target, SmoothStep(Mathf.Clamp01(elapsed / safeDuration)));
+            yield return null;
+        }
+        crowRect.position = target;
+    }
+
+    private IEnumerator WaitForCrowFlyLoopBoundary()
+    {
+        yield return null;
+
+        float guard = 0f;
+        while (guard < 2f)
+        {
+            float normalized = crowAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime % 1f;
+            if (normalized >= 0.98f)
+            {
+                yield break;
+            }
+
+            guard += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    private IEnumerator WaitForCurrentAnimatorState(Animator animator)
+    {
+        if (animator == null) yield break;
+
+        yield return null;
+        AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
+        float length = Mathf.Max(0.01f, info.length);
+        float guard = 0f;
+        while (guard < length + 1f)
+        {
+            info = animator.GetCurrentAnimatorStateInfo(0);
+            if (info.normalizedTime >= 1f)
+            {
+                yield break;
+            }
+
+            guard += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    private IEnumerator FadeCanvasGroup(CanvasGroup group, float target, float duration)
+    {
+        if (group == null) yield break;
+
+        float start = group.alpha;
+        if (duration <= 0f)
+        {
+            group.alpha = target;
+            yield break;
         }
 
-        Camera cam = crowCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : crowCanvas.worldCamera;
-        Camera projector = cam != null ? cam : Camera.main;
-        if (projector == null) return crowRestPosition;
-
-        Vector3 screenPoint = projector.WorldToScreenPoint(scarecrowWorldTarget.position);
-        RectTransform canvasRect = crowCanvas.transform as RectTransform;
-
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, cam, out Vector2 local))
+        for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
         {
-            return local;
+            group.alpha = Mathf.Lerp(start, target, SmoothStep(Mathf.Clamp01(elapsed / duration)));
+            yield return null;
         }
 
-        return crowRestPosition;
+        group.alpha = target;
     }
 
     private void ConfigureCrowImage()
@@ -255,107 +523,117 @@ public sealed class PracticeNightController : MonoBehaviour
         crowImage.preserveAspect = true;
         crowImage.raycastTarget = false;
         crowImage.color = Color.white;
+
+        if (crowStoneEdgeCropPixels > 0f)
+        {
+            CrowStoneEdgeCrop crop = crowRect.GetComponent<CrowStoneEdgeCrop>();
+            if (crop == null) crop = crowRect.gameObject.AddComponent<CrowStoneEdgeCrop>();
+            crop.Configure(crowAnimator, crowStoneEdgeCropPixels);
+        }
     }
 
-    private Vector2 ResolveCrowRestPosition()
+    private void ResolveThrowVisual()
     {
-        if (scarecrowWorldTarget == null || crowCanvas == null)
+        if (throwVisualRoot == null)
         {
-            return crowRestPosition;
+            Canvas parentCanvas = crowCanvas != null ? crowCanvas : FindObjectOfType<Canvas>();
+            if (parentCanvas == null)
+            {
+                return;
+            }
+
+            GameObject visual = new GameObject("PracticeThrowVisual", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Animator));
+            throwVisualRoot = visual.GetComponent<RectTransform>();
+            throwVisualCreatedAtRuntime = true;
+            throwVisualRoot.SetParent(parentCanvas.transform, false);
+            throwVisualRoot.anchorMin = new Vector2(0.5f, 0.5f);
+            throwVisualRoot.anchorMax = new Vector2(0.5f, 0.5f);
+            throwVisualRoot.pivot = new Vector2(0.5f, 0.5f);
+            throwVisualRoot.localScale = Vector3.one;
+
+            Image image = visual.GetComponent<Image>();
+            image.raycastTarget = false;
+            image.preserveAspect = true;
         }
 
-        return ResolveScarecrowAnchoredPosition() + crowRestOffsetFromScarecrow;
+        throwFade = EnsureCanvasGroup(throwVisualRoot.gameObject);
+        CaptureThrowVisualNaturalScale();
+        throwAnimator = throwVisualRoot.GetComponent<Animator>();
+        if (throwAnimator == null)
+        {
+            throwAnimator = throwVisualRoot.gameObject.AddComponent<Animator>();
+        }
+
+        Image throwImage = throwVisualRoot.GetComponent<Image>();
+        if (throwImage == null)
+        {
+            throwImage = throwVisualRoot.gameObject.AddComponent<Image>();
+        }
+        throwImage.raycastTarget = false;
+        throwImage.preserveAspect = true;
     }
 
-    private Vector2 ResolveCrowEntryPosition()
+    private void CaptureThrowVisualNaturalScale()
     {
-        Vector2 offset = crowEntryOffset;
-        float maxDistance = Mathf.Max(0f, maxCrowEntryDistance);
-        if (maxDistance > 0f && offset.magnitude > maxDistance)
+        if (throwVisualRoot == null || throwVisualNaturalScaleCaptured)
         {
-            offset = offset.normalized * maxDistance;
+            return;
         }
 
-        return ClampCrowToCanvas(crowRestPosition + offset);
+        throwVisualNaturalScale = throwVisualRoot.localScale;
+        throwVisualNaturalScaleCaptured = true;
     }
 
-    private Vector2 ClampCrowToCanvas(Vector2 position)
+    private void ResolveWaypointPath()
     {
-        RectTransform canvasRect = crowCanvas != null ? crowCanvas.transform as RectTransform : null;
-        if (canvasRect == null) return position;
+        if (crowWaypointPath != null)
+        {
+            return;
+        }
 
-        Rect bounds = canvasRect.rect;
-        Vector2 halfSize = crowRect != null
-            ? Vector2.Scale(crowRect.rect.size, crowRect.localScale) * 0.5f
-            : Vector2.zero;
-        Vector2 padding = new Vector2(
-            Mathf.Min(Mathf.Max(0f, crowCanvasPadding.x) + halfSize.x, bounds.width * 0.45f),
-            Mathf.Min(Mathf.Max(0f, crowCanvasPadding.y) + halfSize.y, bounds.height * 0.45f));
-
-        return new Vector2(
-            Mathf.Clamp(position.x, bounds.xMin + padding.x, bounds.xMax - padding.x),
-            Mathf.Clamp(position.y, bounds.yMin + padding.y, bounds.yMax - padding.y));
+        GameObject pathObject = GameObject.Find("waypoints");
+        if (pathObject != null)
+        {
+            crowWaypointPath = pathObject.transform;
+        }
     }
 
-    private IEnumerator MoveCrowTo(Vector2 from, Vector2 to, float duration)
+    private string GetCrowWaypointName(int index)
     {
-        float safeDuration = Mathf.Max(0.01f, duration);
-        for (float t = 0f; t < safeDuration; t += Time.deltaTime)
+        if (crowIntroWaypoints == null || index < 0 || index >= crowIntroWaypoints.Length)
         {
-            crowRect.anchoredPosition = Vector2.LerpUnclamped(from, to, SmoothStep(Mathf.Clamp01(t / safeDuration)));
-            yield return null;
+            return "";
         }
-        crowRect.anchoredPosition = to;
+
+        return crowIntroWaypoints[index];
     }
 
-    private IEnumerator PlayOwlLine(PracticeEvent activeEvent)
+    private Vector3 WaypointPosition(string waypointName, Vector3 fallback)
     {
-        float talkSeconds = activeEvent.owlLineClip != null ? activeEvent.owlLineClip.length : owlTalkSecondsFallback;
-
-        yield return owl.PlayEnterThenTalk(() =>
+        if (crowWaypointPath == null || string.IsNullOrEmpty(waypointName))
         {
-            if (activeEvent.owlLineClip == null || owlAudioSource == null) return;
-            owlAudioSource.Stop();
-            owlAudioSource.clip = activeEvent.owlLineClip;
-            owlAudioSource.Play();
-        }, talkSeconds);
+            return fallback;
+        }
+
+        Transform waypoint = crowWaypointPath.Find(waypointName);
+        if (waypoint == null)
+        {
+            Debug.LogWarning($"[PracticeNight] waypoint '{waypointName}' not found under {crowWaypointPath.name}.");
+            return fallback;
+        }
+
+        return waypoint.position;
     }
 
-    private IEnumerator OnWordSuccess(PracticeEvent activeEvent)
+    private static CanvasGroup EnsureCanvasGroup(GameObject target)
     {
-        if (resolutionHoldSeconds > 0f)
+        CanvasGroup group = target.GetComponent<CanvasGroup>();
+        if (group == null)
         {
-            yield return new WaitForSeconds(resolutionHoldSeconds);
+            group = target.AddComponent<CanvasGroup>();
         }
 
-        if (activeEvent.kind == PracticeEventKind.CrowPetrified)
-        {
-            crowAnimator.runtimeAnimatorController = crowSetFreeController;
-            crowAnimator.Play("ga_set_free", 0, 0f);
-            GameAudio.PlayRockBreak();
-            yield return null;
-
-            float len1 = crowAnimator.GetCurrentAnimatorStateInfo(0).length;
-            if (len1 > 0f) yield return new WaitForSeconds(len1);
-
-            crowAnimator.Play("ga_set_free2", 0, 0f);
-            GameAudio.PlayCrowLoop();
-            yield return null;
-
-            float len2 = crowAnimator.GetCurrentAnimatorStateInfo(0).length;
-            if (len2 > 0f) yield return new WaitForSeconds(len2);
-            GameAudio.StopSfxLoop();
-        }
-        else
-        {
-            GameAudio.PlayPaaThrow();
-            yield return MoveCrowTo(crowRect.anchoredPosition, crowRect.anchoredPosition + crowShooOffset, crowShooDuration);
-        }
-
-        crowRect.gameObject.SetActive(false);
-
-        yield return StartCoroutine(SceneFadeController.Cover(sceneFadeDuration));
-        SceneManager.LoadScene(returnSceneName);
+        return group;
     }
 
     private static float SmoothStep(float value)
@@ -370,5 +648,11 @@ public sealed class PracticeNightController : MonoBehaviour
         const float overshoot = 1.15f;
         float s = value - 1f;
         return 1f + s * s * ((overshoot + 1f) * s + overshoot);
+    }
+
+    private static float EaseOut(float value)
+    {
+        value = Mathf.Clamp01(value);
+        return 1f - (1f - value) * (1f - value);
     }
 }

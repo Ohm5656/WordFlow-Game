@@ -64,6 +64,16 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     [Header("Audio")]
     [SerializeField] private AudioSource wordAudioSource;
 
+    [Header("Stone placement voice")]
+    [Tooltip("AudioClip per stone, matched to stone1/stone2/stone3 order. Played when the stone snaps into a slot.")]
+    [SerializeField] private AudioClip[] stonePlacementClips;
+    [Tooltip("Volume scale per stone, matched to stone1/stone2/stone3 order. Defaults to 1 if empty or shorter than the stone list.")]
+    [SerializeField] private float[] stonePlacementVolumes;
+    [Tooltip("While a stone's placement sound is still playing, block placing the next stone into a slot.")]
+    [SerializeField] private bool blockPlacementWhileVoicePlaying = true;
+    [Tooltip("Breathing room after each stone placement voice before completion or the next placement is accepted.")]
+    [SerializeField] private float placementVoicePostGapSeconds = 0.15f;
+
     [Header("Assembly sound hint (plays the target word while assembling)")]
     [SerializeField] private UnityEngine.UI.Button assemblySoundButton;
 
@@ -80,6 +90,8 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     private bool resultShown;
     private Coroutine misassemblyRoutine;
     private Coroutine recordingRoutine;
+    private Coroutine placementVoiceRoutine;
+    private Coroutine pendingCompletionRoutine;
     private Button resultSoundButton;
     private Button resultMicButton;
     private Coroutine assemblySoundFeedbackRoutine;
@@ -90,7 +102,10 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     private Vector3 resultMicNaturalScale = Vector3.one;
     private bool recordStopRequested;
     private bool isRecording;
+    private bool isPlacementVoicePlaying;
     private string recordingDevice;
+    private Vector2 assemblyUiHomePosition;
+    private bool assemblyUiHomeCaptured;
 
     public RectTransform DragParent => transform as RectTransform;
     public float ReturnDuration => returnDuration;
@@ -110,12 +125,15 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         }
 
         if (assemblyUiRoot == null) assemblyUiRoot = transform.parent as RectTransform;
+        CaptureAssemblyUiHome();
         HideAllResultPages();
     }
 
     private void OnDisable()
     {
         StopRecording();
+        StopPlacementVoice();
+        StopPendingCompletionCheck();
         StopActionFeedback(ref assemblySoundFeedbackRoutine, assemblySoundButton, assemblySoundNaturalScale);
         StopActionFeedback(ref resultSoundFeedbackRoutine, resultSoundButton, resultSoundNaturalScale);
     }
@@ -124,6 +142,8 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     /// Call once before PlayReveal().
     public void Configure(string word, RectTransform resultPageRoot, AudioClip resultWordClip, Action onSuccessCallback)
     {
+        PrepareForRound();
+
         targetWord = word ?? "";
         resultPage = resultPageRoot;
         wordClip = resultWordClip;
@@ -144,9 +164,68 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         }
     }
 
+    public void PrepareForRound()
+    {
+        StopRecording();
+        StopPlacementVoice();
+        StopPendingCompletionCheck();
+
+        if (recordingRoutine != null)
+        {
+            StopCoroutine(recordingRoutine);
+            recordingRoutine = null;
+        }
+
+        if (misassemblyRoutine != null)
+        {
+            StopCoroutine(misassemblyRoutine);
+            misassemblyRoutine = null;
+        }
+
+        if (wordAudioSource != null)
+        {
+            wordAudioSource.Stop();
+        }
+
+        StopActionFeedback(ref assemblySoundFeedbackRoutine, assemblySoundButton, assemblySoundNaturalScale);
+        StopActionFeedback(ref resultSoundFeedbackRoutine, resultSoundButton, resultSoundNaturalScale);
+
+        recordStopRequested = false;
+        isRecording = false;
+        revealFinished = false;
+        resultShown = false;
+
+        for (int i = 0; i < slotOccupants.Length; i++)
+        {
+            slotOccupants[i] = null;
+        }
+
+        if (assemblyUiRoot != null)
+        {
+            CaptureAssemblyUiHome();
+            assemblyUiRoot.gameObject.SetActive(true);
+            assemblyUiRoot.anchoredPosition = assemblyUiHomePosition;
+        }
+
+        if (bookCraftRoot != null) bookCraftRoot.gameObject.SetActive(true);
+        if (inputSlot1 != null) inputSlot1.gameObject.SetActive(true);
+        if (inputSlot2 != null) inputSlot2.gameObject.SetActive(true);
+
+        HideAllResultPages();
+
+        for (int i = 0; i < stones.Count; i++)
+        {
+            stones[i].ResetHomeImmediate();
+        }
+
+        SetResultControlsInteractable(false);
+        resultSoundButton = null;
+        resultMicButton = null;
+    }
+
     private void PlayAssemblyHint()
     {
-        if (!CanInteract || wordClip == null || wordAudioSource == null) return;
+        if (!CanInteract || (blockPlacementWhileVoicePlaying && isPlacementVoicePlaying) || wordClip == null || wordAudioSource == null) return;
         GameAudio.PlayClick();
         PlayWordClip();
         StartActionFeedback(assemblySoundButton, assemblySoundNaturalScale, ref assemblySoundFeedbackRoutine);
@@ -158,6 +237,10 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 
         yield return new WaitForEndOfFrame();
         Canvas.ForceUpdateCanvases();
+
+        if (bookCraftRoot != null) bookCraftRoot.gameObject.SetActive(true);
+        if (inputSlot1 != null) inputSlot1.gameObject.SetActive(true);
+        if (inputSlot2 != null) inputSlot2.gameObject.SetActive(true);
 
         for (int i = 0; i < stones.Count; i++)
         {
@@ -207,6 +290,11 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
             return;
         }
 
+        if (blockPlacementWhileVoicePlaying && isPlacementVoicePlaying)
+        {
+            return;
+        }
+
         int targetSlot = GetFirstEmptySlot();
         if (!IsValidSlot(targetSlot))
         {
@@ -235,11 +323,17 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         stone.SetCurrentSlot(slotIndex);
         stone.MoveTo(slotPosition, stone.HomeScale * Mathf.Max(0.01f, snappedScaleMultiplier), snapDuration, true);
 
-        TryComplete();
+        PlayPlacementVoice(stone);
+        QueueCompletionCheck();
     }
 
     private void TryComplete()
     {
+        if (resultShown || misassemblyRoutine != null)
+        {
+            return;
+        }
+
         if (slotOccupants[0] == null || slotOccupants[1] == null)
         {
             return;
@@ -552,6 +646,110 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         wordAudioSource.Play();
     }
 
+    private void QueueCompletionCheck()
+    {
+        if (slotOccupants[0] == null || slotOccupants[1] == null)
+        {
+            return;
+        }
+
+        StopPendingCompletionCheck();
+        if (isPlacementVoicePlaying)
+        {
+            pendingCompletionRoutine = StartCoroutine(CompletionAfterPlacementVoice());
+            return;
+        }
+
+        TryComplete();
+    }
+
+    private IEnumerator CompletionAfterPlacementVoice()
+    {
+        while (isPlacementVoicePlaying)
+        {
+            yield return null;
+        }
+
+        pendingCompletionRoutine = null;
+        TryComplete();
+    }
+
+    private void StopPendingCompletionCheck()
+    {
+        if (pendingCompletionRoutine != null)
+        {
+            StopCoroutine(pendingCompletionRoutine);
+            pendingCompletionRoutine = null;
+        }
+    }
+
+    private AudioClip GetPlacementClipForStone(MagicStonePuzzleStone stone)
+    {
+        int index = stones.IndexOf(stone);
+        if (index < 0 || stonePlacementClips == null || index >= stonePlacementClips.Length)
+        {
+            return null;
+        }
+
+        return stonePlacementClips[index];
+    }
+
+    private float GetPlacementVolumeForStone(MagicStonePuzzleStone stone)
+    {
+        int index = stones.IndexOf(stone);
+        if (index < 0 || stonePlacementVolumes == null || index >= stonePlacementVolumes.Length)
+        {
+            return 1f;
+        }
+
+        return Mathf.Clamp01(stonePlacementVolumes[index]);
+    }
+
+    private void PlayPlacementVoice(MagicStonePuzzleStone stone)
+    {
+        AudioClip clip = GetPlacementClipForStone(stone);
+        if (clip == null || wordAudioSource == null)
+        {
+            return;
+        }
+
+        wordAudioSource.Stop();
+        if (placementVoiceRoutine != null)
+        {
+            StopCoroutine(placementVoiceRoutine);
+            placementVoiceRoutine = null;
+        }
+
+        placementVoiceRoutine = StartCoroutine(PlacementVoiceRoutine(clip, GetPlacementVolumeForStone(stone)));
+    }
+
+    private IEnumerator PlacementVoiceRoutine(AudioClip clip, float volume)
+    {
+        isPlacementVoicePlaying = true;
+        wordAudioSource.PlayOneShot(clip, volume);
+
+        float until = Time.realtimeSinceStartup + clip.length + Mathf.Max(0f, placementVoicePostGapSeconds);
+        while (Time.realtimeSinceStartup < until)
+        {
+            yield return null;
+        }
+
+        isPlacementVoicePlaying = false;
+        placementVoiceRoutine = null;
+    }
+
+    private void StopPlacementVoice()
+    {
+        if (placementVoiceRoutine != null)
+        {
+            StopCoroutine(placementVoiceRoutine);
+            placementVoiceRoutine = null;
+        }
+
+        isPlacementVoicePlaying = false;
+        if (wordAudioSource != null) wordAudioSource.Stop();
+    }
+
     private void StopRecording()
     {
         if (!string.IsNullOrEmpty(recordingDevice))
@@ -657,6 +855,17 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         if (inputSlot1 == null) inputSlot1 = transform.parent.Find("inputSlot1") as RectTransform;
         if (inputSlot2 == null) inputSlot2 = transform.parent.Find("inputSlot2") as RectTransform;
         if (bookCraftRoot == null) bookCraftRoot = transform.parent.Find("book_craft") as RectTransform;
+    }
+
+    private void CaptureAssemblyUiHome()
+    {
+        if (assemblyUiRoot == null || assemblyUiHomeCaptured)
+        {
+            return;
+        }
+
+        assemblyUiHomePosition = assemblyUiRoot.anchoredPosition;
+        assemblyUiHomeCaptured = true;
     }
 
     private static float SmoothStep(float value)

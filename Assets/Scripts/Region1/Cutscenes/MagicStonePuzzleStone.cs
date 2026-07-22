@@ -217,6 +217,23 @@ public sealed class MagicStonePuzzleStone : MonoBehaviour, IPointerClickHandler
         MoveTo(HomePosition, HomeScale, controller != null ? controller.ReturnDuration : 0.2f, false);
     }
 
+    public void ResetHomeImmediate()
+    {
+        CaptureHome();
+        StopMotion();
+        SetCurrentSlot(-1);
+
+        if (rectTransform != null)
+        {
+            rectTransform.anchoredPosition = HomePosition;
+            rectTransform.localScale = HomeScale;
+        }
+
+        SetAlpha(1f);
+        SetInteractable(false);
+        gameObject.SetActive(true);
+    }
+
     private IEnumerator MoveRoutine(Vector2 targetPosition, Vector3 targetScale, float duration, bool bounce)
     {
         Vector2 fromPosition = rectTransform.anchoredPosition;
