@@ -49,7 +49,10 @@ public sealed class WordAssemblyResizeHandle : MonoBehaviour
             CaptureCurrentLayoutAsReference();
         }
 
-        ApplyCurrentSizeToChildren(true);
+        // Do not force-apply child positions during validation. Moving stone1/stone2/stone3 in
+        // the scene should remain authored layout; resize scaling only runs when this root's size
+        // actually changes.
+        ApplyCurrentSizeToChildren(false);
     }
 
     private void Update()
