@@ -14,6 +14,7 @@ using UnityEngine.UI;
 /// inputSlot1/inputSlot2/book_craft are siblings under the parent WordAssembly canvas) — the same
 /// layout MagicStonePuzzleController used, so no scene reparenting is required.
 /// </summary>
+[DefaultExecutionOrder(-1000)]
 public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 {
     [Header("Stones (children of this GameObject)")]
@@ -31,7 +32,6 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     [Header("Reveal")]
     [SerializeField] private float revealDelayBetweenStones = 0.22f;
     [SerializeField] private float revealDuration = 0.42f;
-    [SerializeField] private float revealYOffset = -120f;
     [SerializeField] private float revealStartScale = 0.2f;
 
     [Header("Motion")]
@@ -154,7 +154,6 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 
     public IEnumerator PlayReveal()
     {
-        Vector2 offset = new Vector2(0f, revealYOffset);
         float startScale = Mathf.Max(0.01f, revealStartScale);
 
         yield return new WaitForEndOfFrame();
@@ -163,13 +162,15 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         for (int i = 0; i < stones.Count; i++)
         {
             stones[i].SetCurrentSlot(-1);
+            // The authored scene placement is the single source of truth. Capture it after
+            // the canvas has settled so returning from a slot goes back to the scene position.
             stones[i].CaptureHome(true);
-            stones[i].PrepareHidden(offset, startScale);
+            stones[i].PrepareHidden(startScale);
         }
 
         for (int i = 0; i < stones.Count; i++)
         {
-            yield return stones[i].Reveal(revealDuration, offset, startScale);
+            yield return stones[i].Reveal(revealDuration, startScale);
             if (i < stones.Count - 1 && revealDelayBetweenStones > 0f)
             {
                 yield return new WaitForSeconds(revealDelayBetweenStones);

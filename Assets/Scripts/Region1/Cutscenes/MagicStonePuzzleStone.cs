@@ -92,6 +92,23 @@ public sealed class MagicStonePuzzleStone : MonoBehaviour, IPointerClickHandler
         gameObject.SetActive(true);
     }
 
+    // Keeps the authored scene position intact while preparing the visual reveal.
+    // The offset overload above remains for the older MagicStonePuzzleController flow.
+    public void PrepareHidden(float startScale)
+    {
+        CaptureHome();
+        StopMotion();
+
+        if (rectTransform != null)
+        {
+            rectTransform.localScale = HomeScale * Mathf.Max(0.01f, startScale);
+        }
+
+        SetAlpha(0f);
+        SetInteractable(false);
+        gameObject.SetActive(true);
+    }
+
     public IEnumerator Reveal(float duration, Vector2 offset, float startScale)
     {
         CaptureHome();
@@ -117,6 +134,45 @@ public sealed class MagicStonePuzzleStone : MonoBehaviour, IPointerClickHandler
         rectTransform.anchoredPosition = HomePosition;
         rectTransform.localScale = HomeScale;
         SetAlpha(1f);
+    }
+
+    // Reveals at the exact authored scene position; only alpha and scale animate.
+    public IEnumerator Reveal(float duration, float startScale)
+    {
+        CaptureHome();
+        StopMotion();
+        gameObject.SetActive(true);
+
+        Vector3 fromScale = rectTransform != null
+            ? rectTransform.localScale
+            : HomeScale * Mathf.Max(0.01f, startScale);
+        float safeDuration = Mathf.Max(0.01f, duration);
+
+        SetAlpha(0f);
+        SetInteractable(false);
+
+        for (float elapsed = 0f; elapsed < safeDuration; elapsed += Time.deltaTime)
+        {
+            float t = Mathf.Clamp01(elapsed / safeDuration);
+            float fadeT = SmoothStep(t);
+            float scaleT = EaseOutBack(t);
+
+            if (rectTransform != null)
+            {
+                rectTransform.localScale = Vector3.LerpUnclamped(fromScale, HomeScale, scaleT);
+            }
+
+            SetAlpha(fadeT);
+            yield return null;
+        }
+
+        if (rectTransform != null)
+        {
+            rectTransform.localScale = HomeScale;
+        }
+
+        SetAlpha(1f);
+        SetInteractable(true);
     }
 
     public void SetInteractable(bool value)
