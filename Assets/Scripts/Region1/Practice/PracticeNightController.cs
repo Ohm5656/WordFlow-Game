@@ -31,6 +31,9 @@ public sealed class PracticeNightController : MonoBehaviour
     [Header("Word assembly")]
     [SerializeField] private PracticeWordAssembly wordAssembly;
 
+    [Header("Hero")]
+    [SerializeField] private Animator heroAnimator;
+
     [Header("Crow")]
     [SerializeField] private Animator crowAnimator;
     [SerializeField] private RectTransform crowRect;
@@ -74,6 +77,12 @@ public sealed class PracticeNightController : MonoBehaviour
 
     private void Awake()
     {
+        if (heroAnimator != null)
+        {
+            heroAnimator.SetInteger("orientation", 4);
+            heroAnimator.SetFloat("speed", 0f);
+        }
+
         if (crowRect != null)
         {
             crowRestPosition = crowRect.anchoredPosition;
