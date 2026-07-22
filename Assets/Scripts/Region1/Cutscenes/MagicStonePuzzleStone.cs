@@ -52,11 +52,11 @@ public sealed class MagicStonePuzzleStone : MonoBehaviour, IPointerClickHandler
         Letter = letter ?? "";
     }
 
-    public void CaptureHome()
+    public void CaptureHome(bool force = false)
     {
         Initialize(controller);
 
-        if (homeCaptured || rectTransform == null)
+        if ((!force && homeCaptured) || rectTransform == null)
         {
             return;
         }
@@ -65,6 +65,15 @@ public sealed class MagicStonePuzzleStone : MonoBehaviour, IPointerClickHandler
         HomeScale = rectTransform.localScale;
         homeColor = image != null ? image.color : Color.white;
         homeCaptured = true;
+    }
+
+    public void HideImmediate()
+    {
+        Initialize(controller);
+        StopMotion();
+        SetAlpha(0f);
+        SetInteractable(false);
+        gameObject.SetActive(true);
     }
 
     public void PrepareHidden(Vector2 offset, float startScale)

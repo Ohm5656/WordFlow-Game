@@ -49,6 +49,12 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     [SerializeField] private float recordingPulseScale = 1.1f;
     [SerializeField] private float recordingPulseSpeed = 5f;
 
+    [Header("Sound and microphone button feedback")]
+    [SerializeField] private float actionPulseScale = 1.12f;
+    [SerializeField] private float actionPulseSpeed = 5.5f;
+    [SerializeField] private float buttonPressScale = 0.88f;
+    [SerializeField] private float buttonPressDuration = 0.14f;
+
     [Header("Result: slide the whole book+stones UI off-screen")]
     [Tooltip("Root to slide out. Empty = this GameObject's parent (the WordAssembly canvas child holding book_craft/magic_stone/slots).")]
     [SerializeField] private RectTransform assemblyUiRoot;
@@ -76,7 +82,11 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     private Coroutine recordingRoutine;
     private Button resultSoundButton;
     private Button resultMicButton;
+    private Coroutine assemblySoundFeedbackRoutine;
+    private Coroutine resultSoundFeedbackRoutine;
     private Vector3 resultNaturalScale = Vector3.one;
+    private Vector3 assemblySoundNaturalScale = Vector3.one;
+    private Vector3 resultSoundNaturalScale = Vector3.one;
     private Vector3 resultMicNaturalScale = Vector3.one;
     private bool recordStopRequested;
     private bool isRecording;
@@ -95,9 +105,8 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 
         for (int i = 0; i < stones.Count; i++)
         {
-            stones[i].CaptureHome();
             stones[i].SetCurrentSlot(-1);
-            stones[i].PrepareHidden(new Vector2(0f, revealYOffset), Mathf.Max(0.01f, revealStartScale));
+            stones[i].HideImmediate();
         }
 
         if (assemblyUiRoot == null) assemblyUiRoot = transform.parent as RectTransform;
@@ -107,6 +116,8 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     private void OnDisable()
     {
         StopRecording();
+        StopActionFeedback(ref assemblySoundFeedbackRoutine, assemblySoundButton, assemblySoundNaturalScale);
+        StopActionFeedback(ref resultSoundFeedbackRoutine, resultSoundButton, resultSoundNaturalScale);
     }
 
     /// Sets the round's target word, result page and echo clip, and wires the success callback.
@@ -129,6 +140,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         {
             assemblySoundButton.onClick.RemoveAllListeners();
             assemblySoundButton.onClick.AddListener(PlayAssemblyHint);
+            assemblySoundNaturalScale = assemblySoundButton.transform.localScale;
         }
     }
 
@@ -137,12 +149,23 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         if (!CanInteract || wordClip == null || wordAudioSource == null) return;
         GameAudio.PlayClick();
         PlayWordClip();
+        StartActionFeedback(assemblySoundButton, assemblySoundNaturalScale, ref assemblySoundFeedbackRoutine);
     }
 
     public IEnumerator PlayReveal()
     {
         Vector2 offset = new Vector2(0f, revealYOffset);
         float startScale = Mathf.Max(0.01f, revealStartScale);
+
+        yield return new WaitForEndOfFrame();
+        Canvas.ForceUpdateCanvases();
+
+        for (int i = 0; i < stones.Count; i++)
+        {
+            stones[i].SetCurrentSlot(-1);
+            stones[i].CaptureHome(true);
+            stones[i].PrepareHidden(offset, startScale);
+        }
 
         for (int i = 0; i < stones.Count; i++)
         {
@@ -290,6 +313,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         if (!resultShown || isRecording) return;
         GameAudio.PlayClick();
         PlayWordClip();
+        StartActionFeedback(resultSoundButton, resultSoundNaturalScale, ref resultSoundFeedbackRoutine);
     }
 
     private void HandleResultMicClicked()
@@ -313,6 +337,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         isRecording = true;
         recordStopRequested = false;
         if (wordAudioSource != null) wordAudioSource.Stop();
+        yield return PlayButtonPress(resultMicButton, resultMicNaturalScale);
         SetResultControlsInteractable(false);
         if (resultMicButton != null) resultMicButton.interactable = true;
 
@@ -417,6 +442,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         {
             resultSoundButton.onClick.RemoveAllListeners();
             resultSoundButton.onClick.AddListener(HandleResultSoundClicked);
+            resultSoundNaturalScale = resultSoundButton.transform.localScale;
         }
 
         if (resultMicButton != null)
@@ -446,6 +472,67 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         float pulse = 1f + (Mathf.Sin(Time.realtimeSinceStartup * recordingPulseSpeed) + 1f) * 0.5f
             * Mathf.Max(0f, recordingPulseScale - 1f);
         resultMicButton.transform.localScale = resultMicNaturalScale * pulse;
+    }
+
+    private void StartActionFeedback(Button button, Vector3 naturalScale, ref Coroutine routine)
+    {
+        StopActionFeedback(ref routine, button, naturalScale);
+        if (button != null) routine = StartCoroutine(ActionFeedbackRoutine(button, naturalScale));
+    }
+
+    private void StopActionFeedback(ref Coroutine routine, Button button, Vector3 naturalScale)
+    {
+        if (routine != null)
+        {
+            StopCoroutine(routine);
+            routine = null;
+        }
+
+        if (button != null) button.transform.localScale = naturalScale;
+    }
+
+    private IEnumerator ActionFeedbackRoutine(Button button, Vector3 naturalScale)
+    {
+        yield return PlayButtonPress(button, naturalScale);
+
+        float speed = Mathf.Max(0.01f, actionPulseSpeed);
+        float pulseScale = Mathf.Max(1f, actionPulseScale);
+        for (float elapsed = 0f; wordAudioSource != null && wordAudioSource.isPlaying; elapsed += Time.deltaTime)
+        {
+            float wave = (Mathf.Sin(elapsed * speed) + 1f) * 0.5f;
+            button.transform.localScale = naturalScale * Mathf.Lerp(1f, pulseScale, SmoothStep(wave));
+            yield return null;
+        }
+
+        button.transform.localScale = naturalScale;
+    }
+
+    private IEnumerator PlayButtonPress(Button button, Vector3 naturalScale)
+    {
+        if (button == null) yield break;
+
+        float halfDuration = Mathf.Max(0.01f, buttonPressDuration) * 0.5f;
+        Vector3 pressedScale = naturalScale * Mathf.Clamp(buttonPressScale, 0.1f, 1f);
+
+        for (float elapsed = 0f; elapsed < halfDuration; elapsed += Time.deltaTime)
+        {
+            button.transform.localScale = Vector3.LerpUnclamped(
+                naturalScale,
+                pressedScale,
+                SmoothStep(Mathf.Clamp01(elapsed / halfDuration)));
+            yield return null;
+        }
+
+        for (float elapsed = 0f; elapsed < halfDuration; elapsed += Time.deltaTime)
+        {
+            button.transform.localScale = Vector3.LerpUnclamped(
+                pressedScale,
+                naturalScale,
+                EaseOutBack(Mathf.Clamp01(elapsed / halfDuration)));
+            yield return null;
+        }
+
+        button.transform.localScale = naturalScale;
     }
 
     private void EnsureWordAudioSource()
@@ -519,9 +606,10 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     private bool TryGetSlotPosition(int index, out Vector2 slotPosition)
     {
         RectTransform slot = index == 0 ? inputSlot1 : inputSlot2;
-        if (slot != null)
+        RectTransform dragParent = DragParent;
+        if (slot != null && dragParent != null)
         {
-            slotPosition = slot.anchoredPosition;
+            slotPosition = dragParent.InverseTransformPoint(slot.position);
             return true;
         }
 

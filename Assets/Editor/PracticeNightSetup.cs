@@ -28,6 +28,9 @@ public static class PracticeNightSetup
     private const string PaaWordClipPath = "Assets/Audio/Adventure/paa_word.wav";
     private const string KaaOwlClipPath = "Assets/Audio/Adventure/kaa_sound_out.wav";
     private const string PaaOwlClipPath = "Assets/Audio/Adventure/paa_sound_out.wav";
+    private const string PracticeScarecrowSpritePath =
+        "Assets/Art/boss/pratice/ChatGPT Image Jul 18, 2026, 12_27_39 PM.png";
+    private const string PracticeScarecrowPrefabPath = "Assets/Prefabs/Practice/PracticeScarecrow.prefab";
     private const string ActionIconSheetPath =
         "Assets/Art/visaul_novel/quest/ChatGPT Image Jun 3, 2026, 03_33_58 PM.png";
     private const string SoundIconSpriteName = "ChatGPT Image Jun 3, 2026, 03_33_58 PM_8";
@@ -67,6 +70,7 @@ public static class PracticeNightSetup
         GameObject crow = InstantiateCrow(actorCanvasRoot, wordAssembly.transform);
         GameObject owl = InstantiateOwl(actorCanvasRoot, wordAssembly.transform);
         Animator heroAnimator = SetupHeroIdle(objectsRoot);
+        Transform scarecrow = EnsurePracticeScarecrow(objectsRoot);
 
         GameObject controllerObject = GameObject.Find("PracticeNightController");
         if (controllerObject == null)
@@ -80,7 +84,7 @@ public static class PracticeNightSetup
             controller = controllerObject.AddComponent<PracticeNightController>();
         }
 
-        WireController(controller, wordAssemblyComponent, crow, owl, wordAssembly.transform, heroAnimator);
+        WireController(controller, wordAssemblyComponent, crow, owl, wordAssembly.transform, heroAnimator, scarecrow);
         EnsureBuildScenes();
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
@@ -255,7 +259,7 @@ public static class PracticeNightSetup
     }
 
     private static void WireController(PracticeNightController controller, PracticeWordAssembly wordAssembly,
-        GameObject crow, GameObject owl, Transform wordAssemblyRoot, Animator heroAnimator)
+        GameObject crow, GameObject owl, Transform wordAssemblyRoot, Animator heroAnimator, Transform scarecrowTransform)
     {
         if (crow == null)
         {
@@ -275,8 +279,6 @@ public static class PracticeNightSetup
         so.FindProperty("crowRestOffsetFromScarecrow").vector2Value = new Vector2(210f, -35f);
         so.FindProperty("crowScale").floatValue = 0.65f;
 
-        GameObject scarecrowGo = GameObject.Find("dummy_idle_DOWN_0");
-        Transform scarecrowTransform = scarecrowGo != null ? scarecrowGo.transform : null;
         so.FindProperty("scarecrowWorldTarget").objectReferenceValue = scarecrowTransform;
 
         so.FindProperty("bookPopRoot").objectReferenceValue = wordAssemblyRoot.Find("book_craft") as RectTransform;
@@ -389,15 +391,19 @@ public static class PracticeNightSetup
             ? existing.gameObject
             : new GameObject(buttonName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
 
-        if (existing == null) buttonObject.transform.SetParent(parent, false);
+        bool wasCreated = existing == null;
+        if (wasCreated) buttonObject.transform.SetParent(parent, false);
         buttonObject.layer = parent.gameObject.layer;
 
         RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
-        buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
-        buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
-        buttonRect.pivot = new Vector2(0.5f, 0.5f);
-        buttonRect.anchoredPosition = anchoredPosition;
-        buttonRect.sizeDelta = size;
+        if (wasCreated)
+        {
+            buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
+            buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
+            buttonRect.pivot = new Vector2(0.5f, 0.5f);
+            buttonRect.anchoredPosition = anchoredPosition;
+            buttonRect.sizeDelta = size;
+        }
 
         Transform labelTransform = buttonObject.transform.Find("Label");
         if (labelTransform != null) Object.DestroyImmediate(labelTransform.gameObject);
@@ -425,6 +431,82 @@ public static class PracticeNightSetup
 
         Debug.LogError($"[PracticeNightSetup] Could not find icon sprite '{spriteName}' in {ActionIconSheetPath}.");
         return null;
+    }
+
+    private static Transform EnsurePracticeScarecrow(Transform objectsRoot)
+    {
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(PracticeScarecrowSpritePath);
+        if (sprite == null)
+        {
+            Debug.LogError($"[PracticeNightSetup] Practice scarecrow sprite not found at {PracticeScarecrowSpritePath}.");
+            GameObject fallback = GameObject.Find("dummy_idle_DOWN_0");
+            return fallback != null ? fallback.transform : null;
+        }
+
+        GameObject existing = GameObject.Find("PracticeScarecrow");
+        GameObject previousScarecrow = GameObject.Find("dummy_idle_DOWN_0");
+        bool created = existing == null;
+
+        if (created)
+        {
+            GameObject prefab = GetOrCreatePracticeScarecrowPrefab(sprite);
+            Transform parent = previousScarecrow != null ? previousScarecrow.transform.parent : objectsRoot;
+            existing = InstantiatePrefabRobust(prefab, parent);
+            if (existing == null)
+            {
+                return null;
+            }
+            existing.name = "PracticeScarecrow";
+
+            if (previousScarecrow != null)
+            {
+                existing.transform.SetPositionAndRotation(
+                    previousScarecrow.transform.position,
+                    previousScarecrow.transform.rotation);
+
+                SpriteRenderer previousRenderer = previousScarecrow.GetComponent<SpriteRenderer>();
+                float sourceHeight = Mathf.Max(0.01f, sprite.bounds.size.y);
+                float targetHeight = previousRenderer != null
+                    ? Mathf.Max(0.1f, previousRenderer.bounds.size.y)
+                    : 1.4f;
+                float scale = targetHeight / sourceHeight;
+                existing.transform.localScale = new Vector3(scale, scale, 1f);
+            }
+        }
+
+        SpriteRenderer renderer = existing.GetComponent<SpriteRenderer>();
+        if (renderer == null) renderer = existing.AddComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+
+        if (previousScarecrow != null)
+        {
+            SpriteRenderer previousRenderer = previousScarecrow.GetComponent<SpriteRenderer>();
+            if (previousRenderer != null)
+            {
+                renderer.sortingLayerID = previousRenderer.sortingLayerID;
+                renderer.sortingOrder = previousRenderer.sortingOrder;
+            }
+            previousScarecrow.SetActive(false);
+        }
+
+        return existing.transform;
+    }
+
+    private static GameObject GetOrCreatePracticeScarecrowPrefab(Sprite sprite)
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PracticeScarecrowPrefabPath);
+        if (prefab != null) return prefab;
+
+        if (!AssetDatabase.IsValidFolder("Assets/Prefabs/Practice"))
+        {
+            AssetDatabase.CreateFolder("Assets/Prefabs", "Practice");
+        }
+
+        GameObject template = new GameObject("PracticeScarecrow", typeof(SpriteRenderer));
+        template.GetComponent<SpriteRenderer>().sprite = sprite;
+        prefab = PrefabUtility.SaveAsPrefabAsset(template, PracticeScarecrowPrefabPath);
+        Object.DestroyImmediate(template);
+        return prefab;
     }
 
     // R2 Delta B: idle hero, movement disabled. Objects/character has one child in this scene

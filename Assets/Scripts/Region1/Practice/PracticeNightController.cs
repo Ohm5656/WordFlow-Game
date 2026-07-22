@@ -42,6 +42,7 @@ public sealed class PracticeNightController : MonoBehaviour
     [SerializeField] private Transform scarecrowWorldTarget;                  // dummy_idle_DOWN_0
     [SerializeField] private Vector2 crowRestOffsetFromScarecrow = new Vector2(210f, -35f);
     [SerializeField, Range(0.1f, 1f)] private float crowScale = 0.65f;
+    [SerializeField] private Vector2 crowCanvasPadding = new Vector2(120f, 120f);
 
     [Header("Owl")]
     [SerializeField] private OwlGuideAnimator owl;
@@ -52,6 +53,7 @@ public sealed class PracticeNightController : MonoBehaviour
 
     [Header("Crow pacing")]
     [SerializeField] private Vector2 crowEntryOffset = new Vector2(-500f, 220f);
+    [SerializeField] private float maxCrowEntryDistance = 280f;
     [SerializeField] private float crowEntryDuration = 1.1f;
     [SerializeField] private float crowCircleDuration = 2.4f;
     [SerializeField] private float crowCircleRadius = 220f;
@@ -170,10 +172,10 @@ public sealed class PracticeNightController : MonoBehaviour
 
     private IEnumerator PlayIntro(PracticeEvent activeEvent)
     {
-        crowRestPosition = ResolveCrowRestPosition();
+        crowRestPosition = ClampCrowToCanvas(ResolveCrowRestPosition());
         crowRect.localScale = crowNaturalScale * Mathf.Clamp(crowScale, 0.1f, 1f);
         crowRect.gameObject.SetActive(true);
-        crowRect.anchoredPosition = crowRestPosition + crowEntryOffset;
+        crowRect.anchoredPosition = ResolveCrowEntryPosition();
         crowAnimator.runtimeAnimatorController = crowFlyController;
         crowAnimator.Play("ga_fly", 0, 0f);
         GameAudio.PlayCrowLoop();
@@ -204,13 +206,14 @@ public sealed class PracticeNightController : MonoBehaviour
 
     private IEnumerator CircleScarecrow(float duration)
     {
-        Vector2 center = ResolveScarecrowAnchoredPosition();
+        Vector2 center = ClampCrowToCanvas(ResolveScarecrowAnchoredPosition());
         float safeDuration = Mathf.Max(0.1f, duration);
 
         for (float t = 0f; t < safeDuration; t += Time.deltaTime)
         {
             float angle = (t / safeDuration) * Mathf.PI * 2f;
-            crowRect.anchoredPosition = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle) * 0.5f) * crowCircleRadius;
+            Vector2 position = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle) * 0.5f) * crowCircleRadius;
+            crowRect.anchoredPosition = ClampCrowToCanvas(position);
             yield return null;
         }
 
@@ -247,6 +250,36 @@ public sealed class PracticeNightController : MonoBehaviour
         }
 
         return ResolveScarecrowAnchoredPosition() + crowRestOffsetFromScarecrow;
+    }
+
+    private Vector2 ResolveCrowEntryPosition()
+    {
+        Vector2 offset = crowEntryOffset;
+        float maxDistance = Mathf.Max(0f, maxCrowEntryDistance);
+        if (maxDistance > 0f && offset.magnitude > maxDistance)
+        {
+            offset = offset.normalized * maxDistance;
+        }
+
+        return ClampCrowToCanvas(crowRestPosition + offset);
+    }
+
+    private Vector2 ClampCrowToCanvas(Vector2 position)
+    {
+        RectTransform canvasRect = crowCanvas != null ? crowCanvas.transform as RectTransform : null;
+        if (canvasRect == null) return position;
+
+        Rect bounds = canvasRect.rect;
+        Vector2 halfSize = crowRect != null
+            ? Vector2.Scale(crowRect.rect.size, crowRect.localScale) * 0.5f
+            : Vector2.zero;
+        Vector2 padding = new Vector2(
+            Mathf.Min(Mathf.Max(0f, crowCanvasPadding.x) + halfSize.x, bounds.width * 0.45f),
+            Mathf.Min(Mathf.Max(0f, crowCanvasPadding.y) + halfSize.y, bounds.height * 0.45f));
+
+        return new Vector2(
+            Mathf.Clamp(position.x, bounds.xMin + padding.x, bounds.xMax - padding.x),
+            Mathf.Clamp(position.y, bounds.yMin + padding.y, bounds.yMax - padding.y));
     }
 
     private IEnumerator MoveCrowTo(Vector2 from, Vector2 to, float duration)
