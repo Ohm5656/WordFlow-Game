@@ -111,7 +111,12 @@ namespace WordFlow.Adventure.View
 
                 float clipLen = 0f;
                 if (audioSource != null) audioSource.Stop();
-                if (clip != null) { AvHelpers.TryPlay(audioSource, clip); clipLen = clip.length; }
+                if (clip != null)
+                {
+                    clipLen = clip.length;
+                    global::GameAudio.DuckForSpeech(clipLen + 0.12f);
+                    AvHelpers.TryPlay(audioSource, clip);
+                }
 
                 // Hold the longer of the voice length and the authored hold, then auto-advance.
                 yield return Wait(Mathf.Max(frame.holdSeconds, clipLen));
@@ -328,6 +333,7 @@ namespace WordFlow.Adventure.View
         private void Teardown()
         {
             if (audioSource != null) audioSource.Stop();
+            global::GameAudio.ClearSpeechDucking();
             StopEntrances();
             if (_canvas != null) Destroy(_canvas.gameObject);
             _canvas = null; _group = null; _bg = null; _dim = null; _npc = null; _data = null;

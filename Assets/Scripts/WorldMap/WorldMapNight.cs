@@ -24,6 +24,7 @@ public sealed class WorldMapNight : MonoBehaviour
     private const string ChoiceRootName = "ui";
     private const string DayBackgroundName = "BG_Map";
     private const string NightBackgroundName = "BG_Map_Night";
+    private const float TargetAspect = 16f / 9f;
     private static readonly string[] IslandNames = { "Island1", "Island2", "Island3", "Island4", "Island5" };
 
     // Existing map orders: BG = 0, islands/locks = 3..9, placed choice sprites = 20.
@@ -528,13 +529,24 @@ public sealed class WorldMapNight : MonoBehaviour
         renderer.color = color;
 
         float height = 2f * cam.orthographicSize * overscan;
-        float width = height * cam.aspect;
+        float width = height * GetOverlayAspect(cam);
         float spriteWidth = Mathf.Max(0.0001f, whiteSprite.bounds.size.x);
         float spriteHeight = Mathf.Max(0.0001f, whiteSprite.bounds.size.y);
         Vector3 camPosition = cam.transform.position;
         overlayObject.transform.position = new Vector3(camPosition.x, camPosition.y, 0f);
         overlayObject.transform.localScale = new Vector3(width / spriteWidth, height / spriteHeight, 1f);
         return renderer;
+    }
+
+    private static float GetOverlayAspect(Camera cam)
+    {
+        float aspect = cam != null ? Mathf.Max(0.01f, cam.aspect) : TargetAspect;
+        if (cam != null && cam.pixelRect.height > 0.01f)
+        {
+            aspect = Mathf.Max(aspect, cam.pixelRect.width / cam.pixelRect.height);
+        }
+
+        return Mathf.Max(aspect, TargetAspect);
     }
 
     private static void SetAlpha(SpriteRenderer renderer, float alpha)

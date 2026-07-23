@@ -44,13 +44,44 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3357eb4b131a9054a9d5fa0a14f85af8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Common::GameAudio
-  music: {fileID: 8300000, guid: 2c86a95af6e22164896fa20442cda638, type: 3}
-  musicVolume: 0.85
-  otherSceneDuck: 0.7
+  menuTheme: {fileID: 8300000, guid: 2c86a95af6e22164896fa20442cda638, type: 3}
+  menuThemeVolume: 0.85
+  mainTheme: {fileID: 8300000, guid: 6801f22398612b540a391a02ad5ed747, type: 3}
+  mainThemeVolume: 0.85
+  questTheme: {fileID: 8300000, guid: f94e2a9781d1edf43b00ed6378ec669f, type: 3}
+  questThemeVolume: 0.85
+  mainThemeScenes:
+  - reference_forest
+  menuMusicLevel: 0.82
+  worldMapMusicLevel: 0.74
+  nightWorldMapMusicLevel: 0.58
+  forestMusicLevel: 0.52
+  nightForestMusicLevel: 0.34
+  questMapMusicLevel: 0.55
+  cutsceneMusicLevel: 0.36
+  learningMusicLevel: 0.24
+  successMusicLevel: 0.4
+  bossMusicLevel: 0.58
+  sceneMixLerpSpeed: 2.2
+  crossfadeSeconds: 1.4
+  trackSwitchFadeSeconds: 2
+  sameThemeRestartFadeSeconds: 1.2
+  restartSharedThemeOnSceneLoad: 1
+  musicFadeInSeconds: 2.4
+  bridgeAmbience: {fileID: 0}
+  generateBridgeAmbience: 1
+  bridgeAmbienceVolume: 0.045
+  bridgeAmbienceFadeSpeed: 0.65
+  bridgeAmbienceScenes:
+  - first_page
+  - Login
+  - Register
+  - ForgotPassword
+  - WorldMap
+  - reference_forest
   voiceDuck: 0.2
-  duckLerpSpeed: 2.5
-  crossfadeSeconds: 2
-  musicFadeInSeconds: 3.2
+  stingerDuck: 0.55
+  duckLerpSpeed: 4.5
   click: {fileID: 8300000, guid: 36550ee227e21bf42a12a42e59415d85, type: 3}
   unlockSting: {fileID: 8300000, guid: eada9bda2071d7c48a9b73117aa29503, type: 3}
   questEnter: {fileID: 8300000, guid: 352d44abccc750f41b2738a7a72ecf5b, type: 3}

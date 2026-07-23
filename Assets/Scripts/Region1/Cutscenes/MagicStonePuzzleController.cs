@@ -1489,6 +1489,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour, IStonePuzzleOwne
 
         StopSoundPlayback();
         source.clip = clip;
+        GameAudio.DuckForSpeech(clip.length + 0.15f);
         source.Play();
         SetActionButtonInteractable(micButton, false);
         StartActionPulse(soundButtonRoot, ref soundPulseRoutine);
@@ -1514,6 +1515,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour, IStonePuzzleOwne
 
         source.Stop();
         source.clip = soundPlaybackClip;
+        GameAudio.DuckForSpeech(soundPlaybackClip.length + 0.15f);
         source.Play();
         assemblyHintPlaying = true;
         RefreshAssemblyHintInteractivity();
@@ -1580,6 +1582,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour, IStonePuzzleOwne
         }
 
         StopActionPulse(soundButtonRoot, ref soundPulseRoutine);
+        GameAudio.ClearSpeechDucking();
         SetActionButtonInteractable(micButton, CanUseActionButtons() && !isRecording);
         soundPlaybackRoutine = null;
     }
@@ -1592,6 +1595,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour, IStonePuzzleOwne
         }
 
         assemblyHintPlaying = false;
+        GameAudio.ClearSpeechDucking();
         StopActionPulse(assemblySoundButtonRoot, ref assemblyHintPulseRoutine);
         assemblyHintPlaybackRoutine = null;
         RefreshAssemblyHintInteractivity();
@@ -1624,6 +1628,7 @@ public sealed class MagicStonePuzzleController : MonoBehaviour, IStonePuzzleOwne
         {
             actionAudioSource.Stop();
         }
+        GameAudio.ClearSpeechDucking();
 
         StopActionPulse(soundButtonRoot, ref soundPulseRoutine);
         SetActionButtonInteractable(micButton, CanUseActionButtons() && !isRecording);
@@ -1691,15 +1696,18 @@ public sealed class MagicStonePuzzleController : MonoBehaviour, IStonePuzzleOwne
     private IEnumerator PlacementVoiceRoutine(AudioSource source, AudioClip clip, float volume = 1f)
     {
         isPlacementVoicePlaying = true;
+        float postGap = Mathf.Max(0f, placementVoicePostGapSeconds);
+        GameAudio.DuckForSpeech(clip.length + postGap);
         source.PlayOneShot(clip, volume);
 
-        float until = Time.realtimeSinceStartup + clip.length + Mathf.Max(0f, placementVoicePostGapSeconds);
+        float until = Time.realtimeSinceStartup + clip.length + postGap;
         while (Time.realtimeSinceStartup < until)
         {
             yield return null;
         }
 
         isPlacementVoicePlaying = false;
+        GameAudio.ClearSpeechDucking();
         placementVoiceRoutine = null;
     }
 

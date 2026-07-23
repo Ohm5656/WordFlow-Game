@@ -186,6 +186,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         {
             wordAudioSource.Stop();
         }
+        GameAudio.ClearSpeechDucking();
 
         StopActionFeedback(ref assemblySoundFeedbackRoutine, assemblySoundButton, assemblySoundNaturalScale);
         StopActionFeedback(ref resultSoundFeedbackRoutine, resultSoundButton, resultSoundNaturalScale);
@@ -432,6 +433,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         isRecording = true;
         recordStopRequested = false;
         if (wordAudioSource != null) wordAudioSource.Stop();
+        GameAudio.ClearSpeechDucking();
         yield return PlayButtonPress(resultMicButton, resultMicNaturalScale);
         SetResultControlsInteractable(false);
         if (resultMicButton != null) resultMicButton.interactable = true;
@@ -643,6 +645,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         if (wordClip == null || wordAudioSource == null) return;
         wordAudioSource.Stop();
         wordAudioSource.clip = wordClip;
+        GameAudio.DuckForSpeech(wordClip.length + 0.15f);
         wordAudioSource.Play();
     }
 
@@ -726,9 +729,11 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     private IEnumerator PlacementVoiceRoutine(AudioClip clip, float volume)
     {
         isPlacementVoicePlaying = true;
+        float postGap = Mathf.Max(0f, placementVoicePostGapSeconds);
+        GameAudio.DuckForSpeech(clip.length + postGap);
         wordAudioSource.PlayOneShot(clip, volume);
 
-        float until = Time.realtimeSinceStartup + clip.length + Mathf.Max(0f, placementVoicePostGapSeconds);
+        float until = Time.realtimeSinceStartup + clip.length + postGap;
         while (Time.realtimeSinceStartup < until)
         {
             yield return null;
@@ -748,6 +753,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 
         isPlacementVoicePlaying = false;
         if (wordAudioSource != null) wordAudioSource.Stop();
+        GameAudio.ClearSpeechDucking();
     }
 
     private void StopRecording()
