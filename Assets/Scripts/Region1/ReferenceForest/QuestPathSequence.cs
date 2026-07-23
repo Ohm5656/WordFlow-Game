@@ -819,9 +819,9 @@ public sealed class QuestPathSequence : MonoBehaviour
             }
         }
 
-        // Walk only to the quests that still owe stars — a 3-star (or already-attempted) quest is
-        // skipped entirely, not walked past. Its actor/board/light are already up from Start(), so
-        // arriving just holds a beat before the scene switch.
+        // Walk to the next quest that still owes stars, while keeping the authored route between
+        // quest stops. If paa is already perfect and only kaa is visible, the hero still passes
+        // through wp_1 before reaching wp_2 instead of cutting diagonally across the map.
         for (int i = startIndex; i < nightQuestIds.Length; i++)
         {
             string id = nightQuestIds[i];
@@ -830,7 +830,10 @@ public sealed class QuestPathSequence : MonoBehaviour
                 continue;
             }
 
-            yield return WalkToQuest(id);
+            bool replayingReturnedQuest = !string.IsNullOrEmpty(returned)
+                && !returnedPerfect
+                && returned == id;
+            yield return WalkToQuest(id, replayingReturnedQuest);
             Vibrate();
             yield return new WaitForSeconds(questAutoHold);
 
@@ -884,7 +887,7 @@ public sealed class QuestPathSequence : MonoBehaviour
 
     // Walk to the quest's waypoint and hold the same facing the day beat would - no reveal here, so
     // this runs unconditionally (redoable or not) to keep the hero on the authored road.
-    private IEnumerator WalkToQuest(string questId)
+    private IEnumerator WalkToQuest(string questId, bool alreadyAtQuest = false)
     {
         facingLock = -1;
 
@@ -895,6 +898,18 @@ public sealed class QuestPathSequence : MonoBehaviour
         }
         else if (questId == "kaa")
         {
+            if (!alreadyAtQuest && wp1 != null)
+            {
+                yield return MoveTo(wp1.position);
+            }
+
+            if (!alreadyAtQuest && wp1 != null && wp2 != null)
+            {
+                facingLock = OrientationFor(wp2.position - wp1.position);
+                yield return new WaitForSeconds(0.15f);
+                facingLock = -1;
+            }
+
             if (wp2 != null) yield return MoveTo(wp2.position);
             if (wp2 != null && wp3 != null) facingLock = OrientationFor(wp3.position - wp2.position);
         }
