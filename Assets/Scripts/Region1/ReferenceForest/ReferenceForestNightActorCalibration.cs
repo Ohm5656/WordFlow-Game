@@ -52,6 +52,7 @@ public sealed class ReferenceForestNightActorCalibration : MonoBehaviour
     private static ReferenceForestNightActorCalibration activeInstance;
 
     private bool applied;
+    private bool patrolLayoutApplied;
     private bool fadePatrolStartsCaptured;
     private Vector3[] fadePatrolStarts = Array.Empty<Vector3>();
 
@@ -97,6 +98,12 @@ public sealed class ReferenceForestNightActorCalibration : MonoBehaviour
 
         applied = true;
 
+        ApplyPositionNightLayout();
+        ApplyPatrolNightLayout();
+    }
+
+    private void ApplyPositionNightLayout()
+    {
         for (int i = 0; i < positions.Length; i++)
         {
             PositionCalibration calibration = positions[i];
@@ -110,7 +117,16 @@ public sealed class ReferenceForestNightActorCalibration : MonoBehaviour
             position.y = calibration.nightPosition.y;
             calibration.target.position = position;
         }
+    }
 
+    private void ApplyPatrolNightLayout()
+    {
+        if (patrolLayoutApplied)
+        {
+            return;
+        }
+
+        patrolLayoutApplied = true;
         for (int i = 0; i < patrols.Length; i++)
         {
             PatrolCalibration calibration = patrols[i];
@@ -136,7 +152,7 @@ public sealed class ReferenceForestNightActorCalibration : MonoBehaviour
     {
         // A redo already entered on its calibrated night layout. The normal day-to-night fade is
         // the only path that needs a visual handoff between two different pen layouts.
-        if (NightMode.RedoActive || applied || patrols == null || patrols.Length == 0)
+        if (NightMode.RedoActive || applied || patrolLayoutApplied || patrols == null || patrols.Length == 0)
         {
             return;
         }
@@ -167,8 +183,10 @@ public sealed class ReferenceForestNightActorCalibration : MonoBehaviour
         if (amount >= 0.9999f)
         {
             // Preserve the existing patrol animation, but re-base its walk bounds only once the
-            // animal has reached the corresponding night pen.
-            ApplyNightLayout();
+            // animal has reached the corresponding night pen. Do not apply the full night layout
+            // during the daytime route: that layout also includes the hero's night-redo start
+            // position, which would teleport the child mid-walk before they enter the house.
+            ApplyPatrolNightLayout();
         }
     }
 

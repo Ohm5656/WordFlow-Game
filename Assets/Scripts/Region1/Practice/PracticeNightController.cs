@@ -45,6 +45,8 @@ public sealed class PracticeNightController : MonoBehaviour
     [SerializeField, Range(0.1f, 1f)] private float crowScale = 0.48f;
     [SerializeField] private float crowFadeInDuration = 0.4f;
     [SerializeField] private float crowWaypointLegDuration = 1.35f;
+    [SerializeField] private string crowFreedWaypointName = "wp_3";
+    [SerializeField] private float crowFreedWaypointLegDuration = 1.35f;
     [SerializeField] private float crowStoneEdgeCropPixels = 4f;
     [SerializeField] private float crowHoverAmplitude = 24f;
     [SerializeField] private float crowHoverFrequency = 1.3f;
@@ -77,6 +79,9 @@ public sealed class PracticeNightController : MonoBehaviour
     [SerializeField] private Vector2 throwVisualSize = new Vector2(1920f, 1080f);
     [SerializeField, Min(0.01f)] private float throwVisualScale = 1f;
     [SerializeField] private string throwStateName = "Thow";
+    [SerializeField, Min(0)] private int throwFirstFrameNumber = 37;
+    [SerializeField, Min(0)] private int crowEscapeThrowFrameNumber = 108;
+    [SerializeField, Min(0.01f)] private float throwClipFps = 30f;
     [SerializeField] private float throwFadeOutDuration = 0.25f;
 
     [Header("Book intro")]
@@ -174,6 +179,8 @@ public sealed class PracticeNightController : MonoBehaviour
         yield return PlayThrowAndCrowEscape();
 
         yield return StartCoroutine(SceneFadeController.Cover(sceneFadeDuration));
+        NightMode.ForceNightPhaseForCurrentSession();
+        NightMode.EndSession();
         SceneManager.LoadScene(returnSceneName);
     }
 
@@ -334,22 +341,34 @@ public sealed class PracticeNightController : MonoBehaviour
 
         crowAnimator.runtimeAnimatorController = crowFlyController;
         crowAnimator.Play("ga_fly", 0, 0f);
+        yield return MoveCrowToWorld(
+            WaypointPosition(crowFreedWaypointName, crowRect.position),
+            crowFreedWaypointLegDuration > 0f ? crowFreedWaypointLegDuration : crowWaypointLegDuration);
         StartCrowHover();
     }
 
     private IEnumerator PlayThrowAndCrowEscape()
     {
-        StopCrowHover();
-
         crowRect.gameObject.SetActive(true);
         crowFade = EnsureCanvasGroup(crowRect.gameObject);
         crowFade.alpha = 1f;
         crowAnimator.runtimeAnimatorController = crowFlyController;
         crowAnimator.Play("ga_fly", 0, 0f);
+        if (crowHoverRoutine == null)
+        {
+            StartCrowHover();
+        }
         GameAudio.PlayCrowLoop();
         GameAudio.PlayPaaThrow();
 
-        Coroutine throwRoutine = StartCoroutine(PlayThrowVisual());
+        bool crowCanEscape = false;
+        Coroutine throwRoutine = StartCoroutine(PlayThrowVisual(() => crowCanEscape = true));
+        while (!crowCanEscape)
+        {
+            yield return null;
+        }
+
+        StopCrowHover();
         yield return MoveCrowAwayAndFade();
 
         if (throwRoutine != null)
@@ -361,17 +380,19 @@ public sealed class PracticeNightController : MonoBehaviour
         crowRect.gameObject.SetActive(false);
     }
 
-    private IEnumerator PlayThrowVisual()
+    private IEnumerator PlayThrowVisual(Action onCrowEscapeFrame)
     {
         if (throwController == null)
         {
             Debug.LogWarning("[PracticeNight] throwController is not assigned; playing audio/crow escape only.");
+            onCrowEscapeFrame?.Invoke();
             yield break;
         }
 
         ResolveThrowVisual();
         if (throwVisualRoot == null || throwAnimator == null || throwFade == null)
         {
+            onCrowEscapeFrame?.Invoke();
             yield break;
         }
 
@@ -387,9 +408,15 @@ public sealed class PracticeNightController : MonoBehaviour
         throwAnimator.runtimeAnimatorController = throwController;
         throwAnimator.speed = 1f;
         throwAnimator.Play(throwStateName, 0, 0f);
-        yield return WaitForCurrentAnimatorState(throwAnimator);
+        yield return WaitForCurrentAnimatorState(throwAnimator, GetCrowEscapeThrowSeconds(), onCrowEscapeFrame);
         yield return FadeCanvasGroup(throwFade, 0f, throwFadeOutDuration);
         throwVisualRoot.gameObject.SetActive(false);
+    }
+
+    private float GetCrowEscapeThrowSeconds()
+    {
+        int frameOffset = Mathf.Max(0, crowEscapeThrowFrameNumber - throwFirstFrameNumber);
+        return frameOffset / Mathf.Max(0.01f, throwClipFps);
     }
 
     private IEnumerator MoveCrowAwayAndFade()
@@ -473,22 +500,40 @@ public sealed class PracticeNightController : MonoBehaviour
 
     private IEnumerator WaitForCurrentAnimatorState(Animator animator)
     {
+        yield return WaitForCurrentAnimatorState(animator, -1f, null);
+    }
+
+    private IEnumerator WaitForCurrentAnimatorState(Animator animator, float signalSeconds, Action onSignal)
+    {
         if (animator == null) yield break;
 
         yield return null;
         AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
         float length = Mathf.Max(0.01f, info.length);
         float guard = 0f;
+        bool signaled = false;
         while (guard < length + 1f)
         {
             info = animator.GetCurrentAnimatorStateInfo(0);
+            float stateSeconds = Mathf.Max(0f, info.normalizedTime) * length;
+            if (!signaled && signalSeconds >= 0f && stateSeconds >= signalSeconds)
+            {
+                signaled = true;
+                onSignal?.Invoke();
+            }
+
             if (info.normalizedTime >= 1f)
             {
-                yield break;
+                break;
             }
 
             guard += Time.deltaTime;
             yield return null;
+        }
+
+        if (!signaled)
+        {
+            onSignal?.Invoke();
         }
     }
 

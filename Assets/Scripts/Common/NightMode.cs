@@ -21,13 +21,15 @@ public static class NightMode
     private const string RedoKey = "NightRedoActive";
     private const string ActiveQuestKey = "NightActiveQuest";
     private const string DonePrefix = "NightDone_";
+    private static bool forceNightPhaseThisSession;
 
     /// True once the daytime run has ended. Guarded by "has any quest actually been scored?" — a
     /// stale flag (a killed play session, an editor test) can otherwise leave a fresh game starting
     /// at night with no stars to redo, which is never a valid state.
     public static bool NightPhase
     {
-        get => PlayerPrefs.GetInt(PhaseKey, 0) == 1 && QuestStars.AnyRecorded(QuestIds);
+        get => PlayerPrefs.GetInt(PhaseKey, 0) == 1
+            && (forceNightPhaseThisSession || QuestStars.AnyRecorded(QuestIds));
         set { PlayerPrefs.SetInt(PhaseKey, value ? 1 : 0); PlayerPrefs.Save(); }
     }
 
@@ -71,8 +73,17 @@ public static class NightMode
         RedoActive = false;
     }
 
+    /// Forces the very next in-memory WorldMap return to render as night even when a developer
+    /// starts a night practice scene directly without existing quest stars.
+    public static void ForceNightPhaseForCurrentSession()
+    {
+        forceNightPhaseThisSession = true;
+        NightPhase = true;
+    }
+
     public static void ResetAll(string[] questIds)
     {
+        forceNightPhaseThisSession = false;
         PlayerPrefs.DeleteKey(PhaseKey);
         PlayerPrefs.DeleteKey(RedoKey);
         PlayerPrefs.DeleteKey(ActiveQuestKey);
