@@ -34,7 +34,7 @@ public sealed class SceneFadeController : MonoBehaviour
     private const string RevealObjectName = "Scene Fade Reveal";
     private const string CanvasName = "Scene Fade Canvas";
 
-    private const float DefaultRevealDuration = 0.9f;
+    private const float DefaultRevealDuration = 0.65f;
 
     /// <summary>True once any in-progress reference_forest reveal has finished (or none is running).</summary>
     public static bool RevealComplete { get; private set; } = true;

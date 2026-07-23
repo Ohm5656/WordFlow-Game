@@ -13,11 +13,13 @@ using UnityEngine.InputSystem.Controls;
 /// Self-bootstrapping WorldMap night presentation. The existing night overlay remains unchanged:
 /// the backdrop darkens while the islands stay lit. If at least one quest is below three stars, the
 /// two choice sprites already placed under the scene's "ui" root are revealed above one temporary
-/// extra dim. Only the incomplete-quest choice is active for this pass.
+/// extra dim. The left choice opens night practice; the right choice starts the incomplete-quest
+/// redo route.
 /// </summary>
 public sealed class WorldMapNight : MonoBehaviour
 {
     private const string WorldMapSceneName = "WorldMap";
+    private const string PracticeNightSceneName = "practice_night";
     private const string SetupObjectName = "WorldMap Night";
     private const string ChoiceRootName = "ui";
     private const string DayBackgroundName = "BG_Map";
@@ -39,6 +41,7 @@ public sealed class WorldMapNight : MonoBehaviour
     [SerializeField] private float choiceDismissDuration = 0.24f;
     [SerializeField] private float pressDownDuration = 0.08f;
     [SerializeField] private float pressReleaseDuration = 0.13f;
+    [SerializeField] private float practiceSceneCoverDuration = 0.55f;
     [SerializeField, Range(0.8f, 1f)] private float pressedScale = 0.94f;
 
     public static bool BlocksIslandInput { get; private set; }
@@ -105,19 +108,22 @@ public sealed class WorldMapNight : MonoBehaviour
 
     private void Update()
     {
-        if (!choiceReady || choicePressing || incompleteChoice == null)
+        if (!choiceReady || choicePressing || !HasBothChoices)
         {
             return;
         }
 
         if (TryGetPointerPress(out Vector2 screenPosition)
-            && TryScreenToWorld(screenPosition, out Vector3 worldPosition)
-            && incompleteChoice.bounds.Contains(new Vector3(
-                worldPosition.x,
-                worldPosition.y,
-                incompleteChoice.bounds.center.z)))
+            && TryScreenToWorld(screenPosition, out Vector3 worldPosition))
         {
-            StartCoroutine(PressIncompleteChoice());
+            if (IsInsideChoice(practiceChoice, worldPosition))
+            {
+                StartCoroutine(PressPracticeChoice());
+            }
+            else if (IsInsideChoice(incompleteChoice, worldPosition))
+            {
+                StartCoroutine(PressIncompleteChoice());
+            }
         }
     }
 
@@ -205,28 +211,57 @@ public sealed class WorldMapNight : MonoBehaviour
 
     private IEnumerator PressIncompleteChoice()
     {
+        yield return PressAndDismissChoice(incompleteChoice, incompleteBaseScale);
+        BlocksIslandInput = false;
+
+        WorldMapProblemIslands map = FindObjectOfType<WorldMapProblemIslands>();
+        if (map != null && map.StartNightRedoFromChoice())
+        {
+            yield break;
+        }
+
+        // Do not strand the player if the map controller was unexpectedly not ready.
+        Debug.LogWarning("[WorldMapNight] incomplete-quest choice could not start the playable island");
+        choicePressing = false;
+        yield return RevealChoices();
+    }
+
+    private IEnumerator PressPracticeChoice()
+    {
+        yield return PressAndDismissChoice(practiceChoice, practiceBaseScale);
+
+        // Practice is a separate night training path, so clear any stale redo flags before loading.
+        NightMode.ForceNightPhaseForCurrentSession();
+        NightMode.EndSession();
+
+        yield return SceneFadeController.Cover(practiceSceneCoverDuration);
+        SceneManager.LoadScene(PracticeNightSceneName);
+    }
+
+    private IEnumerator PressAndDismissChoice(SpriteRenderer pressedChoice, Vector3 baseScale)
+    {
         choicePressing = true;
         choiceReady = false;
         GameAudio.PlayClick();
 
-        Vector3 downScale = incompleteBaseScale * pressedScale;
+        Vector3 downScale = baseScale * pressedScale;
         float downDuration = Mathf.Max(0.01f, pressDownDuration);
         for (float elapsed = 0f; elapsed < downDuration; elapsed += Time.deltaTime)
         {
             float t = Smooth(elapsed / downDuration);
-            incompleteChoice.transform.localScale = Vector3.Lerp(incompleteBaseScale, downScale, t);
+            pressedChoice.transform.localScale = Vector3.Lerp(baseScale, downScale, t);
             yield return null;
         }
-        incompleteChoice.transform.localScale = downScale;
+        pressedChoice.transform.localScale = downScale;
 
         float releaseDuration = Mathf.Max(0.01f, pressReleaseDuration);
         for (float elapsed = 0f; elapsed < releaseDuration; elapsed += Time.deltaTime)
         {
             float t = EaseOutBack(elapsed / releaseDuration);
-            incompleteChoice.transform.localScale = Vector3.LerpUnclamped(downScale, incompleteBaseScale, t);
+            pressedChoice.transform.localScale = Vector3.LerpUnclamped(downScale, baseScale, t);
             yield return null;
         }
-        incompleteChoice.transform.localScale = incompleteBaseScale;
+        pressedChoice.transform.localScale = baseScale;
 
         float dismissDuration = Mathf.Max(0.01f, choiceDismissDuration);
         for (float elapsed = 0f; elapsed < dismissDuration; elapsed += Time.deltaTime)
@@ -241,18 +276,6 @@ public sealed class WorldMapNight : MonoBehaviour
         SetAlpha(choiceDim, 0f);
         RestoreChoiceVisuals();
         SetChoiceVisible(false);
-        BlocksIslandInput = false;
-
-        WorldMapProblemIslands map = FindObjectOfType<WorldMapProblemIslands>();
-        if (map != null && map.StartNightRedoFromChoice())
-        {
-            yield break;
-        }
-
-        // Do not strand the player if the map controller was unexpectedly not ready.
-        Debug.LogWarning("[WorldMapNight] incomplete-quest choice could not start the playable island");
-        choicePressing = false;
-        yield return RevealChoices();
     }
 
     private void ResolveChoiceSprites()
@@ -536,6 +559,19 @@ public sealed class WorldMapNight : MonoBehaviour
             screenPosition.y,
             -cam.transform.position.z));
         return true;
+    }
+
+    private static bool IsInsideChoice(SpriteRenderer choice, Vector3 worldPosition)
+    {
+        if (choice == null)
+        {
+            return false;
+        }
+
+        return choice.bounds.Contains(new Vector3(
+            worldPosition.x,
+            worldPosition.y,
+            choice.bounds.center.z));
     }
 
     private static bool TryGetPointerPress(out Vector2 screenPosition)

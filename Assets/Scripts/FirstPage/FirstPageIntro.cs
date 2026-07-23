@@ -12,15 +12,16 @@ using WordFlow.Adventure.Net;
 ///   1. intro_rev plays once, speed ramping 2x -> 1x; the WordFlow logo drop-bounces in.
 ///   2. idle_loop (already baked forward+backward) loops natively at 1x. On
 ///      entering this phase the press-to-start prompt floats up (plus a logout
-///      button when a stored session exists). Pressing runs a silent
-///      TryAutoLogin: a live session enters WorldMap, no/expired session swaps
-///      the prompt for the Login/Sign-up buttons.
+///      button when a stored session exists). A stored session is silently
+///      restored during the intro so pressing can enter WorldMap immediately
+///      when it is still live; no/expired sessions swap the prompt for the
+///      Login/Sign-up buttons.
 ///
 /// The idle ping-pong is baked into one clip rather than swapped between two
 /// players: Unity's own looping has no swap latency, and the intro player is
 /// stopped once it hands over, so only one video decoder runs from then on.
-/// Press-to-start runs a silent TryAutoLogin before entering WorldMap; on
-/// failure (expired token) the auth buttons replace the prompt.
+/// Press-to-start uses the warmed silent TryAutoLogin before entering WorldMap;
+/// on failure (expired token) the auth buttons replace the prompt.
 /// </summary>
 public sealed class FirstPageIntro : MonoBehaviour
 {
@@ -30,7 +31,7 @@ public sealed class FirstPageIntro : MonoBehaviour
 
     private const float MinSpeed = 1f;
     private const float MaxSpeed = 2f;
-    private const float SceneFadeDuration = 0.6f;
+    private const float SceneFadeDuration = 0.35f;
     private const double FallbackClipLength = 5.0417; // seconds, matches the baked source clips
 
     private const float LogoEntranceDelay = 0.6f;  // seconds into the intro leg
@@ -74,6 +75,10 @@ public sealed class FirstPageIntro : MonoBehaviour
     private bool enteredIdle;
     private bool acceptingInput;
     private bool transitioning;
+    private bool autoLoginStarted;
+    private bool autoLoginFinished;
+    private bool autoLoginSucceeded;
+    private int autoLoginGeneration;
     private Vector2 logoRestPosition;
     private Vector2 promptRestPosition;
     private Vector2 authRestPosition;
@@ -105,6 +110,11 @@ public sealed class FirstPageIntro : MonoBehaviour
 
         idlePlayer.clip = idleLoopClip;
         idlePlayer.Prepare();
+    }
+
+    private void Start()
+    {
+        StartAutoLoginWarmup();
     }
 
     private void Update()
@@ -198,9 +208,10 @@ public sealed class FirstPageIntro : MonoBehaviour
 
     private IEnumerator RevealUi()
     {
-        // Always float up press-to-start first. On press, OnPressToStart runs TryAutoLogin: a live
-        // session enters WorldMap, no/expired session swaps in the Login/Sign-up buttons. Logout only
-        // makes sense when a stored session exists, so it rides in alongside the prompt in that case.
+        // Always float up press-to-start first. A stored session is already being restored in the
+        // background; on press, a live session enters WorldMap while no/expired sessions swap in the
+        // Login/Sign-up buttons. Logout only makes sense when a stored session exists, so it rides in
+        // alongside the prompt in that case.
         bool hasSession = AuthSession.Instance != null && AuthSession.Instance.HasStoredSession;
         if (hasSession) StartCoroutine(FadeIn(logoutGroup, UiFloatDuration));
         yield return FloatUp(pressToStartGroup, pressToStartRect, promptRestPosition);
@@ -265,19 +276,79 @@ public sealed class FirstPageIntro : MonoBehaviour
     private void OnPressToStart()
     {
         transitioning = true;
-        AuthSession.Instance.TryAutoLogin(ok =>
+
+        if (autoLoginFinished)
         {
-            if (ok)
+            CompletePressToStart(autoLoginSucceeded);
+            return;
+        }
+
+        if (autoLoginStarted)
+        {
+            StartCoroutine(WaitForAutoLoginThenContinue());
+            return;
+        }
+
+        CompletePressToStart(false);
+    }
+
+    private void StartAutoLoginWarmup()
+    {
+        AuthSession session = AuthSession.Instance;
+        if (session == null || autoLoginStarted)
+        {
+            return;
+        }
+
+        if (session.IsLoggedIn)
+        {
+            autoLoginStarted = true;
+            autoLoginFinished = true;
+            autoLoginSucceeded = true;
+            return;
+        }
+
+        if (!session.HasStoredSession)
+        {
+            return;
+        }
+
+        autoLoginStarted = true;
+        int generation = ++autoLoginGeneration;
+        session.TryAutoLogin(ok =>
+        {
+            if (generation != autoLoginGeneration)
             {
-                StartCoroutine(LoadAfterFade(WorldMapSceneName));
+                return;
             }
-            else
-            {
-                transitioning = false;
-                acceptingInput = false;
-                StartCoroutine(SwapPromptForAuthButtons());
-            }
+
+            autoLoginSucceeded = ok;
+            autoLoginFinished = true;
         });
+    }
+
+    private IEnumerator WaitForAutoLoginThenContinue()
+    {
+        while (!autoLoginFinished)
+        {
+            yield return null;
+        }
+
+        CompletePressToStart(autoLoginSucceeded);
+    }
+
+    private void CompletePressToStart(bool ok)
+    {
+        if (ok)
+        {
+            StartCoroutine(LoadAfterFade(WorldMapSceneName));
+        }
+        else
+        {
+            transitioning = false;
+            acceptingInput = false;
+            StartCoroutine(SwapPromptForAuthButtons());
+        }
     }
 
     private void OnLogout()
@@ -288,6 +359,10 @@ public sealed class FirstPageIntro : MonoBehaviour
         }
 
         AuthSession.Instance?.Logout();
+        autoLoginGeneration++;
+        autoLoginStarted = false;
+        autoLoginFinished = true;
+        autoLoginSucceeded = false;
         acceptingInput = false;
         StartCoroutine(SwapPromptForAuthButtons());
     }

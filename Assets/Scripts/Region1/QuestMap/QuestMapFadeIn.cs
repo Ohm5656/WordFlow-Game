@@ -10,7 +10,7 @@ public sealed class QuestMapFadeIn : MonoBehaviour
     private const string FadeCanvasName = "QuestMap Fade Canvas";
 
     [SerializeField]
-    private float fadeInDuration = 2.6f;
+    private float fadeInDuration = 0.85f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
