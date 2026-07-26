@@ -11,10 +11,10 @@ using UnityEngine.InputSystem.Controls;
 
 /// <summary>
 /// Self-bootstrapping WorldMap night presentation. The existing night overlay remains unchanged:
-/// the backdrop darkens while the islands stay lit. If at least one quest is below three stars, the
-/// two choice sprites already placed under the scene's "ui" root are revealed above one temporary
-/// extra dim. The left choice opens night practice; the right choice starts the incomplete-quest
-/// redo route.
+/// the backdrop darkens while the islands stay lit. Once night is available, the two choice sprites
+/// already placed under the scene's "ui" root are revealed above one temporary extra dim. The left
+/// choice opens night practice; the right choice starts the incomplete-quest redo route, or returns
+/// to this map if every redo quest is already perfect.
 /// </summary>
 public sealed class WorldMapNight : MonoBehaviour
 {
@@ -97,9 +97,7 @@ public sealed class WorldMapNight : MonoBehaviour
 
         SetMapPresentation(NightMode.NightPhase ? 1f : 0f);
 
-        BlocksIslandInput = NightMode.NightPhase
-            && QuestStars.AnyNeedsRedo(NightMode.QuestIds)
-            && HasBothChoices;
+        BlocksIslandInput = NightMode.NightPhase && HasBothChoices;
     }
 
     private void Start()
@@ -159,7 +157,7 @@ public sealed class WorldMapNight : MonoBehaviour
         // frame before a dark overlay caught up.
         SetMapPresentation(1f);
 
-        if (QuestStars.AnyNeedsRedo(NightMode.QuestIds) && HasBothChoices)
+        if (HasBothChoices)
         {
             yield return RevealChoices();
         }

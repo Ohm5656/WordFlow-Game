@@ -20,6 +20,7 @@ public sealed class DaySceneColorGrade : MonoBehaviour
         "Success_ga",
         "Success_ga_correct",
         "Success_ta_incorrect",
+        "reference_forest",
         "word_build_paa_polished",
     };
 
@@ -125,6 +126,24 @@ public sealed class DaySceneColorGrade : MonoBehaviour
         volume.priority = 200f;
         volume.sharedProfile = ScriptableObject.CreateInstance<VolumeProfile>();
 
+        if (sceneName == "reference_forest")
+        {
+            ConfigureReferenceForestDayProfile();
+        }
+        else
+        {
+            ConfigureQuestDayProfile();
+        }
+
+        SetAmount(1f);
+        if (sceneName == "reference_forest")
+        {
+            referenceForestGrade = this;
+        }
+    }
+
+    private void ConfigureQuestDayProfile()
+    {
         ColorAdjustments adjustments = volume.sharedProfile.Add<ColorAdjustments>(true);
         // Keep the daytime maps slightly muted, but warm the low and mid tones rather than
         // pushing them toward blue. Exposure stays neutral so this reads as art direction,
@@ -134,12 +153,25 @@ public sealed class DaySceneColorGrade : MonoBehaviour
         adjustments.hueShift.Override(-3f);
         adjustments.saturation.Override(-15f);
         adjustments.colorFilter.Override(new Color(1.03f, 0.96f, 0.82f, 1f));
+    }
 
-        SetAmount(1f);
-        if (sceneName == "reference_forest")
-        {
-            referenceForestGrade = this;
-        }
+    private void ConfigureReferenceForestDayProfile()
+    {
+        ColorAdjustments adjustments = volume.sharedProfile.Add<ColorAdjustments>(true);
+        adjustments.postExposure.Override(0f);
+        adjustments.contrast.Override(-4.2f);
+        adjustments.hueShift.Override(0f);
+        adjustments.saturation.Override(-9.1f);
+        adjustments.colorFilter.Override(new Color(0.8773585f, 0.8550107f, 0.84011215f, 1f));
+
+        ShadowsMidtonesHighlights tones = volume.sharedProfile.Add<ShadowsMidtonesHighlights>(true);
+        tones.shadows.Override(new Vector4(1f, 0.92312944f, 0.88904154f, 0f));
+        tones.midtones.Override(new Vector4(0.90693307f, 0.9541811f, 1f, 0f));
+        tones.highlights.Override(new Vector4(1f, 0.9755228f, 0.79972625f, 0f));
+        tones.shadowsStart.Override(0f);
+        tones.shadowsEnd.Override(0.3f);
+        tones.highlightsStart.Override(0.55f);
+        tones.highlightsEnd.Override(1f);
     }
 
     private void OnDestroy()

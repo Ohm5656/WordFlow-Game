@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3357eb4b131a9054a9d5fa0a14f85af8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Common::GameAudio
-  menuTheme: {fileID: 8300000, guid: 2c86a95af6e22164896fa20442cda638, type: 3}
+  menuTheme: {fileID: 8300000, guid: 6801f22398612b540a391a02ad5ed747, type: 3}
   menuThemeVolume: 0.85
   mainTheme: {fileID: 8300000, guid: 6801f22398612b540a391a02ad5ed747, type: 3}
   mainThemeVolume: 0.85
@@ -52,15 +52,15 @@ MonoBehaviour:
   questThemeVolume: 0.85
   mainThemeScenes:
   - reference_forest
-  menuMusicLevel: 0.82
-  worldMapMusicLevel: 0.74
-  nightWorldMapMusicLevel: 0.58
-  forestMusicLevel: 0.52
-  nightForestMusicLevel: 0.34
+  menuMusicLevel: 1
+  worldMapMusicLevel: 0.8
+  nightWorldMapMusicLevel: 0.8
+  forestMusicLevel: 0.5
+  nightForestMusicLevel: 0.5
   questMapMusicLevel: 0.55
-  cutsceneMusicLevel: 0.36
+  cutsceneMusicLevel: 0.44
   learningMusicLevel: 0.24
-  successMusicLevel: 0.4
+  successMusicLevel: 0.48
   bossMusicLevel: 0.58
   sceneMixLerpSpeed: 2.2
   crossfadeSeconds: 1.4

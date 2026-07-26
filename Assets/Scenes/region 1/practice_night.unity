@@ -1945,8 +1945,8 @@ MonoBehaviour:
   buttonPressScale: 0.88
   buttonPressDuration: 0.14
   assemblyUiRoot: {fileID: 2099611334}
-  slideOutOffset: {x: 0, y: -1600}
-  slideOutDuration: 0.25
+  slideOutOffset: {x: -1800, y: 0}
+  slideOutDuration: 0.18
   wordAudioSource: {fileID: 476345541}
   stonePlacementClips:
   - {fileID: 8300000, guid: 84e36abdc70fcd14a8ddb5a9f6fe6d0c, type: 3}
@@ -1958,6 +1958,20 @@ MonoBehaviour:
   - 1
   blockPlacementWhileVoicePlaying: 1
   placementVoicePostGapSeconds: 0.15
+  stonePlacementLineIds:
+  - gameplay_ko
+  - gameplay_po
+  - gameplay_aa
+  paEchoLineIds:
+  - gameplay_po
+  - gameplay_aa
+  - gameplay_paa
+  gaEchoLineIds:
+  - gameplay_ko
+  - gameplay_aa
+  - gameplay_kaa
+  ttsEchoGapSeconds: 0.4
+  ttsEchoFinalWordGapSeconds: 0.55
   assemblySoundButton: {fileID: 1427979712}
 --- !u!82 &476345541
 AudioSource:

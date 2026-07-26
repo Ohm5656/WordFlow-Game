@@ -6,17 +6,17 @@ using UnityEngine.SceneManagement;
 // Resources/GameAudio.prefab on first static access, so any scene (or direct editor
 // play of a single scene) works without manual setup.
 //
-// Music is picked per scene: Golden Gleam for the title/auth/WorldMap flow, the main theme
-// for forest exploration, and the quest theme for focused play. Scene mix levels keep music
+// Music is picked per scene: the main theme covers title/auth/WorldMap/forest exploration,
+// and the quest theme covers focused play. Scene mix levels keep music
 // supportive instead of equally loud everywhere: puzzles sit low for speech, map/menu can
 // breathe, cutscenes make room for VO/SFX.
 public sealed class GameAudio : MonoBehaviour
 {
     [Header("Music - tracks")]
-    [Tooltip("Shared theme: first_page, Login, ForgotPassword, Register, WorldMap.")]
+    [Tooltip("Legacy title theme slot. The title/auth/WorldMap flow currently shares Main Theme with reference_forest.")]
     [SerializeField] private AudioClip menuTheme;
     [SerializeField, Range(0f, 1f)] private float menuThemeVolume = 0.85f;
-    [Tooltip("Forest/exploration theme: reference_forest.")]
+    [Tooltip("Shared theme: first_page, Login, ForgotPassword, Register, WorldMap, reference_forest.")]
     [SerializeField] private AudioClip mainTheme;
     [SerializeField, Range(0f, 1f)] private float mainThemeVolume = 0.85f;
     [Tooltip("Quest/cutscene theme: every scene NOT listed in Main Theme Scenes.")]
@@ -29,15 +29,15 @@ public sealed class GameAudio : MonoBehaviour
     };
 
     [Header("Music - scene mix")]
-    [SerializeField, Range(0f, 1f)] private float menuMusicLevel = 0.82f;
-    [SerializeField, Range(0f, 1f)] private float worldMapMusicLevel = 0.74f;
-    [SerializeField, Range(0f, 1f)] private float nightWorldMapMusicLevel = 0.58f;
-    [SerializeField, Range(0f, 1f)] private float forestMusicLevel = 0.52f;
-    [SerializeField, Range(0f, 1f)] private float nightForestMusicLevel = 0.34f;
+    [SerializeField, Range(0f, 1f)] private float menuMusicLevel = 1f;
+    [SerializeField, Range(0f, 1f)] private float worldMapMusicLevel = 0.8f;
+    [SerializeField, Range(0f, 1f)] private float nightWorldMapMusicLevel = 0.8f;
+    [SerializeField, Range(0f, 1f)] private float forestMusicLevel = 0.5f;
+    [SerializeField, Range(0f, 1f)] private float nightForestMusicLevel = 0.5f;
     [SerializeField, Range(0f, 1f)] private float questMapMusicLevel = 0.55f;
-    [SerializeField, Range(0f, 1f)] private float cutsceneMusicLevel = 0.36f;
+    [SerializeField, Range(0f, 1f)] private float cutsceneMusicLevel = 0.44f;
     [SerializeField, Range(0f, 1f)] private float learningMusicLevel = 0.24f;
-    [SerializeField, Range(0f, 1f)] private float successMusicLevel = 0.40f;
+    [SerializeField, Range(0f, 1f)] private float successMusicLevel = 0.48f;
     [SerializeField, Range(0f, 1f)] private float bossMusicLevel = 0.58f;
     [Tooltip("How quickly the music settles into a scene's mix level after a load.")]
     [SerializeField] private float sceneMixLerpSpeed = 2.2f;
@@ -269,7 +269,7 @@ public sealed class GameAudio : MonoBehaviour
     {
         if (IsSharedThemeScene(sceneName))
         {
-            return menuTheme != null ? menuTheme : mainTheme;
+            return mainTheme != null ? mainTheme : menuTheme;
         }
 
         if (sceneName == "practice_night"
@@ -434,15 +434,15 @@ public sealed class GameAudio : MonoBehaviour
     private void SaveResumeTime()
     {
         if (currentTrack == null || activeBgm == null) return;
-        if (currentTrack == menuTheme) menuResumeTime = activeBgm.time;
-        else if (currentTrack == mainTheme) mainResumeTime = activeBgm.time;
+        if (currentTrack == mainTheme) mainResumeTime = activeBgm.time;
+        else if (currentTrack == menuTheme) menuResumeTime = activeBgm.time;
         else if (currentTrack == questTheme) questResumeTime = activeBgm.time;
     }
 
     private float ResumeTimeForTrack(AudioClip clip)
     {
-        if (clip == menuTheme) return menuResumeTime;
         if (clip == mainTheme) return mainResumeTime;
+        if (clip == menuTheme) return menuResumeTime;
         if (clip == questTheme) return questResumeTime;
         return 0f;
     }
@@ -523,6 +523,7 @@ public sealed class GameAudio : MonoBehaviour
 
     private float VolumeForTrack(AudioClip clip)
     {
+        if (clip == mainTheme) return mainThemeVolume;
         if (clip == menuTheme) return menuThemeVolume;
         if (clip == questTheme) return questThemeVolume;
         return mainThemeVolume;

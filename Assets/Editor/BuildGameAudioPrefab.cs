@@ -8,8 +8,8 @@ using UnityEngine;
 public static class BuildGameAudioPrefab
 {
     const string PrefabPath = "Assets/Resources/GameAudio.prefab";
-    const string MenuThemeFile = "Golden Gleam.ogg";
     const string MainThemeFile = "main_theme.ogg";
+    const string MenuThemeFile = MainThemeFile;
     const string QuestThemeFile = "quest_theme.ogg";
 
     // Non-destructive: point the existing prefab at the three music tracks and leave

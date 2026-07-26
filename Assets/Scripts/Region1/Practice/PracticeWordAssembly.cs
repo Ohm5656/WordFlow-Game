@@ -17,6 +17,12 @@ using UnityEngine.UI;
 [DefaultExecutionOrder(-1000)]
 public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 {
+    private const string LetterKo = "\u0E01";
+    private const string LetterPo = "\u0E1B";
+    private const string LetterAa = "\u0E32";
+    private const string GaWord = LetterKo + LetterAa;
+    private const string PaWord = LetterPo + LetterAa;
+
     [Header("Stones (children of this GameObject)")]
     [SerializeField] private RectTransform stone1; // ก
     [SerializeField] private RectTransform stone2; // ป
@@ -74,9 +80,20 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     [Tooltip("Breathing room after each stone placement voice before completion or the next placement is accepted.")]
     [SerializeField] private float placementVoicePostGapSeconds = 0.15f;
 
+    [Header("Gameplay TTS (same baked line ids as CutScene_bear)")]
+    [Tooltip("TTS line id per stone, matched to stone1/stone2/stone3 order. Loaded from Resources/TTS before using legacy clips.")]
+    [SerializeField] private string[] stonePlacementLineIds = { "gameplay_ko", "gameplay_po", "gameplay_aa" };
+    [Tooltip("Echo voiced for \u0E1B\u0E32: \u0E1B\u0E2D, \u0E2D\u0E32, \u0E1B\u0E32.")]
+    [SerializeField] private string[] paEchoLineIds = { "gameplay_po", "gameplay_aa", "gameplay_paa" };
+    [Tooltip("Echo voiced for \u0E01\u0E32: \u0E01\u0E2D, \u0E2D\u0E32, \u0E01\u0E32.")]
+    [SerializeField] private string[] gaEchoLineIds = { "gameplay_ko", "gameplay_aa", "gameplay_kaa" };
+    [SerializeField] private float ttsEchoGapSeconds = 0.40f;
+    [SerializeField] private float ttsEchoFinalWordGapSeconds = 0.55f;
+
     [Header("Assembly sound hint (plays the target word while assembling)")]
     [SerializeField] private UnityEngine.UI.Button assemblySoundButton;
 
+    private readonly Dictionary<string, AudioClip> bakedTtsCache = new Dictionary<string, AudioClip>();
     private readonly List<MagicStonePuzzleStone> stones = new List<MagicStonePuzzleStone>();
     private readonly List<RectTransform> resultPages = new List<RectTransform>();
     private readonly MagicStonePuzzleStone[] slotOccupants = new MagicStonePuzzleStone[2];
@@ -84,6 +101,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     private string targetWord = "";
     private RectTransform resultPage;
     private AudioClip wordClip;
+    private AudioClip activeEchoClip;
     private Action onSuccess;
 
     private bool revealFinished;
@@ -147,6 +165,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         targetWord = word ?? "";
         resultPage = resultPageRoot;
         wordClip = resultWordClip;
+        activeEchoClip = BuildEchoClipForWord(targetWord, wordClip) ?? wordClip;
         onSuccess = onSuccessCallback;
         if (resultPage != null)
         {
@@ -195,6 +214,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         isRecording = false;
         revealFinished = false;
         resultShown = false;
+        activeEchoClip = null;
 
         for (int i = 0; i < slotOccupants.Length; i++)
         {
@@ -226,7 +246,7 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 
     private void PlayAssemblyHint()
     {
-        if (!CanInteract || (blockPlacementWhileVoicePlaying && isPlacementVoicePlaying) || wordClip == null || wordAudioSource == null) return;
+        if (!CanInteract || (blockPlacementWhileVoicePlaying && isPlacementVoicePlaying) || ActiveEchoClip == null || wordAudioSource == null) return;
         GameAudio.PlayClick();
         PlayWordClip();
         StartActionFeedback(assemblySoundButton, assemblySoundNaturalScale, ref assemblySoundFeedbackRoutine);
@@ -396,9 +416,9 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         resultPage.localScale = resultNaturalScale;
 
         PlayWordClip();
-        if (wordClip != null)
+        if (ActiveEchoClip != null)
         {
-            yield return new WaitForSeconds(wordClip.length);
+            yield return new WaitForSeconds(ActiveEchoClip.length);
         }
 
         SetResultControlsInteractable(true);
@@ -642,12 +662,15 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
 
     private void PlayWordClip()
     {
-        if (wordClip == null || wordAudioSource == null) return;
+        AudioClip clip = ActiveEchoClip;
+        if (clip == null || wordAudioSource == null) return;
         wordAudioSource.Stop();
-        wordAudioSource.clip = wordClip;
-        GameAudio.DuckForSpeech(wordClip.length + 0.15f);
+        wordAudioSource.clip = clip;
+        GameAudio.DuckForSpeech(clip.length + 0.15f);
         wordAudioSource.Play();
     }
+
+    private AudioClip ActiveEchoClip => activeEchoClip != null ? activeEchoClip : wordClip;
 
     private void QueueCompletionCheck()
     {
@@ -689,12 +712,28 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
     private AudioClip GetPlacementClipForStone(MagicStonePuzzleStone stone)
     {
         int index = stones.IndexOf(stone);
+        AudioClip bakedClip = GetBakedTtsClip(GetPlacementLineIdForStone(index));
+        if (bakedClip != null)
+        {
+            return bakedClip;
+        }
+
         if (index < 0 || stonePlacementClips == null || index >= stonePlacementClips.Length)
         {
             return null;
         }
 
         return stonePlacementClips[index];
+    }
+
+    private string GetPlacementLineIdForStone(int index)
+    {
+        if (index < 0 || stonePlacementLineIds == null || index >= stonePlacementLineIds.Length)
+        {
+            return "";
+        }
+
+        return stonePlacementLineIds[index];
     }
 
     private float GetPlacementVolumeForStone(MagicStonePuzzleStone stone)
@@ -724,6 +763,167 @@ public sealed class PracticeWordAssembly : MonoBehaviour, IStonePuzzleOwner
         }
 
         placementVoiceRoutine = StartCoroutine(PlacementVoiceRoutine(clip, GetPlacementVolumeForStone(stone)));
+    }
+
+    private AudioClip BuildEchoClipForWord(string word, AudioClip fallbackWordClip)
+    {
+        AudioClip fromLineIds = BuildEchoClipFromLineIds(GetEchoLineIdsForWord(word));
+        if (fromLineIds != null)
+        {
+            return fromLineIds;
+        }
+
+        return BuildEchoClipFromExistingClips(word, fallbackWordClip);
+    }
+
+    private string[] GetEchoLineIdsForWord(string word)
+    {
+        if (string.Equals(word, GaWord, StringComparison.Ordinal)) return gaEchoLineIds;
+        if (string.Equals(word, PaWord, StringComparison.Ordinal)) return paEchoLineIds;
+        return null;
+    }
+
+    private AudioClip BuildEchoClipFromLineIds(string[] lineIds)
+    {
+        if (lineIds == null || lineIds.Length == 0)
+        {
+            return null;
+        }
+
+        AudioClip[] parts = new AudioClip[lineIds.Length];
+        for (int i = 0; i < lineIds.Length; i++)
+        {
+            parts[i] = GetBakedTtsClip(lineIds[i]);
+            if (parts[i] == null)
+            {
+                return null;
+            }
+        }
+
+        return ConcatClips(parts, ttsEchoGapSeconds, ttsEchoFinalWordGapSeconds);
+    }
+
+    private AudioClip BuildEchoClipFromExistingClips(string word, AudioClip fallbackWordClip)
+    {
+        if (fallbackWordClip == null)
+        {
+            return null;
+        }
+
+        AudioClip first = null;
+        if (string.Equals(word, GaWord, StringComparison.Ordinal))
+        {
+            first = GetPlacementClipForLetter(LetterKo);
+        }
+        else if (string.Equals(word, PaWord, StringComparison.Ordinal))
+        {
+            first = GetPlacementClipForLetter(LetterPo);
+        }
+
+        AudioClip vowel = GetPlacementClipForLetter(LetterAa);
+        if (first == null || vowel == null)
+        {
+            return null;
+        }
+
+        return ConcatClips(new[] { first, vowel, fallbackWordClip }, ttsEchoGapSeconds, ttsEchoFinalWordGapSeconds);
+    }
+
+    private AudioClip GetPlacementClipForLetter(string letter)
+    {
+        for (int i = 0; i < stones.Count; i++)
+        {
+            MagicStonePuzzleStone stone = stones[i];
+            if (stone != null && string.Equals(stone.Letter, letter, StringComparison.Ordinal))
+            {
+                return GetPlacementClipForStone(stone);
+            }
+        }
+
+        return null;
+    }
+
+    private AudioClip GetBakedTtsClip(string lineId)
+    {
+        if (string.IsNullOrWhiteSpace(lineId))
+        {
+            return null;
+        }
+
+        lineId = lineId.Trim();
+        if (bakedTtsCache.TryGetValue(lineId, out AudioClip cachedClip))
+        {
+            return cachedClip;
+        }
+
+        AudioClip clip = Resources.Load<AudioClip>("TTS/" + lineId);
+        bakedTtsCache[lineId] = clip;
+        return clip;
+    }
+
+    private static AudioClip ConcatClips(AudioClip[] parts, float gapSeconds, float finalWordGapSeconds)
+    {
+        if (parts == null || parts.Length == 0)
+        {
+            return null;
+        }
+
+        int frequency = 0;
+        int channels = 0;
+        int totalFrames = 0;
+        foreach (AudioClip part in parts)
+        {
+            if (part == null)
+            {
+                return null;
+            }
+
+            if (frequency == 0)
+            {
+                frequency = part.frequency;
+                channels = part.channels;
+            }
+
+            if (part.frequency != frequency || part.channels != channels)
+            {
+                return null;
+            }
+
+            totalFrames += part.samples;
+        }
+
+        if (totalFrames == 0)
+        {
+            return null;
+        }
+
+        int gapFrames = Mathf.Max(0, Mathf.RoundToInt(gapSeconds * frequency));
+        int finalWordGapFrames = Mathf.Max(gapFrames, Mathf.RoundToInt(finalWordGapSeconds * frequency));
+        for (int i = 1; i < parts.Length; i++)
+        {
+            bool beforeWholeWord = parts.Length > 2 && i == parts.Length - 1;
+            totalFrames += beforeWholeWord ? finalWordGapFrames : gapFrames;
+        }
+
+        float[] data = new float[totalFrames * channels];
+        int offset = 0;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (i > 0)
+            {
+                bool beforeWholeWord = parts.Length > 2 && i == parts.Length - 1;
+                offset += (beforeWholeWord ? finalWordGapFrames : gapFrames) * channels;
+            }
+
+            float[] chunk = new float[parts[i].samples * parts[i].channels];
+            parts[i].GetData(chunk, 0);
+            chunk.CopyTo(data, offset);
+            offset += chunk.Length;
+        }
+
+        AudioClip merged = AudioClip.Create("practice_tts_echo", totalFrames, channels, frequency, false);
+        merged.SetData(data, 0);
+        return merged;
     }
 
     private IEnumerator PlacementVoiceRoutine(AudioClip clip, float volume)
